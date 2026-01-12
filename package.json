@@ -96,6 +96,7 @@
     "@types/babel__traverse": "^7.28.0",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.19.28",
+    "chokidar": "^5.0.0",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
