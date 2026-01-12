@@ -9,8 +9,8 @@ const __filename = fileURLToPath(import.meta.url)
 // Mock require since it's not supported in vitest
 vi.mock('node:module', () => ({
   createRequire: vi.fn().mockReturnValue({
-    // Add the extension to the path
-    resolve: vi.fn((path) => `${path}.ts`),
+    // Add the extension to the path or replace the extension with .ts
+    resolve: vi.fn((path) => (path.endsWith('.js') ? path.replace('.js', '.ts') : `${path}.ts`)),
   }),
 }))
 
