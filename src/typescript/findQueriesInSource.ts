@@ -33,7 +33,7 @@ export function findQueriesInSource(
   source: string,
   filename: string,
   babelConfig: TransformOptions = getBabelConfig(),
-  resolver: NodeJS.RequireResolve = require.resolve
+  resolver: NodeJS.RequireResolve = require.resolve,
 ): ExtractedModule {
   const queries: ExtractedQuery[] = []
   const errors: QueryExtractionError[] = []
@@ -67,27 +67,27 @@ export function findQueriesInSource(
           return
         }
 
-        const {id, start, end} = node
+        const {end, id, start} = node
         const variable = {id, ...(start && {start}), ...(end && {end})}
 
         try {
           const query = resolveExpression({
-            node: init,
-            file,
-            scope,
             babelConfig,
+            file,
             filename,
+            node: init,
             resolver,
+            scope,
           })
-          queries.push({variable, query, filename})
+          queries.push({filename, query, variable})
         } catch (cause) {
-          errors.push(new QueryExtractionError({filename, variable, cause}))
+          errors.push(new QueryExtractionError({cause, filename, variable}))
         }
       }
     },
   })
 
-  return {filename, queries, errors}
+  return {errors, filename, queries}
 }
 
 function declarationLeadingCommentContains(path: NodePath, comment: string): boolean {
@@ -143,7 +143,7 @@ function declarationLeadingCommentContains(path: NodePath, comment: string): boo
 
   if (
     variableDeclaration.node.leadingComments?.find(
-      (commentItem) => commentItem.value.trim() === comment
+      (commentItem) => commentItem.value.trim() === comment,
     )
   ) {
     return true
@@ -152,7 +152,7 @@ function declarationLeadingCommentContains(path: NodePath, comment: string): boo
   // If the declaration is exported, the comment lies on the parent of the export declaration
   if (
     variableDeclaration.parent.leadingComments?.find(
-      (commentItem) => commentItem.value.trim() === comment
+      (commentItem) => commentItem.value.trim() === comment,
     )
   ) {
     return true
@@ -165,7 +165,7 @@ function isImportFrom(
   moduleName: string,
   importName: string,
   scope: Scope,
-  node: babelTypes.Expression | babelTypes.V8IntrinsicIdentifier
+  node: babelTypes.Expression | babelTypes.V8IntrinsicIdentifier,
 ) {
   if (babelTypes.isIdentifier(node)) {
     const binding = scope.getBinding(node.name)

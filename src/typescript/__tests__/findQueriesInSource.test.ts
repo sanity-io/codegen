@@ -28,7 +28,7 @@ describe('findQueries with the groq template', () => {
 
       expect(queryResult?.variable.id.name).toEqual('postQuery')
       expect(queryResult?.query).toEqual('*[_type == "author"]')
-      expect(queryResult?.variable).toMatchObject({start: 48, end: 86})
+      expect(queryResult?.variable).toMatchObject({end: 86, start: 48})
     })
 
     test('with variables', () => {
@@ -43,7 +43,7 @@ describe('findQueries with the groq template', () => {
       const [queryResult] = queries
 
       expect(queryResult?.query).toEqual('*[_type == "author"]')
-      expect(queryResult?.variable).toMatchObject({start: 77, end: 118})
+      expect(queryResult?.variable).toMatchObject({end: 118, start: 77})
     })
 
     test('with function', () => {

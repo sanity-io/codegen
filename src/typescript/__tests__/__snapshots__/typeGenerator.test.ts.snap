@@ -9,8 +9,8 @@ exports[`TypeGenerator > ArrayOf should be handled for a complex query too 1`] =
     _type: "section";
     title?: string;
   }>;
-  tags?: ArrayOf<Tag | Rag>;
   strings: Array<string>;
+  tags?: ArrayOf<Tag | Rag>;
 };
 
 export type Tag = {

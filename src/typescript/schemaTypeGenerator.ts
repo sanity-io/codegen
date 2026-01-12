@@ -24,8 +24,19 @@ import {type ExtractedQuery, type TypeEvaluationStats} from './types.js'
 
 export class SchemaTypeGenerator {
   public readonly schema: SchemaType
-  private tsTypes = new Map<string, t.TSType>()
+  evaluateQuery = weakMapMemo(
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    ({query}: Pick<ExtractedQuery, 'query'>): {stats: TypeEvaluationStats; tsType: t.TSType} => {
+      const ast = safeParseQuery(query)
+      const typeNode = typeEvaluate(ast, this.schema)
+      const tsType = this.generateTsType(typeNode)
+      const stats = walkAndCountQueryTypeNodeStats(typeNode)
+      return {stats, tsType}
+    },
+  )
   private identifiers = new Map<string, t.Identifier>()
+
+  private tsTypes = new Map<string, t.TSType>()
 
   constructor(schema: SchemaType) {
     this.schema = schema
@@ -41,9 +52,7 @@ export class SchemaTypeGenerator {
     }
 
     for (const type of schema) {
-      const currentIdentifierNames = new Set(
-        Array.from(this.identifiers.values()).map((id) => id.name),
-      )
+      const currentIdentifierNames = new Set([...this.identifiers.values()].map((id) => id.name))
       const uniqueIdentifier = getUniqueIdentifierForName(type.name, currentIdentifierNames)
       this.identifiers.set(type.name, uniqueIdentifier)
     }
@@ -53,62 +62,25 @@ export class SchemaTypeGenerator {
     }
   }
 
-  private generateTsType(
-    typeNode: TypeNode | TypeDeclarationSchemaType | DocumentSchemaType,
-  ): t.TSType {
-    switch (typeNode.type) {
-      case 'string': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.stringLiteral(typeNode.value))
-        }
-        return t.tsStringKeyword()
-      }
-      case 'number': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.numericLiteral(typeNode.value))
-        }
-        return t.tsNumberKeyword()
-      }
-      case 'boolean': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.booleanLiteral(typeNode.value))
-        }
-        return t.tsBooleanKeyword()
-      }
-      case 'unknown': {
-        return t.tsUnknownKeyword()
-      }
-      case 'document': {
-        return this.generateDocumentTsType(typeNode)
-      }
-      case 'type': {
-        return this.generateTsType(typeNode.value)
-      }
-      case 'array': {
-        return this.generateArrayTsType(typeNode)
-      }
-      case 'object': {
-        return this.generateObjectTsType(typeNode)
-      }
-      case 'union': {
-        return this.generateUnionTsType(typeNode)
-      }
-      case 'inline': {
-        return this.generateInlineTsType(typeNode)
-      }
-      case 'null': {
-        return t.tsNullKeyword()
-      }
+  getType(typeName: string): {id: t.Identifier; tsType: t.TSType} | undefined {
+    const tsType = this.tsTypes.get(typeName)
+    const id = this.identifiers.get(typeName)
+    if (tsType && id) return {id, tsType}
+    return undefined
+  }
 
-      default: {
-        throw new Error(
-          `Encountered unsupported node type "${
-            // @ts-expect-error This should never happen
-            typeNode.type
-          }" while generating schema types`,
-        )
-      }
+  hasType(typeName: string): boolean {
+    return this.tsTypes.has(typeName)
+  }
+
+  *[Symbol.iterator]() {
+    for (const {name} of this.schema) {
+      yield {name, ...this.getType(name)!}
     }
+  }
+
+  typeNames(): string[] {
+    return this.schema.map((schemaType) => schemaType.name)
   }
 
   /**
@@ -154,40 +126,54 @@ export class SchemaTypeGenerator {
     ])
   }
 
-  // Helper function used to generate TS types for object properties.
-  private generateTsObjectProperty(key: string, attribute: ObjectAttribute): t.TSPropertySignature {
-    const type = this.generateTsType(attribute.value)
-    const keyNode = isIdentifierName(key) ? t.identifier(key) : t.stringLiteral(key)
-    const propertySignature = t.tsPropertySignature(keyNode, t.tsTypeAnnotation(type))
-    propertySignature.optional = attribute.optional
+  // Helper function used to generate TS types for document type nodes.
+  private generateDocumentTsType(document: DocumentSchemaType): t.TSType {
+    const props = Object.entries(document.attributes).map(([key, node]) =>
+      this.generateTsObjectProperty(key, node),
+    )
 
-    return propertySignature
+    return t.tsTypeLiteral(props)
+  }
+
+  private generateInlineTsType(typeNode: InlineTypeNode): t.TSType {
+    const id = this.identifiers.get(typeNode.name)
+    if (!id) {
+      // Not found in schema, return unknown type
+      return t.addComment(
+        t.tsUnknownKeyword(),
+        'trailing',
+        ` Unable to locate the referenced type "${typeNode.name}" in schema`,
+        true,
+      )
+    }
+
+    return t.tsTypeReference(id)
   }
 
   // Helper function used to generate TS types for object type nodes.
   private generateObjectTsType(typeNode: ObjectTypeNode): t.TSType {
     const props: t.TSPropertySignature[] = []
-    Object.entries(typeNode.attributes).forEach(([key, attribute]) => {
+    for (const [key, attribute] of Object.entries(typeNode.attributes)) {
       props.push(this.generateTsObjectProperty(key, attribute))
-    })
+    }
     const rest = typeNode.rest
 
     if (rest) {
       switch (rest.type) {
-        case 'unknown': {
-          return t.tsUnknownKeyword()
-        }
-        case 'object': {
-          Object.entries(rest.attributes).forEach(([key, attribute]) => {
-            props.push(this.generateTsObjectProperty(key, attribute))
-          })
-          break
-        }
         case 'inline': {
           const resolved = this.generateInlineTsType(rest)
           // if object rest is unknown, we can't generate a type literal for it
           if (t.isTSUnknownKeyword(resolved)) return resolved
           return t.tsIntersectionType([t.tsTypeLiteral(props), resolved])
+        }
+        case 'object': {
+          for (const [key, attribute] of Object.entries(rest.attributes)) {
+            props.push(this.generateTsObjectProperty(key, attribute))
+          }
+          break
+        }
+        case 'unknown': {
+          return t.tsUnknownKeyword()
         }
         default: {
           // @ts-expect-error This should never happen
@@ -210,19 +196,72 @@ export class SchemaTypeGenerator {
     return t.tsTypeLiteral(props)
   }
 
-  private generateInlineTsType(typeNode: InlineTypeNode): t.TSType {
-    const id = this.identifiers.get(typeNode.name)
-    if (!id) {
-      // Not found in schema, return unknown type
-      return t.addComment(
-        t.tsUnknownKeyword(),
-        'trailing',
-        ` Unable to locate the referenced type "${typeNode.name}" in schema`,
-        true,
-      )
-    }
+  // Helper function used to generate TS types for object properties.
+  private generateTsObjectProperty(key: string, attribute: ObjectAttribute): t.TSPropertySignature {
+    const type = this.generateTsType(attribute.value)
+    const keyNode = isIdentifierName(key) ? t.identifier(key) : t.stringLiteral(key)
+    const propertySignature = t.tsPropertySignature(keyNode, t.tsTypeAnnotation(type))
+    propertySignature.optional = attribute.optional
 
-    return t.tsTypeReference(id)
+    return propertySignature
+  }
+
+  private generateTsType(
+    typeNode: DocumentSchemaType | TypeDeclarationSchemaType | TypeNode,
+  ): t.TSType {
+    switch (typeNode.type) {
+      case 'array': {
+        return this.generateArrayTsType(typeNode)
+      }
+      case 'boolean': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.booleanLiteral(typeNode.value))
+        }
+        return t.tsBooleanKeyword()
+      }
+      case 'document': {
+        return this.generateDocumentTsType(typeNode)
+      }
+      case 'inline': {
+        return this.generateInlineTsType(typeNode)
+      }
+      case 'null': {
+        return t.tsNullKeyword()
+      }
+      case 'number': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.numericLiteral(typeNode.value))
+        }
+        return t.tsNumberKeyword()
+      }
+      case 'object': {
+        return this.generateObjectTsType(typeNode)
+      }
+      case 'string': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.stringLiteral(typeNode.value))
+        }
+        return t.tsStringKeyword()
+      }
+      case 'type': {
+        return this.generateTsType(typeNode.value)
+      }
+      case 'union': {
+        return this.generateUnionTsType(typeNode)
+      }
+      case 'unknown': {
+        return t.tsUnknownKeyword()
+      }
+
+      default: {
+        throw new Error(
+          `Encountered unsupported node type "${
+            // @ts-expect-error This should never happen
+            typeNode.type
+          }" while generating schema types`,
+        )
+      }
+    }
   }
 
   // Helper function used to generate TS types for union type nodes.
@@ -231,53 +270,10 @@ export class SchemaTypeGenerator {
     if (typeNode.of.length === 1) return this.generateTsType(typeNode.of[0]!)
     return t.tsUnionType(typeNode.of.map((node) => this.generateTsType(node)))
   }
-
-  // Helper function used to generate TS types for document type nodes.
-  private generateDocumentTsType(document: DocumentSchemaType): t.TSType {
-    const props = Object.entries(document.attributes).map(([key, node]) =>
-      this.generateTsObjectProperty(key, node),
-    )
-
-    return t.tsTypeLiteral(props)
-  }
-
-  typeNames(): string[] {
-    return this.schema.map((schemaType) => schemaType.name)
-  }
-
-  getType(typeName: string): {tsType: t.TSType; id: t.Identifier} | undefined {
-    const tsType = this.tsTypes.get(typeName)
-    const id = this.identifiers.get(typeName)
-    if (tsType && id) return {tsType, id}
-    return undefined
-  }
-
-  hasType(typeName: string): boolean {
-    return this.tsTypes.has(typeName)
-  }
-
-  evaluateQuery = weakMapMemo(
-    ({query}: Pick<ExtractedQuery, 'query'>): {tsType: t.TSType; stats: TypeEvaluationStats} => {
-      const ast = safeParseQuery(query)
-      const typeNode = typeEvaluate(ast, this.schema)
-      const tsType = this.generateTsType(typeNode)
-      const stats = walkAndCountQueryTypeNodeStats(typeNode)
-      return {tsType, stats}
-    },
-  );
-
-  *[Symbol.iterator]() {
-    for (const {name} of this.schema) {
-      yield {name, ...this.getType(name)!}
-    }
-  }
 }
 
 export function walkAndCountQueryTypeNodeStats(typeNode: TypeNode): TypeEvaluationStats {
   switch (typeNode.type) {
-    case 'unknown': {
-      return {allTypes: 1, unknownTypes: 1, emptyUnions: 0}
-    }
     case 'array': {
       const acc = walkAndCountQueryTypeNodeStats(typeNode.of)
       acc.allTypes += 1 // count the array type itself
@@ -286,46 +282,51 @@ export function walkAndCountQueryTypeNodeStats(typeNode: TypeNode): TypeEvaluati
     case 'object': {
       // if the rest is unknown, we count it as one unknown type
       if (typeNode.rest && typeNode.rest.type === 'unknown') {
-        return {allTypes: 2, unknownTypes: 1, emptyUnions: 0} // count the object type itself as well
+        return {allTypes: 2, emptyUnions: 0, unknownTypes: 1} // count the object type itself as well
       }
 
       const restStats = typeNode.rest
         ? walkAndCountQueryTypeNodeStats(typeNode.rest)
-        : {allTypes: 0, unknownTypes: 0, emptyUnions: 0}
+        : {allTypes: 0, emptyUnions: 0, unknownTypes: 0}
 
       // count the object type itself
       restStats.allTypes += 1
 
-      return Object.values(typeNode.attributes).reduce((acc, attribute) => {
-        const {allTypes, unknownTypes, emptyUnions} = walkAndCountQueryTypeNodeStats(
+      const attrs = Object.values(typeNode.attributes)
+      let acc = restStats
+      for (const attribute of attrs) {
+        const {allTypes, emptyUnions, unknownTypes} = walkAndCountQueryTypeNodeStats(
           attribute.value,
         )
-        return {
+        acc = {
           allTypes: acc.allTypes + allTypes,
-          unknownTypes: acc.unknownTypes + unknownTypes,
           emptyUnions: acc.emptyUnions + emptyUnions,
+          unknownTypes: acc.unknownTypes + unknownTypes,
         }
-      }, restStats)
+      }
+      return acc
     }
     case 'union': {
       if (typeNode.of.length === 0) {
-        return {allTypes: 1, unknownTypes: 0, emptyUnions: 1}
+        return {allTypes: 1, emptyUnions: 1, unknownTypes: 0}
       }
 
-      return typeNode.of.reduce(
-        (acc, type) => {
-          const {allTypes, unknownTypes, emptyUnions} = walkAndCountQueryTypeNodeStats(type)
-          return {
-            allTypes: acc.allTypes + allTypes,
-            unknownTypes: acc.unknownTypes + unknownTypes,
-            emptyUnions: acc.emptyUnions + emptyUnions,
-          }
-        },
-        {allTypes: 1, unknownTypes: 0, emptyUnions: 0}, // count the union type itself
-      )
+      let acc = {allTypes: 1, emptyUnions: 0, unknownTypes: 0} // count the union type itself
+      for (const type of typeNode.of) {
+        const {allTypes, emptyUnions, unknownTypes} = walkAndCountQueryTypeNodeStats(type)
+        acc = {
+          allTypes: acc.allTypes + allTypes,
+          emptyUnions: acc.emptyUnions + emptyUnions,
+          unknownTypes: acc.unknownTypes + unknownTypes,
+        }
+      }
+      return acc
+    }
+    case 'unknown': {
+      return {allTypes: 1, emptyUnions: 0, unknownTypes: 1}
     }
     default: {
-      return {allTypes: 1, unknownTypes: 0, emptyUnions: 0}
+      return {allTypes: 1, emptyUnions: 0, unknownTypes: 0}
     }
   }
 }

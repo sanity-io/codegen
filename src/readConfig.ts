@@ -7,6 +7,9 @@ import * as z from 'zod'
  * @internal
  */
 export const configDefinition = z.object({
+  formatGeneratedCode: z.boolean().default(true),
+  generates: z.string().default('./sanity.types.ts'),
+  overloadClientMethods: z.boolean().default(true),
   path: z
     .string()
     .or(z.array(z.string()))
@@ -16,9 +19,6 @@ export const configDefinition = z.object({
       './sanity/**/*.{ts,tsx,js,jsx,mjs,cjs}',
     ]),
   schema: z.string().default('./schema.json'),
-  generates: z.string().default('./sanity.types.ts'),
-  formatGeneratedCode: z.boolean().default(true),
-  overloadClientMethods: z.boolean().default(true),
 })
 
 export type TypeGenConfig = z.infer<typeof configDefinition>
@@ -34,7 +34,7 @@ export type CodegenConfig = TypeGenConfig
  */
 export async function readConfig(path: string): Promise<TypeGenConfig> {
   try {
-    const content = await readFile(path, 'utf-8')
+    const content = await readFile(path, 'utf8')
     const json = json5.parse(content)
     return configDefinition.parseAsync(json)
   } catch (error) {

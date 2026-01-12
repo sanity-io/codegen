@@ -1,5 +1,6 @@
-import {parse, type TransformOptions} from '@babel/core'
 import type * as babelTypes from '@babel/types'
+
+import {parse, type TransformOptions} from '@babel/core'
 
 // helper function to parse a source file
 export function parseSourceFile(
@@ -54,7 +55,7 @@ function parseVue(source: string): string {
   // const matches = [...source.matchAll(scriptRegex)]
   // TODO: swap once this code runs in `ES2020`
   const matches = matchAllPolyfill(source, scriptRegex)
-  if (!matches.length) {
+  if (matches.length === 0) {
     return ''
   }
 
@@ -67,7 +68,7 @@ function parseSvelte(source: string): string {
   // const matches = [...source.matchAll(scriptRegex)]
   // TODO: swap once this code runs in `ES2020`
   const matches = matchAllPolyfill(source, scriptRegex)
-  if (!matches.length) {
+  if (matches.length === 0) {
     return ''
   }
 

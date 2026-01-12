@@ -11,8 +11,8 @@ export function normalizePath(root: string, filename: string) {
   return path.relative(root, resolved)
 }
 
-export function sanitizeIdentifier(input: string): string {
-  return `${input.replace(/^\d/, '_').replace(/[^$\w]+(.)/g, (_, char) => char.toUpperCase())}`
+function sanitizeIdentifier(input: string): string {
+  return `${input.replace(/^\d/, '_').replaceAll(/[^$\w]+(.)/g, (_, char) => char.toUpperCase())}`
 }
 
 /**
@@ -24,7 +24,7 @@ export function isIdentifierName(input: string): boolean {
   return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(input)
 }
 
-export function normalizeIdentifier(input: string): string {
+function normalizeIdentifier(input: string): string {
   const sanitized = sanitizeIdentifier(input)
   return `${sanitized.charAt(0).toUpperCase()}${sanitized.slice(1)}`
 }
@@ -41,7 +41,7 @@ export function getUniqueIdentifierForName(name: string, currentIdentifiers: Set
 }
 
 export function computeOnce<TReturn>(fn: () => TReturn): () => TReturn {
-  const ref = {current: undefined as TReturn | undefined, computed: false}
+  const ref = {computed: false, current: undefined as TReturn | undefined}
 
   return function () {
     if (ref.computed) return ref.current as TReturn
@@ -80,7 +80,7 @@ export function getFilterArrayUnionType(
     ...typeNode,
     of: {
       ...typeNode.of,
-      of: typeNode.of.of.filter(predicate),
+      of: typeNode.of.of.filter((unionTypeNode) => predicate(unionTypeNode)),
     },
   } satisfies ArrayTypeNode<UnionTypeNode>
 }

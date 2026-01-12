@@ -4,28 +4,28 @@ import {extractSliceParams, safeParseQuery} from '../safeParseQuery.js'
 
 const variants = [
   {
-    query: '*[_type == "author"][$from...$to]',
     params: ['from', 'to'],
+    query: '*[_type == "author"][$from...$to]',
   },
   {
-    query: '*[_type == "author"][$from...5]',
     params: ['from'],
+    query: '*[_type == "author"][$from...5]',
   },
   {
-    query: '*[_type == "author"][5...$to]',
     params: ['to'],
+    query: '*[_type == "author"][5...$to]',
   },
   {
-    query: '*[_type == "author"][3...5]',
     params: [],
+    query: '*[_type == "author"][3...5]',
   },
   {
-    query: '*[_type == "author"][3...5] { name, "foo": *[_type == "bar"][0...$limit] }',
     params: ['limit'],
+    query: '*[_type == "author"][3...5] { name, "foo": *[_type == "bar"][0...$limit] }',
   },
   {
-    query: '*[_type == "author"][$from...$to] { name, "foo": *[_type == "bar"][0...$limit] }',
     params: ['from', 'to', 'limit'],
+    query: '*[_type == "author"][$from...$to] { name, "foo": *[_type == "bar"][0...$limit] }',
   },
 ]
 describe('safeParseQuery', () => {

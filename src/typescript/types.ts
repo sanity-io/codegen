@@ -9,14 +9,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  */
 export interface TypeEvaluationStats {
   allTypes: number
-  unknownTypes: number
   emptyUnions: number
+  unknownTypes: number
 }
 
 interface QueryVariable {
   id: t.Identifier
-  start?: number
+
   end?: number
+  start?: number
 }
 
 /**
@@ -24,9 +25,9 @@ interface QueryVariable {
  * @public
  */
 export interface ExtractedQuery {
-  variable: QueryVariable
-  query: string
   filename: string
+  query: string
+  variable: QueryVariable
 }
 
 /**
@@ -34,9 +35,9 @@ export interface ExtractedQuery {
  * @public
  */
 export interface ExtractedModule {
+  errors: QueryExtractionError[]
   filename: string
   queries: ExtractedQuery[]
-  errors: QueryExtractionError[]
 }
 
 /**
@@ -44,11 +45,11 @@ export interface ExtractedModule {
  * @public
  */
 export interface EvaluatedQuery extends ExtractedQuery {
-  id: t.Identifier
-  code: string
-  tsType: t.TSType
   ast: t.ExportNamedDeclaration
+  code: string
+  id: t.Identifier
   stats: TypeEvaluationStats
+  tsType: t.TSType
 }
 
 /**
@@ -56,15 +57,16 @@ export interface EvaluatedQuery extends ExtractedQuery {
  * @public
  */
 export interface EvaluatedModule {
+  errors: (QueryEvaluationError | QueryExtractionError)[]
   filename: string
   queries: EvaluatedQuery[]
-  errors: (QueryExtractionError | QueryEvaluationError)[]
 }
 
 interface QueryExtractionErrorOptions {
-  variable?: QueryVariable
   cause: unknown
   filename: string
+
+  variable?: QueryVariable
 }
 
 /**
@@ -72,9 +74,9 @@ interface QueryExtractionErrorOptions {
  * @public
  */
 export class QueryExtractionError extends Error {
-  variable?: QueryVariable
   filename: string
-  constructor({variable, cause, filename}: QueryExtractionErrorOptions) {
+  variable?: QueryVariable
+  constructor({cause, filename, variable}: QueryExtractionErrorOptions) {
     super(
       `Error while extracting query ${variable ? `from variable '${variable.id.name}' ` : ''}in ${filename}: ${
         isRecord(cause) && typeof cause.message === 'string' ? cause.message : 'Unknown error'
@@ -88,9 +90,10 @@ export class QueryExtractionError extends Error {
 }
 
 interface QueryEvaluationErrorOptions {
-  variable?: QueryVariable
   cause: unknown
   filename: string
+
+  variable?: QueryVariable
 }
 
 /**
@@ -98,9 +101,9 @@ interface QueryEvaluationErrorOptions {
  * @public
  */
 export class QueryEvaluationError extends Error {
-  variable?: QueryVariable
   filename: string
-  constructor({variable, cause, filename}: QueryEvaluationErrorOptions) {
+  variable?: QueryVariable
+  constructor({cause, filename, variable}: QueryEvaluationErrorOptions) {
     super(
       `Error while evaluating query ${variable ? `from variable '${variable.id.name}' ` : ''}in ${filename}: ${
         isRecord(cause) && typeof cause.message === 'string' ? cause.message : 'Unknown error'

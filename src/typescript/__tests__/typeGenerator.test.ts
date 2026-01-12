@@ -1,13 +1,10 @@
-/* eslint-disable dot-notation */
-import EventEmitter from 'node:events'
-
 import * as t from '@babel/types'
 import {WorkerChannelReceiver, WorkerChannelReporter} from '@sanity/worker-channels'
 import {type SchemaType} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
 import {TypeGenerator, type TypegenWorkerChannel} from '../typeGenerator.js'
-import {type ExtractedModule, QueryExtractionError} from '../types.js'
+import {EvaluatedModule, type ExtractedModule, QueryExtractionError} from '../types.js'
 
 // TODO: replace with Array.fromAsync once we drop support for node v20
 // node v22 is the first version to support Array.fromAsync
@@ -25,74 +22,74 @@ async function* empty() {
 
 describe(TypeGenerator.name, () => {
   test('generates types and reports progress via a worker channel reporter', async () => {
-    const emitter = new EventEmitter()
+    const emitter = new EventTarget()
     const receiver = WorkerChannelReceiver.from<TypegenWorkerChannel>(emitter)
     const typeGenerator = new TypeGenerator()
 
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'foo',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'foo'}},
-          foo: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          foo: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'foo',
+        type: 'document',
       },
       {
-        type: 'document',
-        name: 'bar',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'bar'}},
-          bar: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          bar: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'bar',
+        type: 'document',
       },
     ]
 
     async function* getQueries(): AsyncGenerator<ExtractedModule> {
       yield {
+        errors: [],
         filename: '/src/foo.ts',
         queries: [
           {
             filename: '/src/foo.ts',
             query: '*[_type == "foo"]',
-            variable: {id: {type: 'Identifier', name: 'queryFoo'}},
+            variable: {id: {name: 'queryFoo', type: 'Identifier'}},
           },
         ],
-        errors: [],
       }
-      yield {filename: '/src/no-queries', queries: [], errors: []}
+      yield {errors: [], filename: '/src/no-queries', queries: []}
       yield {
-        filename: '/src/has-an-error',
-        queries: [],
         errors: [
           new QueryExtractionError({
-            filename: '/src/has-an-error',
             cause: new Error('Test Error'),
-            variable: {id: {type: 'Identifier', name: 'hadAnError'}},
+            filename: '/src/has-an-error',
+            variable: {id: {name: 'hadAnError', type: 'Identifier'}},
           }),
         ],
+        filename: '/src/has-an-error',
+        queries: [],
       }
       yield {
+        errors: [],
         filename: '/src/bar.ts',
         queries: [
           {
             filename: '/src/bar.ts',
             query: '*[_type == "bar"]',
-            variable: {id: {type: 'Identifier', name: 'queryBar'}},
+            variable: {id: {name: 'queryBar', type: 'Identifier'}},
           },
         ],
-        errors: [],
       }
     }
 
     const complete = typeGenerator.generateTypes({
+      queries: getQueries(),
+      reporter: WorkerChannelReporter.from<TypegenWorkerChannel>(emitter),
       root: '/src',
       schema,
       schemaPath: '/src/changed-path/my-schema-path.json',
-      queries: getQueries(),
-      reporter: WorkerChannelReporter.from<TypegenWorkerChannel>(emitter),
     })
 
     const {allSanitySchemaTypesDeclaration, internalReferenceSymbol, schemaTypeDeclarations} =
@@ -112,14 +109,14 @@ describe(TypeGenerator.name, () => {
     const [fooDeclaration, barDeclaration] = schemaTypeDeclarations
 
     expect(fooDeclaration).toMatchObject({
+      code: expect.stringContaining('export type Foo'),
       id: {name: 'Foo'},
       name: 'foo',
-      code: expect.stringContaining('export type Foo'),
     })
     expect(barDeclaration).toMatchObject({
+      code: expect.stringContaining('export type Bar'),
       id: {name: 'Bar'},
       name: 'bar',
-      code: expect.stringContaining('export type Bar'),
     })
 
     const evaluatedModules = await ArrayFromAsync(receiver.stream.evaluatedModules())
@@ -154,13 +151,13 @@ describe(TypeGenerator.name, () => {
 
     const {queryMapDeclaration} = await receiver.event.generatedQueryTypes()
 
-    expect(queryMapDeclaration.code).toMatchInlineSnapshot(`
+    expect(queryMapDeclaration.code).toMatchInlineSnapshot(String.raw`
       "// Query TypeMap
       import "@sanity/client";
       declare module "@sanity/client" {
         interface SanityQueries {
-          "*[_type == \\"foo\\"]": QueryFooResult;
-          "*[_type == \\"bar\\"]": QueryBarResult;
+          "*[_type == \"foo\"]": QueryFooResult;
+          "*[_type == \"bar\"]": QueryBarResult;
         }
       }
 
@@ -168,7 +165,7 @@ describe(TypeGenerator.name, () => {
     `)
 
     const {code} = await complete
-    expect(code).toMatchInlineSnapshot(`
+    expect(code).toMatchInlineSnapshot(String.raw`
       "// Source: changed-path/my-schema-path.json
       export type Foo = {
         _id: string;
@@ -212,8 +209,8 @@ describe(TypeGenerator.name, () => {
       import "@sanity/client";
       declare module "@sanity/client" {
         interface SanityQueries {
-          "*[_type == \\"foo\\"]": QueryFooResult;
-          "*[_type == \\"bar\\"]": QueryBarResult;
+          "*[_type == \"foo\"]": QueryFooResult;
+          "*[_type == \"bar\"]": QueryBarResult;
         }
       }
 
@@ -226,55 +223,56 @@ describe(TypeGenerator.name, () => {
 
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'foo',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'foo'}},
-          foo: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          foo: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'foo',
+        type: 'document',
       },
       {
-        type: 'document',
-        name: 'bar',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'bar'}},
-          bar: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          bar: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'bar',
+        type: 'document',
       },
     ]
 
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     async function* getQueries(): AsyncGenerator<ExtractedModule> {
       yield {
+        errors: [],
         filename: '/src/foo.ts',
         queries: [
           {
             filename: '/src/foo.ts',
             query: '*[_type == "foo"]',
-            variable: {id: {type: 'Identifier', name: 'queryFoo'}},
+            variable: {id: {name: 'queryFoo', type: 'Identifier'}},
           },
         ],
-        errors: [],
       }
       yield {
+        errors: [],
         filename: '/src/bar.ts',
         queries: [
           {
             filename: '/src/bar.ts',
             query: '*[_type == "bar"]',
-            variable: {id: {type: 'Identifier', name: 'queryBar'}},
+            variable: {id: {name: 'queryBar', type: 'Identifier'}},
           },
         ],
-        errors: [],
       }
     }
 
     const {code} = await typeGenerator.generateTypes({
-      root: '/src',
-      schema,
       overloadClientMethods: false,
       queries: getQueries(),
+      root: '/src',
+      schema,
     })
 
     expect(code).toMatchInlineSnapshot(`
@@ -325,22 +323,22 @@ describe(TypeGenerator.name, () => {
 
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'foo',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'foo'}},
-          foo: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          foo: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'foo',
+        type: 'document',
       },
       {
-        type: 'document',
-        name: 'bar',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'bar'}},
-          bar: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+          bar: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
         },
+        name: 'bar',
+        type: 'document',
       },
     ]
 
@@ -395,40 +393,40 @@ describe(TypeGenerator.name, () => {
 
     const schema1: SchemaType = [
       {
-        type: 'document',
-        name: 'doc1',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'doc1'}},
         },
+        name: 'doc1',
+        type: 'document',
       },
     ]
 
     const schema2: SchemaType = [
       {
-        type: 'document',
-        name: 'doc2',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'doc2'}},
         },
+        name: 'doc2',
+        type: 'document',
       },
     ]
 
     const options1 = {
-      schema: schema1,
-      root: '/test-root',
       queries: empty(),
+      root: '/test-root',
+      schema: schema1,
     }
 
     const options2 = {
-      schema: schema2,
-      root: '/test-root',
       queries: empty(),
+      root: '/test-root',
+      schema: schema2,
     }
 
-    const emitter1 = new EventEmitter()
-    const emitter2 = new EventEmitter()
+    const emitter1 = new EventTarget()
+    const emitter2 = new EventTarget()
     const receiver1 = WorkerChannelReceiver.from<TypegenWorkerChannel>(emitter1)
     const receiver2 = WorkerChannelReceiver.from<TypegenWorkerChannel>(emitter2)
     const reporter1 = WorkerChannelReporter.from<TypegenWorkerChannel>(emitter1)
@@ -454,16 +452,17 @@ describe(TypeGenerator.name, () => {
 
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'testDoc',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'testDoc'}},
         },
+        name: 'testDoc',
+        type: 'document',
       },
     ]
 
     const stableQuery: ExtractedModule = {
+      errors: [],
       filename: '/src/test.ts',
       queries: [
         {
@@ -472,7 +471,6 @@ describe(TypeGenerator.name, () => {
           variable: {id: t.identifier('testQuery')},
         },
       ],
-      errors: [],
     }
 
     async function* getQueries() {
@@ -480,35 +478,36 @@ describe(TypeGenerator.name, () => {
     }
 
     const options = {
-      schema,
       root: '/test-root',
+      schema,
     }
 
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const createReporterReceiver = () => {
-      const emitter = new EventEmitter()
+      const emitter = new EventTarget()
       const receiver = WorkerChannelReceiver.from<TypegenWorkerChannel>(emitter)
       const reporter = WorkerChannelReporter.from<TypegenWorkerChannel>(emitter)
       return {receiver, reporter}
     }
 
-    const [e1, e2, e3] = Array.from({length: 4}).map(createReporterReceiver)
+    const [e1, e2, e3] = Array.from({length: 4}).map(() => createReporterReceiver())
 
     const r1 = await typeGenerator.generateTypes({
       ...options,
-      reporter: e1?.reporter,
       queries: getQueries(),
+      reporter: e1?.reporter,
     })
     const r2 = await typeGenerator.generateTypes({
       ...options,
-      reporter: e2?.reporter,
       queries: getQueries(),
+      reporter: e2?.reporter,
     })
     const r3 = await typeGenerator.generateTypes({
       ...options,
+      queries: getQueries(),
+      reporter: e3?.reporter,
       // shallow copy the schema
       schema: [...schema],
-      reporter: e3?.reporter,
-      queries: getQueries(),
     })
 
     // should be identical because the content did not change and these are strings
@@ -528,9 +527,15 @@ describe(TypeGenerator.name, () => {
     // the last one should be different because the schema changed
     expect(s2?.schemaTypeDeclarations).not.toBe(s3?.schemaTypeDeclarations)
 
-    const m1 = await ArrayFromAsync(e1?.receiver.stream.evaluatedModules()!)
-    const m2 = await ArrayFromAsync(e2?.receiver.stream.evaluatedModules()!)
-    const m3 = await ArrayFromAsync(e3?.receiver.stream.evaluatedModules()!)
+    const m1 = await ArrayFromAsync(
+      e1?.receiver.stream.evaluatedModules() as AsyncIterable<EvaluatedModule>,
+    )
+    const m2 = await ArrayFromAsync(
+      e2?.receiver.stream.evaluatedModules() as AsyncIterable<EvaluatedModule>,
+    )
+    const m3 = await ArrayFromAsync(
+      e3?.receiver.stream.evaluatedModules() as AsyncIterable<EvaluatedModule>,
+    )
 
     // none of these will be the same because the array itself is generated on each call
     expect(m1).not.toBe(m2)
@@ -558,18 +563,34 @@ describe(TypeGenerator.name, () => {
   test('should use ArrayMember generic for objects in arrays', async () => {
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'post',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
-          // Inline object array
-          sections: {
+          // Arrays with both inline objects and other types should result in a union between Array and ArrayOf
+          mixed: {
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
-                type: 'object',
+                of: [
+                  // These should be a union wrapped in an Array
+                  {type: 'number'},
+                  {type: 'string'},
+                  {type: 'null'},
+
+                  // While this one should be in an ArrayOf
+                  {name: 'tag', type: 'inline'},
+                ],
+                type: 'union',
+              },
+              type: 'array',
+            },
+          },
+          // Inline object array
+          sections: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              of: {
                 attributes: {
                   _key: {
                     type: 'objectAttribute',
@@ -580,72 +601,55 @@ describe(TypeGenerator.name, () => {
                     value: {type: 'string', value: 'section'},
                   },
                   title: {
+                    optional: true,
                     type: 'objectAttribute',
                     value: {type: 'string'},
-                    optional: true,
                   },
                 },
+                type: 'object',
               },
-            },
-            optional: true,
-          },
-          // Array of reusable types
-          tags: {
-            type: 'objectAttribute',
-            value: {
               type: 'array',
-              of: {
-                type: 'union',
-                of: [
-                  {
-                    type: 'inline',
-                    name: 'tag',
-                  },
-                  {
-                    type: 'inline',
-                    name: 'rag',
-                  },
-                ],
-              },
             },
-            optional: true,
           },
           // Arrays of strings
           strings: {
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
                 type: 'string',
               },
+              type: 'array',
             },
           },
-          // Arrays with both inline objects and other types should result in a union between Array and ArrayOf
-          mixed: {
+          // Array of reusable types
+          tags: {
+            optional: true,
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
-                type: 'union',
                 of: [
-                  // These should be a union wrapped in an Array
-                  {type: 'number'},
-                  {type: 'string'},
-                  {type: 'null'},
-
-                  // While this one should be in an ArrayOf
-                  {type: 'inline', name: 'tag'},
+                  {
+                    name: 'tag',
+                    type: 'inline',
+                  },
+                  {
+                    name: 'rag',
+                    type: 'inline',
+                  },
                 ],
+                type: 'union',
               },
+              type: 'array',
             },
           },
         },
+        name: 'post',
+        type: 'document',
       },
       {
-        type: 'type',
         name: 'tag',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _key: {
               type: 'objectAttribute',
@@ -656,18 +660,18 @@ describe(TypeGenerator.name, () => {
               value: {type: 'string', value: 'tag'},
             },
             label: {
+              optional: true,
               type: 'objectAttribute',
               value: {type: 'string'},
-              optional: true,
             },
           },
+          type: 'object',
         },
       },
       {
-        type: 'type',
         name: 'rag',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _key: {
               type: 'objectAttribute',
@@ -678,11 +682,12 @@ describe(TypeGenerator.name, () => {
               value: {type: 'string', value: 'rag'},
             },
             color: {
+              optional: true,
               type: 'objectAttribute',
               value: {type: 'string'},
-              optional: true,
             },
           },
+          type: 'object',
         },
       },
     ]
@@ -694,14 +699,14 @@ describe(TypeGenerator.name, () => {
       "export type Post = {
         _id: string;
         _type: "post";
+        mixed: Array<number | string | null> | ArrayOf<Tag>;
         sections?: Array<{
           _key: string;
           _type: "section";
           title?: string;
         }>;
-        tags?: ArrayOf<Tag | Rag>;
         strings: Array<string>;
-        mixed: Array<number | string | null> | ArrayOf<Tag>;
+        tags?: ArrayOf<Tag | Rag>;
       };
 
       export type Tag = {
@@ -731,18 +736,15 @@ describe(TypeGenerator.name, () => {
   test('ArrayOf should be handled for a complex query too', async () => {
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'post',
         attributes: {
           _id: {type: 'objectAttribute', value: {type: 'string'}},
           _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
           // Inline object array
           sections: {
+            optional: true,
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
-                type: 'object',
                 attributes: {
                   _key: {
                     type: 'objectAttribute',
@@ -753,53 +755,55 @@ describe(TypeGenerator.name, () => {
                     value: {type: 'string', value: 'section'},
                   },
                   title: {
+                    optional: true,
                     type: 'objectAttribute',
                     value: {type: 'string'},
-                    optional: true,
                   },
                 },
+                type: 'object',
               },
-            },
-            optional: true,
-          },
-          // Array of reusable types
-          tags: {
-            type: 'objectAttribute',
-            value: {
               type: 'array',
-              of: {
-                type: 'union',
-                of: [
-                  {
-                    type: 'inline',
-                    name: 'tag',
-                  },
-                  {
-                    type: 'inline',
-                    name: 'rag',
-                  },
-                ],
-              },
             },
-            optional: true,
           },
           // Arrays of strings
           strings: {
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
                 type: 'string',
               },
+              type: 'array',
+            },
+          },
+          // Array of reusable types
+          tags: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              of: {
+                of: [
+                  {
+                    name: 'tag',
+                    type: 'inline',
+                  },
+                  {
+                    name: 'rag',
+                    type: 'inline',
+                  },
+                ],
+                type: 'union',
+              },
+              type: 'array',
             },
           },
         },
+        name: 'post',
+        type: 'document',
       },
       {
-        type: 'type',
         name: 'tag',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _key: {
               type: 'objectAttribute',
@@ -810,18 +814,18 @@ describe(TypeGenerator.name, () => {
               value: {type: 'string', value: 'tag'},
             },
             label: {
+              optional: true,
               type: 'objectAttribute',
               value: {type: 'string'},
-              optional: true,
             },
           },
+          type: 'object',
         },
       },
       {
-        type: 'type',
         name: 'rag',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _key: {
               type: 'objectAttribute',
@@ -832,17 +836,20 @@ describe(TypeGenerator.name, () => {
               value: {type: 'string', value: 'rag'},
             },
             color: {
+              optional: true,
               type: 'objectAttribute',
               value: {type: 'string'},
-              optional: true,
             },
           },
+          type: 'object',
         },
       },
     ]
 
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     async function* getQueries(): AsyncGenerator<ExtractedModule> {
       yield {
+        errors: [],
         filename: '/src/foo.ts',
         queries: [
           {
@@ -854,19 +861,18 @@ describe(TypeGenerator.name, () => {
               },
               "surpriseField": coalesce(tags[_type == "rag"], *[_type == 'post'][0].strings, 123)
             }`,
-            variable: {id: {type: 'Identifier', name: 'STRANGE_QUERY'}},
+            variable: {id: {name: 'STRANGE_QUERY', type: 'Identifier'}},
           },
         ],
-        errors: [],
       }
     }
 
     const typeGenerator = new TypeGenerator()
     const {code} = await typeGenerator.generateTypes({
-      root: '/src',
-      schema,
       overloadClientMethods: false,
       queries: getQueries(),
+      root: '/src',
+      schema,
     })
 
     expect(code).toMatchSnapshot()
@@ -875,20 +881,16 @@ describe(TypeGenerator.name, () => {
   test('should handle required image array member', async () => {
     const schema: SchemaType = [
       {
-        type: 'document',
-        name: 'author',
         attributes: {
           images: {
             type: 'objectAttribute',
             value: {
-              type: 'array',
               of: {
-                type: 'object',
                 attributes: {
                   asset: {
+                    optional: false, // <-- exported with --enforce-required-fields
                     type: 'objectAttribute',
                     value: {
-                      type: 'object',
                       attributes: {
                         _ref: {
                           type: 'objectAttribute',
@@ -905,14 +907,18 @@ describe(TypeGenerator.name, () => {
                         },
                       },
                       dereferencesTo: 'sanity.imageAsset',
+                      type: 'object',
                     },
-                    optional: false, // <-- exported with --enforce-required-fields
                   },
                 },
+                type: 'object',
               },
+              type: 'array',
             },
           },
         },
+        name: 'author',
+        type: 'document',
       },
     ]
 

@@ -77,7 +77,7 @@ describe('findQueriesInPath', () => {
       const base: ExtractedQuery[] = []
       beforeAll(async () => {
         // create 1 000 files with the same query, but different variable
-        for (let i = 0; i < 1_000; i++) {
+        for (let i = 0; i < 1000; i++) {
           const randomFilename = Math.random().toString(36).slice(7)
           await writeFile(
             path.join(tmpDir, `${randomFilename}.ts`),
@@ -98,7 +98,7 @@ describe('findQueriesInPath', () => {
           path: path.join(tmpDir, '*.ts'),
         })
         for await (const result of queries) {
-          if (result.errors.length) {
+          if (result.errors.length > 0) {
             const [error] = result.errors
             throw error
           }
@@ -109,7 +109,7 @@ describe('findQueriesInPath', () => {
 
       afterAll(async () => {
         // cleanup
-        await rm(tmpDir, {recursive: true, force: true})
+        await rm(tmpDir, {force: true, recursive: true})
       })
 
       for (let i = 0; i < 10; i++) {
@@ -124,7 +124,7 @@ describe('findQueriesInPath', () => {
             `import {defineQuery} from 'groq'\n`,
           )
           for await (const result of queries) {
-            if (result.errors.length) {
+            if (result.errors.length > 0) {
               const [error] = result.errors
               throw error
             }
