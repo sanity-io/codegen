@@ -80,6 +80,7 @@
     "rimraf": "^5.0.10",
     "vitest": "^4.0.16"
   },
+  "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=20.19 <22 || >=22.12"
   },
@@ -87,4 +88,3 @@
     "access": "public"
   }
 }
-
