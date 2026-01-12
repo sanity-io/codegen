@@ -1,19 +1,19 @@
-export {type CodegenConfig, configDefinition, readConfig, type TypeGenConfig} from '../readConfig'
-export {readSchema} from '../readSchema'
-export {safeParseQuery} from '../safeParseQuery'
-export {findQueriesInPath} from '../typescript/findQueriesInPath'
-export {findQueriesInSource} from '../typescript/findQueriesInSource'
-export {getResolver} from '../typescript/moduleResolver'
-export {registerBabel} from '../typescript/registerBabel'
+export {type CodegenConfig, configDefinition, readConfig, type TypeGenConfig} from '../readConfig.js'
+export {readSchema} from '../readSchema.js'
+export {safeParseQuery} from '../safeParseQuery.js'
+export {findQueriesInPath} from '../typescript/findQueriesInPath.js'
+export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
+export {getResolver} from '../typescript/moduleResolver.js'
+export {registerBabel} from '../typescript/registerBabel.js'
 export {
   type GenerateTypesOptions,
   TypeGenerator,
   type TypegenWorkerChannel,
-} from '../typescript/typeGenerator'
+} from '../typescript/typeGenerator.js'
 export {
   type EvaluatedModule,
   type EvaluatedQuery,
   type ExtractedModule,
   type ExtractedQuery,
   QueryExtractionError,
-} from '../typescript/types'
+} from '../typescript/types.js'

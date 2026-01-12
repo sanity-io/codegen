@@ -1,1 +1,1 @@
-export * from './exportVar'
+export * from './exportVar.js'

@@ -6,7 +6,7 @@ import {Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 import createDebug from 'debug'
 
-import {parseSourceFile} from './parseSource'
+import {parseSourceFile} from './parseSource.js'
 
 const debug = createDebug('sanity:codegen:findQueries:debug')
 
@@ -123,7 +123,7 @@ export function resolveExpression({
     FUNCTION_WRAPPER_ALLOW_LIST.includes(node.callee.name)
   ) {
     return resolveExpression({
-      node: node.arguments[0],
+      node: node.arguments[0]!,
       scope,
       filename,
       file,
@@ -439,7 +439,7 @@ function resolveImportSpecifier({
             babelConfig,
           })
         } catch (e) {
-          if (e.cause !== `noBinding:${importName}`) throw e
+          if ((e as Error).cause !== `noBinding:${importName}`) throw e
         }
       }
     },

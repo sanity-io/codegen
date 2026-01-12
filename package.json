@@ -69,6 +69,7 @@
     "@types/babel__generator": "^7.27.0",
     "@types/babel__register": "^7.17.3",
     "@types/babel__traverse": "^7.28.0",
+    "prettier-plugin-packagejson": "^2.5.20",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.19.28",
     "@typescript/native-preview": "7.0.0-dev.20260111.1",

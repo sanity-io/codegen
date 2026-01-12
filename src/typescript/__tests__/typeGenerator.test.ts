@@ -1,17 +1,13 @@
 /* eslint-disable dot-notation */
 import EventEmitter from 'node:events'
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 
 import * as t from '@babel/types'
 import {WorkerChannelReceiver, WorkerChannelReporter} from '@sanity/worker-channels'
 import {type SchemaType} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
-import {TypeGenerator, type TypegenWorkerChannel} from '../typeGenerator'
-import {type ExtractedModule, QueryExtractionError} from '../types'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import {TypeGenerator, type TypegenWorkerChannel} from '../typeGenerator.js'
+import {type ExtractedModule, QueryExtractionError} from '../types.js'
 
 // TODO: replace with Array.fromAsync once we drop support for node v20
 // node v22 is the first version to support Array.fromAsync
@@ -132,29 +128,29 @@ describe(TypeGenerator.name, () => {
     const [foo, noQueries, hasAnError, bar] = evaluatedModules
 
     // Assert foo module
-    expect(foo.filename).toBe('/src/foo.ts')
-    expect(foo.queries).toHaveLength(1)
-    expect(foo.errors).toHaveLength(0)
-    expect(foo.queries[0].variable.id.name).toBe('queryFoo')
-    expect(foo.queries[0].query).toBe('*[_type == "foo"]')
+    expect(foo?.filename).toBe('/src/foo.ts')
+    expect(foo?.queries).toHaveLength(1)
+    expect(foo?.errors).toHaveLength(0)
+    expect(foo?.queries[0]?.variable.id.name).toBe('queryFoo')
+    expect(foo?.queries[0]?.query).toBe('*[_type == "foo"]')
 
     // Assert noQueries module
-    expect(noQueries.filename).toBe('/src/no-queries')
-    expect(noQueries.queries).toHaveLength(0)
-    expect(noQueries.errors).toHaveLength(0)
+    expect(noQueries?.filename).toBe('/src/no-queries')
+    expect(noQueries?.queries).toHaveLength(0)
+    expect(noQueries?.errors).toHaveLength(0)
 
     // Assert hasAnError module
-    expect(hasAnError.filename).toBe('/src/has-an-error')
-    expect(hasAnError.queries).toHaveLength(0)
-    expect(hasAnError.errors).toHaveLength(1)
-    expect(hasAnError.errors[0]).toBeInstanceOf(QueryExtractionError)
+    expect(hasAnError?.filename).toBe('/src/has-an-error')
+    expect(hasAnError?.queries).toHaveLength(0)
+    expect(hasAnError?.errors).toHaveLength(1)
+    expect(hasAnError?.errors[0]).toBeInstanceOf(QueryExtractionError)
 
     // Assert bar module
-    expect(bar.filename).toBe('/src/bar.ts')
-    expect(bar.queries).toHaveLength(1)
-    expect(bar.errors).toHaveLength(0)
-    expect(bar.queries[0].variable.id.name).toBe('queryBar')
-    expect(bar.queries[0].query).toBe('*[_type == "bar"]')
+    expect(bar?.filename).toBe('/src/bar.ts')
+    expect(bar?.queries).toHaveLength(1)
+    expect(bar?.errors).toHaveLength(0)
+    expect(bar?.queries[0]?.variable.id.name).toBe('queryBar')
+    expect(bar?.queries[0]?.query).toBe('*[_type == "bar"]')
 
     const {queryMapDeclaration} = await receiver.event.generatedQueryTypes()
 
@@ -449,8 +445,8 @@ describe(TypeGenerator.name, () => {
 
     // Should return different instances when schema changes
     expect(schemaTypeDeclarations1).not.toBe(schemaTypeDeclarations2)
-    expect(schemaTypeDeclarations1[0].name).toBe('doc1')
-    expect(schemaTypeDeclarations2[0].name).toBe('doc2')
+    expect(schemaTypeDeclarations1[0]?.name).toBe('doc1')
+    expect(schemaTypeDeclarations2[0]?.name).toBe('doc2')
   })
 
   test('memoization works correctly with multiple generateTypes calls', async () => {
@@ -499,19 +495,19 @@ describe(TypeGenerator.name, () => {
 
     const r1 = await typeGenerator.generateTypes({
       ...options,
-      reporter: e1.reporter,
+      reporter: e1?.reporter,
       queries: getQueries(),
     })
     const r2 = await typeGenerator.generateTypes({
       ...options,
-      reporter: e2.reporter,
+      reporter: e2?.reporter,
       queries: getQueries(),
     })
     const r3 = await typeGenerator.generateTypes({
       ...options,
       // shallow copy the schema
       schema: [...schema],
-      reporter: e3.reporter,
+      reporter: e3?.reporter,
       queries: getQueries(),
     })
 
@@ -523,18 +519,18 @@ describe(TypeGenerator.name, () => {
     expect(r1.ast).not.toBe(r2.ast)
     expect(r2.ast).not.toBe(r3.ast)
 
-    const s1 = await e1.receiver.event.generatedSchemaTypes()
-    const s2 = await e2.receiver.event.generatedSchemaTypes()
-    const s3 = await e3.receiver.event.generatedSchemaTypes()
+    const s1 = await e1?.receiver.event.generatedSchemaTypes()
+    const s2 = await e2?.receiver.event.generatedSchemaTypes()
+    const s3 = await e3?.receiver.event.generatedSchemaTypes()
 
     // the first two should be the same because the content did not change
-    expect(s1.schemaTypeDeclarations).toBe(s2.schemaTypeDeclarations)
+    expect(s1?.schemaTypeDeclarations).toBe(s2?.schemaTypeDeclarations)
     // the last one should be different because the schema changed
-    expect(s2.schemaTypeDeclarations).not.toBe(s3.schemaTypeDeclarations)
+    expect(s2?.schemaTypeDeclarations).not.toBe(s3?.schemaTypeDeclarations)
 
-    const m1 = await ArrayFromAsync(e1.receiver.stream.evaluatedModules())
-    const m2 = await ArrayFromAsync(e2.receiver.stream.evaluatedModules())
-    const m3 = await ArrayFromAsync(e3.receiver.stream.evaluatedModules())
+    const m1 = await ArrayFromAsync(e1?.receiver.stream.evaluatedModules()!)
+    const m2 = await ArrayFromAsync(e2?.receiver.stream.evaluatedModules()!)
+    const m3 = await ArrayFromAsync(e3?.receiver.stream.evaluatedModules()!)
 
     // none of these will be the same because the array itself is generated on each call
     expect(m1).not.toBe(m2)
@@ -551,12 +547,12 @@ describe(TypeGenerator.name, () => {
     // won't be the same
     expect(t2).not.toBe(t3)
 
-    const q1 = await e1.receiver.event.generatedQueryTypes()
-    const q2 = await e2.receiver.event.generatedQueryTypes()
-    const q3 = await e3.receiver.event.generatedQueryTypes()
+    const q1 = await e1?.receiver.event.generatedQueryTypes()
+    const q2 = await e2?.receiver.event.generatedQueryTypes()
+    const q3 = await e3?.receiver.event.generatedQueryTypes()
 
-    expect(q1.queryMapDeclaration).not.toBe(q2.queryMapDeclaration)
-    expect(q2.queryMapDeclaration).not.toBe(q3.queryMapDeclaration)
+    expect(q1?.queryMapDeclaration).not.toBe(q2?.queryMapDeclaration)
+    expect(q2?.queryMapDeclaration).not.toBe(q3?.queryMapDeclaration)
   })
 
   test('should use ArrayMember generic for objects in arrays', async () => {

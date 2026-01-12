@@ -12,15 +12,15 @@ import {
   type UnionTypeNode,
 } from 'groq-js'
 
-import {safeParseQuery} from '../safeParseQuery'
-import {ARRAY_OF, INTERNAL_REFERENCE_SYMBOL} from './constants'
+import {safeParseQuery} from '../safeParseQuery.js'
+import {ARRAY_OF, INTERNAL_REFERENCE_SYMBOL} from './constants.js'
 import {
   getFilterArrayUnionType,
   getUniqueIdentifierForName,
   isIdentifierName,
   weakMapMemo,
-} from './helpers'
-import {type ExtractedQuery, type TypeEvaluationStats} from './types'
+} from './helpers.js'
+import {type ExtractedQuery, type TypeEvaluationStats} from './types.js'
 
 export class SchemaTypeGenerator {
   public readonly schema: SchemaType
@@ -228,7 +228,7 @@ export class SchemaTypeGenerator {
   // Helper function used to generate TS types for union type nodes.
   private generateUnionTsType(typeNode: UnionTypeNode): t.TSType {
     if (typeNode.of.length === 0) return t.tsNeverKeyword()
-    if (typeNode.of.length === 1) return this.generateTsType(typeNode.of[0])
+    if (typeNode.of.length === 1) return this.generateTsType(typeNode.of[0]!)
     return t.tsUnionType(typeNode.of.map((node) => this.generateTsType(node)))
   }
 

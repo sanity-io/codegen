@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {extractSliceParams, safeParseQuery} from '../safeParseQuery'
+import {extractSliceParams, safeParseQuery} from '../safeParseQuery.js'
 
 const variants = [
   {

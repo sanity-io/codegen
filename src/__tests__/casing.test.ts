@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {resultSuffix} from '../casing'
+import {resultSuffix} from '../casing.js'
 
 describe('resultSuffix', () => {
   it('appends Result for camelCase', () => {

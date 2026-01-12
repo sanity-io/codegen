@@ -4,8 +4,8 @@ import path from 'node:path'
 
 import {afterAll, beforeAll, describe, expect, suite, test} from 'vitest'
 
-import {findQueriesInPath} from '../findQueriesInPath'
-import {type ExtractedQuery} from '../types'
+import {findQueriesInPath} from '../findQueriesInPath.js'
+import {type ExtractedQuery} from '../types.js'
 
 // TODO: replace with `Array.fromAsync` once we stop testing with Node 20
 // Array.fromAsync is available from Node v22
@@ -24,12 +24,12 @@ describe('findQueriesInPath', () => {
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
-    expect(res[0].queries.length).toBe(1)
+    expect(res[0]?.queries.length).toBe(1)
     // filename can be either of these two
     // depending on whether the test is run from the monorepo root or from the package root
-    expect(res[0].filename.endsWith('src/typescript/__tests__/fixtures/source1.ts')).toBe(true)
-    expect(res[0].queries[0].variable.id.name).toBe('postQuery')
-    expect(res[0].queries[0].query).toBe('*[_type == "author"]')
+    expect(res[0]?.filename.endsWith('src/typescript/__tests__/fixtures/source1.ts')).toBe(true)
+    expect(res[0]?.queries[0]?.variable.id.name).toBe('postQuery')
+    expect(res[0]?.queries[0]?.query).toBe('*[_type == "author"]')
   })
   test('should return an error if the query name already exists', async () => {
     const {queries} = findQueriesInPath({
@@ -58,7 +58,7 @@ describe('findQueriesInPath', () => {
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
-    expect(res[0].queries.length).toBe(1)
+    expect(res[0]?.queries.length).toBe(1)
   })
   test('can find and handle .vue files', async () => {
     const {queries} = findQueriesInPath({
@@ -66,7 +66,7 @@ describe('findQueriesInPath', () => {
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
-    expect(res[0].queries.length).toBe(1)
+    expect(res[0]?.queries.length).toBe(1)
   })
 
   // This test is skipped by default because it's very slow, but it's useful to have it around for testing deterministic behavior

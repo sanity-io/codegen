@@ -4,10 +4,10 @@ import {type NodePath, type TransformOptions, traverse} from '@babel/core'
 import {type Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 
-import {getBabelConfig} from '../getBabelConfig'
-import {resolveExpression} from './expressionResolvers'
-import {parseSourceFile} from './parseSource'
-import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types'
+import {getBabelConfig} from '../getBabelConfig.js'
+import {resolveExpression} from './expressionResolvers.js'
+import {parseSourceFile} from './parseSource.js'
+import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types.js'
 
 const require = createRequire(import.meta.url)
 
@@ -33,7 +33,7 @@ export function findQueriesInSource(
   source: string,
   filename: string,
   babelConfig: TransformOptions = getBabelConfig(),
-  resolver: NodeJS.RequireResolve = require.resolve,
+  resolver: NodeJS.RequireResolve = require.resolve
 ): ExtractedModule {
   const queries: ExtractedQuery[] = []
   const errors: QueryExtractionError[] = []
@@ -143,7 +143,7 @@ function declarationLeadingCommentContains(path: NodePath, comment: string): boo
 
   if (
     variableDeclaration.node.leadingComments?.find(
-      (commentItem) => commentItem.value.trim() === comment,
+      (commentItem) => commentItem.value.trim() === comment
     )
   ) {
     return true
@@ -152,7 +152,7 @@ function declarationLeadingCommentContains(path: NodePath, comment: string): boo
   // If the declaration is exported, the comment lies on the parent of the export declaration
   if (
     variableDeclaration.parent.leadingComments?.find(
-      (commentItem) => commentItem.value.trim() === comment,
+      (commentItem) => commentItem.value.trim() === comment
     )
   ) {
     return true
@@ -165,7 +165,7 @@ function isImportFrom(
   moduleName: string,
   importName: string,
   scope: Scope,
-  node: babelTypes.Expression | babelTypes.V8IntrinsicIdentifier,
+  node: babelTypes.Expression | babelTypes.V8IntrinsicIdentifier
 ) {
   if (babelTypes.isIdentifier(node)) {
     const binding = scope.getBinding(node.name)

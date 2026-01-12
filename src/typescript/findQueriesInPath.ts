@@ -4,10 +4,10 @@ import {type TransformOptions} from '@babel/core'
 import createDebug from 'debug'
 import glob from 'globby'
 
-import {getBabelConfig} from '../getBabelConfig'
-import {findQueriesInSource} from './findQueriesInSource'
-import {getResolver} from './moduleResolver'
-import {type ExtractedModule, QueryExtractionError} from './types'
+import {getBabelConfig} from '../getBabelConfig.js'
+import {findQueriesInSource} from './findQueriesInSource.js'
+import {getResolver} from './moduleResolver.js'
+import {type ExtractedModule, QueryExtractionError} from './types.js'
 
 const debug = createDebug('sanity:codegen:findQueries:debug')
 

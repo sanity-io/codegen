@@ -5,22 +5,22 @@ import {type WorkerChannel, type WorkerChannelReporter} from '@sanity/worker-cha
 import {type SchemaType} from 'groq-js'
 import {createSelector} from 'reselect'
 
-import {resultSuffix} from '../casing'
+import {resultSuffix} from '../casing.js'
 import {
   ALL_SANITY_SCHEMA_TYPES,
   ARRAY_OF,
   INTERNAL_REFERENCE_SYMBOL,
   SANITY_QUERIES,
-} from './constants'
-import {computeOnce, generateCode, getUniqueIdentifierForName, normalizePath} from './helpers'
-import {SchemaTypeGenerator} from './schemaTypeGenerator'
+} from './constants.js'
+import {computeOnce, generateCode, getUniqueIdentifierForName, normalizePath} from './helpers.js'
+import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
   type EvaluatedModule,
   type EvaluatedQuery,
   type ExtractedModule,
   QueryEvaluationError,
   type QueryExtractionError,
-} from './types'
+} from './types.js'
 
 export type TypegenWorkerChannel = WorkerChannel.Definition<{
   generatedSchemaTypes: WorkerChannel.Event<{

@@ -3,7 +3,7 @@ import * as t from '@babel/types'
 import {type TypeNode} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
-import {SchemaTypeGenerator, walkAndCountQueryTypeNodeStats} from '../schemaTypeGenerator'
+import {SchemaTypeGenerator, walkAndCountQueryTypeNodeStats} from '../schemaTypeGenerator.js'
 
 function generateCode(node: t.Node | undefined) {
   if (!node) throw new Error('Node is undefined')
@@ -134,9 +134,9 @@ describe(SchemaTypeGenerator.name, () => {
     expect(new Set(typeNames).size).toBe(3) // ensure type names are unique
 
     const [first, second, third] = Array.from(schema)
-    expect(first.id.name).toBe('FooBar')
-    expect(second.id.name).toBe('FooBar_2')
-    expect(third.id.name).toBe('FooBar_3')
+    expect(first?.id.name).toBe('FooBar')
+    expect(second?.id.name).toBe('FooBar_2')
+    expect(third?.id.name).toBe('FooBar_3')
   })
 
   describe('generateTsType', () => {

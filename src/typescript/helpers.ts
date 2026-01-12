@@ -4,7 +4,7 @@ import {CodeGenerator} from '@babel/generator'
 import * as t from '@babel/types'
 import {type ArrayTypeNode, type UnionTypeNode} from 'groq-js'
 
-import {RESERVED_IDENTIFIERS} from './constants'
+import {RESERVED_IDENTIFIERS} from './constants.js'
 
 export function normalizePath(root: string, filename: string) {
   const resolved = path.resolve(root, filename)

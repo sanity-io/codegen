@@ -1,7 +1,7 @@
 import {type TransformOptions} from '@babel/core'
 import register from '@babel/register'
 
-import {getBabelConfig} from '../getBabelConfig'
+import {getBabelConfig} from '../getBabelConfig.js'
 
 /**
  * Register Babel with the given options

@@ -2,7 +2,7 @@ import {fileURLToPath} from 'node:url'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import {findQueriesInSource} from '../findQueriesInSource'
+import {findQueriesInSource} from '../findQueriesInSource.js'
 
 const __filename = fileURLToPath(import.meta.url)
 
@@ -103,7 +103,7 @@ describe('findQueries with the groq template', () => {
   test('should import', () => {
     const source = `
       import { groq } from "groq";
-      import {foo}  from "./fixtures/exportVar";
+      import {foo}  from "./fixtures/exportVar.js";
       const postQuery = groq\`*[_type == "\${foo}"]\`
       const res = sanity.fetch(postQueryResult);
     `
@@ -116,7 +116,7 @@ describe('findQueries with the groq template', () => {
   test('should import, subdirectory', () => {
     const source = `
       import { groq } from "groq";
-      import {foo}  from "../__tests__/fixtures/exportVar";
+      import {foo}  from "../__tests__/fixtures/exportVar.js";
       const postQuery = groq\`*[_type == "\${foo}"]\`
       const res = sanity.fetch(postQueryResult);
     `
@@ -129,7 +129,7 @@ describe('findQueries with the groq template', () => {
   test('can import sequence of files', () => {
     const source = `
       import { groq } from "groq";
-      import {query}  from "../__tests__/fixtures/importSeq1";
+      import {query}  from "../__tests__/fixtures/importSeq1.js";
       const someQuery = groq\`$\{query}\`
     `
     const {queries} = findQueriesInSource(source, __filename, undefined)
@@ -141,18 +141,18 @@ describe('findQueries with the groq template', () => {
   test('can import deeply nested files', () => {
     const source = `
       import { groq } from "groq";
-      import {query}  from "../__tests__/fixtures/deeplyNestedImports/root";
+      import {query}  from "../__tests__/fixtures/deeplyNestedImports/root.js";
       const someQuery = groq\`$\{query}\`
     `
     const {queries} = findQueriesInSource(source, __filename, undefined)
     expect(queries.length).toBe(1)
-    expect(queries[0].query).toBe('* { foo, bar }')
+    expect(queries[0]?.query).toBe('* { foo, bar }')
   })
 
   test('can import from export *', () => {
     const source = `
       import { groq } from "groq";
-      import {foo}  from "./fixtures/exportStar";
+      import {foo}  from "./fixtures/exportStar.js";
       const postQuery = groq\`*[_type == "\${foo}"]\`
       const res = sanity.fetch(postQueryResult);
     `
@@ -298,7 +298,7 @@ describe('findQueries with defineQuery', () => {
   test('should import', () => {
     const source = `
       import {defineQuery} from "groq";
-      import {foo}  from "./fixtures/exportVar";
+      import {foo}  from "./fixtures/exportVar.js";
       const postQuery = defineQuery(\`*[_type == "\${foo}"]\`);
       const res = sanity.fetch(postQueryResult);
     `
@@ -311,7 +311,7 @@ describe('findQueries with defineQuery', () => {
   test('should import, subdirectory', () => {
     const source = `
       import {defineQuery} from "groq";
-      import {foo}  from "../__tests__/fixtures/exportVar";
+      import {foo}  from "../__tests__/fixtures/exportVar.js";
       const postQuery = defineQuery(\`*[_type == "\${foo}"]\`);
       const res = sanity.fetch(postQueryResult);
     `
@@ -324,7 +324,7 @@ describe('findQueries with defineQuery', () => {
   test('can import sequence of files', () => {
     const source = `
       import {defineQuery} from "groq";
-      import {query}  from "../__tests__/fixtures/importSeq1";
+      import {query}  from "../__tests__/fixtures/importSeq1.js";
       const someQuery = defineQuery(\`$\{query}\`);
     `
     const {queries} = findQueriesInSource(source, __filename, undefined)
@@ -336,18 +336,18 @@ describe('findQueries with defineQuery', () => {
   test('can import deeply nested files', () => {
     const source = `
       import {defineQuery} from "groq";
-      import {query}  from "../__tests__/fixtures/deeplyNestedImports/root";
+      import {query}  from "../__tests__/fixtures/deeplyNestedImports/root.js";
       const someQuery = defineQuery(\`$\{query}\`);
     `
     const {queries} = findQueriesInSource(source, __filename, undefined)
     expect(queries.length).toBe(1)
-    expect(queries[0].query).toBe('* { foo, bar }')
+    expect(queries[0]?.query).toBe('* { foo, bar }')
   })
 
   test('should detect defineQuery calls that have been required', () => {
     const source = `
       const {defineQuery} = require("groq");
-      import {query}  from "../__tests__/fixtures/importSeq1";
+      import {query}  from "../__tests__/fixtures/importSeq1.js";
       const someQuery = defineQuery(\`$\{query}\`);
     `
     const {queries} = findQueriesInSource(source, __filename, undefined)

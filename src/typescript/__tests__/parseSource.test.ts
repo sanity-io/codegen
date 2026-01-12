@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {parseSourceFile} from '../parseSource'
+import {parseSourceFile} from '../parseSource.js'
 
 describe('parseSource', () => {
   test('should parse astro', () => {
