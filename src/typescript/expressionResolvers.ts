@@ -12,8 +12,8 @@ const debug = createDebug('sanity:codegen:findQueries:debug')
 
 type resolveExpressionReturnType = string
 
-const TAGGED_TEMPLATE_ALLOW_LIST = ['groq']
-const FUNCTION_WRAPPER_ALLOW_LIST = ['defineQuery']
+const TAGGED_TEMPLATE_ALLOW_LIST = new Set(['groq'])
+const FUNCTION_WRAPPER_ALLOW_LIST = new Set(['defineQuery'])
 
 /**
  * resolveExpression takes a node and returns the resolved value of the expression.
@@ -21,23 +21,23 @@ const FUNCTION_WRAPPER_ALLOW_LIST = ['defineQuery']
  * @internal
  */
 export function resolveExpression({
-  node,
-  file,
-  scope,
-  filename,
-  resolver,
   babelConfig,
-  params = [],
+  file,
+  filename,
   fnArguments = [],
+  node,
+  params = [],
+  resolver,
+  scope,
 }: {
-  node: babelTypes.Node
-  file: babelTypes.File
-  scope: Scope
-  filename: string
-  resolver: NodeJS.RequireResolve
   babelConfig: TransformOptions
-  params?: babelTypes.Node[]
+  file: babelTypes.File
+  filename: string
   fnArguments?: babelTypes.Node[]
+  node: babelTypes.Node
+  params?: babelTypes.Node[]
+  resolver: NodeJS.RequireResolve
+  scope: Scope
 }): resolveExpressionReturnType {
   debug(
     `Resolving node ${node.type} in ${filename}:${node.loc?.start.line}:${node.loc?.start.column}`,
@@ -45,31 +45,31 @@ export function resolveExpression({
   if (
     babelTypes.isTaggedTemplateExpression(node) &&
     babelTypes.isIdentifier(node.tag) &&
-    TAGGED_TEMPLATE_ALLOW_LIST.includes(node.tag.name)
+    TAGGED_TEMPLATE_ALLOW_LIST.has(node.tag.name)
   ) {
     return resolveExpression({
-      node: node.quasi,
-      scope,
-      filename,
-      file,
-      resolver,
-      params,
       babelConfig,
+      file,
+      filename,
       fnArguments,
+      node: node.quasi,
+      params,
+      resolver,
+      scope,
     })
   }
 
   if (babelTypes.isTemplateLiteral(node)) {
     const resolvedExpressions = node.expressions.map((expression) =>
       resolveExpression({
-        node: expression,
-        scope,
-        filename,
-        file,
-        resolver,
-        params,
         babelConfig,
+        file,
+        filename,
         fnArguments,
+        node: expression,
+        params,
+        resolver,
+        scope,
       }),
     )
     return node.quasis
@@ -89,14 +89,14 @@ export function resolveExpression({
 
   if (babelTypes.isIdentifier(node)) {
     return resolveIdentifier({
-      node,
-      scope,
-      filename,
-      file,
-      resolver,
-      fnArguments,
       babelConfig,
+      file,
+      filename,
+      fnArguments,
+      node,
       params,
+      resolver,
+      scope,
     })
   }
 
@@ -107,42 +107,42 @@ export function resolveExpression({
     }
 
     return resolveExpression({
-      node: init,
-      fnArguments,
-      scope,
-      filename,
-      file,
       babelConfig,
+      file,
+      filename,
+      fnArguments,
+      node: init,
       resolver,
+      scope,
     })
   }
 
   if (
     babelTypes.isCallExpression(node) &&
     babelTypes.isIdentifier(node.callee) &&
-    FUNCTION_WRAPPER_ALLOW_LIST.includes(node.callee.name)
+    FUNCTION_WRAPPER_ALLOW_LIST.has(node.callee.name)
   ) {
     return resolveExpression({
-      node: node.arguments[0]!,
-      scope,
-      filename,
-      file,
-      resolver,
       babelConfig,
+      file,
+      filename,
+      node: node.arguments[0]!,
       params,
+      resolver,
+      scope,
     })
   }
 
   if (babelTypes.isCallExpression(node)) {
     return resolveCallExpression({
-      node,
-      scope,
-      filename,
-      file,
-      resolver,
       babelConfig,
-      params,
+      file,
+      filename,
       fnArguments,
+      node,
+      params,
+      resolver,
+      scope,
     })
   }
 
@@ -153,64 +153,64 @@ export function resolveExpression({
   ) {
     const newScope = new Scope(scope.path, scope)
 
-    params.forEach((param, i) => {
+    for (const [i, param] of params.entries()) {
       newScope.push({
         id: param as babelTypes.LVal,
         init: fnArguments[i] as babelTypes.Expression | undefined,
       })
-    })
+    }
 
     return resolveExpression({
+      babelConfig,
+      file,
+      filename,
+      fnArguments,
       node: node.body,
       params: node.params,
-      fnArguments,
-      scope: newScope,
-      filename,
-      file,
-      babelConfig,
       resolver,
+      scope: newScope,
     })
   }
 
   if (babelTypes.isNewExpression(node)) {
     return resolveExpression({
-      node: node.callee,
-      scope,
-      filename,
-      file,
       babelConfig,
+      file,
+      filename,
+      node: node.callee,
       resolver,
+      scope,
     })
   }
 
   if (babelTypes.isImportDefaultSpecifier(node) || babelTypes.isImportSpecifier(node)) {
-    return resolveImportSpecifier({node, file, scope, filename, fnArguments, resolver, babelConfig})
+    return resolveImportSpecifier({babelConfig, file, filename, fnArguments, node, resolver, scope})
   }
 
   if (babelTypes.isAssignmentPattern(node)) {
     return resolveExpression({
-      node: node.right,
-      scope,
-      filename,
-      file,
-      resolver,
-      params,
       babelConfig,
+      file,
+      filename,
       fnArguments,
+      node: node.right,
+      params,
+      resolver,
+      scope,
     })
   }
 
   // Handle TypeScript type assertions (e.g., `'foo' as string`)
   if (babelTypes.isTSAsExpression(node)) {
     return resolveExpression({
-      node: node.expression,
-      scope,
-      filename,
-      file,
-      resolver,
-      params,
       babelConfig,
+      file,
+      filename,
       fnArguments,
+      node: node.expression,
+      params,
+      resolver,
+      scope,
     })
   }
 
@@ -220,23 +220,23 @@ export function resolveExpression({
 }
 
 function resolveIdentifier({
-  node,
-  scope,
-  filename,
-  file,
-  resolver,
   babelConfig,
+  file,
+  filename,
   fnArguments,
+  node,
   params,
+  resolver,
+  scope,
 }: {
-  node: babelTypes.Identifier
-  file: babelTypes.File
-  scope: Scope
-  filename: string
-  resolver: NodeJS.RequireResolve
   babelConfig: TransformOptions
+  file: babelTypes.File
+  filename: string
   fnArguments: babelTypes.Node[]
+  node: babelTypes.Identifier
   params: babelTypes.Node[]
+  resolver: NodeJS.RequireResolve
+  scope: Scope
 }): resolveExpressionReturnType {
   const paramIndex = params.findIndex(
     (param) =>
@@ -246,19 +246,19 @@ function resolveIdentifier({
         node.name === param.left.name),
   )
   let argument = fnArguments[paramIndex]
-  if (!argument && paramIndex >= 0 && babelTypes.isAssignmentPattern(params[paramIndex])) {
+  if (!argument && paramIndex !== -1 && babelTypes.isAssignmentPattern(params[paramIndex])) {
     argument = params[paramIndex].right
   }
   if (argument && babelTypes.isLiteral(argument)) {
     return resolveExpression({
-      node: argument,
-      scope,
-      filename,
-      file,
-      resolver,
-      params,
       babelConfig,
+      file,
+      filename,
       fnArguments,
+      node: argument,
+      params,
+      resolver,
+      scope,
     })
   }
   const binding = scope.getBinding(node.name)
@@ -272,14 +272,14 @@ function resolveIdentifier({
       }
     }
     return resolveExpression({
-      node: binding.path.node,
-      params,
-      fnArguments,
-      scope,
-      filename,
       babelConfig,
       file,
+      filename,
+      fnArguments,
+      node: binding.path.node,
+      params,
       resolver,
+      scope,
     })
   }
 
@@ -289,51 +289,51 @@ function resolveIdentifier({
 }
 
 function resolveCallExpression({
-  node,
-  scope,
-  filename,
-  file,
-  resolver,
   babelConfig,
+  file,
+  filename,
+  node,
   params,
+  resolver,
+  scope,
 }: {
-  node: babelTypes.CallExpression
-  file: babelTypes.File
-  scope: Scope
-  filename: string
-  resolver: NodeJS.RequireResolve
   babelConfig: TransformOptions
+  file: babelTypes.File
+  filename: string
   fnArguments: babelTypes.Node[]
+  node: babelTypes.CallExpression
   params: babelTypes.Node[]
+  resolver: NodeJS.RequireResolve
+  scope: Scope
 }): resolveExpressionReturnType {
   const {callee} = node
   return resolveExpression({
-    node: callee,
-    scope,
-    filename,
-    file,
-    resolver,
     babelConfig,
-    params,
+    file,
+    filename,
     fnArguments: node.arguments,
+    node: callee,
+    params,
+    resolver,
+    scope,
   })
 }
 
 function resolveImportSpecifier({
-  node,
+  babelConfig,
   file,
   filename,
   fnArguments,
+  node,
   resolver,
-  babelConfig,
 }: {
-  node: babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier | babelTypes.ExportSpecifier
+  babelConfig: TransformOptions
   file: babelTypes.File
-  scope: Scope
   filename: string
   fnArguments: babelTypes.Node[]
+  node: babelTypes.ExportSpecifier | babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
   resolver: NodeJS.RequireResolve
-  babelConfig: TransformOptions
+  scope: Scope
 }): resolveExpressionReturnType {
   let importDeclaration: babelTypes.ImportDeclaration | undefined
   traverse(file, {
@@ -342,12 +342,10 @@ function resolveImportSpecifier({
         return
       }
       for (const specifier of n.node.specifiers) {
-        if (babelTypes.isImportDefaultSpecifier(specifier)) {
-          if (specifier.local.loc?.identifierName === node.local.name) {
+        if (babelTypes.isImportDefaultSpecifier(specifier) && specifier.local.loc?.identifierName === node.local.name) {
             importDeclaration = n.node
             break
           }
-        }
         if (specifier.local.name === node.local.name) {
           importDeclaration = n.node
         }
@@ -384,13 +382,13 @@ function resolveImportSpecifier({
   const binding = newScope.getBinding(importName)
   if (binding) {
     return resolveExpression({
-      node: binding.path.node,
-      file: tree,
-      scope: newScope,
-      fnArguments,
       babelConfig,
+      file: tree,
       filename: resolvedFile,
+      fnArguments,
+      node: binding.path.node,
       resolver,
+      scope: newScope,
     })
   }
 
@@ -416,12 +414,12 @@ function resolveImportSpecifier({
 
   if (namedExport && newImportName) {
     return resolveExportSpecifier({
-      node: namedExport,
-      importName: newImportName,
+      babelConfig,
       filename: resolvedFile,
       fnArguments,
+      importName: newImportName,
+      node: namedExport,
       resolver,
-      babelConfig,
     })
   }
 
@@ -431,12 +429,12 @@ function resolveImportSpecifier({
       if (p.node.type === 'ExportAllDeclaration') {
         try {
           result = resolveExportSpecifier({
-            node: p.node,
-            importName,
+            babelConfig,
             filename: resolvedFile,
             fnArguments,
+            importName,
+            node: p.node,
             resolver,
-            babelConfig,
           })
         } catch (e) {
           if ((e as Error).cause !== `noBinding:${importName}`) throw e
@@ -450,18 +448,18 @@ function resolveImportSpecifier({
 }
 
 function resolveExportSpecifier({
-  node,
-  importName,
+  babelConfig,
   filename,
   fnArguments,
-  babelConfig,
+  importName,
+  node,
   resolver,
 }: {
-  node: babelTypes.ExportNamedDeclaration | babelTypes.ExportAllDeclaration
-  importName: string
+  babelConfig: TransformOptions
   filename: string
   fnArguments: babelTypes.Node[]
-  babelConfig: TransformOptions
+  importName: string
+  node: babelTypes.ExportAllDeclaration | babelTypes.ExportNamedDeclaration
   resolver: NodeJS.RequireResolve
 }): resolveExpressionReturnType {
   if (!node.source) {
@@ -487,13 +485,13 @@ function resolveExportSpecifier({
   const binding = newScope.getBinding(importName)
   if (binding) {
     return resolveExpression({
-      node: binding.path.node,
-      file: tree,
-      scope: newScope,
-      filename: resolvedFile,
       babelConfig,
-      resolver,
+      file: tree,
+      filename: resolvedFile,
       fnArguments,
+      node: binding.path.node,
+      resolver,
+      scope: newScope,
     })
   }
 

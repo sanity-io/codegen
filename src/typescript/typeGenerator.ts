@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/consistent-function-scoping */
 import process from 'node:process'
 
 import * as t from '@babel/types'
@@ -23,38 +24,39 @@ import {
 } from './types.js'
 
 export type TypegenWorkerChannel = WorkerChannel.Definition<{
-  generatedSchemaTypes: WorkerChannel.Event<{
-    internalReferenceSymbol: {
-      id: t.Identifier
-      code: string
-      ast: t.ExportNamedDeclaration
-    }
-    schemaTypeDeclarations: {
-      id: t.Identifier
-      name: string
-      code: string
-      tsType: t.TSType
-      ast: t.ExportNamedDeclaration
-    }[]
-    allSanitySchemaTypesDeclaration: {
-      code: string
-      id: t.Identifier
-      ast: t.ExportNamedDeclaration
-    }
-  }>
   evaluatedModules: WorkerChannel.Stream<EvaluatedModule>
   generatedQueryTypes: WorkerChannel.Event<{
-    queryMapDeclaration: {code: string; ast: t.Program}
+    queryMapDeclaration: {ast: t.Program; code: string}
+  }>
+  generatedSchemaTypes: WorkerChannel.Event<{
+    allSanitySchemaTypesDeclaration: {
+      ast: t.ExportNamedDeclaration
+      code: string
+      id: t.Identifier
+    }
+    internalReferenceSymbol: {
+      ast: t.ExportNamedDeclaration
+      code: string
+      id: t.Identifier
+    }
+    schemaTypeDeclarations: {
+      ast: t.ExportNamedDeclaration
+      code: string
+      id: t.Identifier
+      name: string
+      tsType: t.TSType
+    }[]
   }>
 }>
 
 export interface GenerateTypesOptions {
   schema: SchemaType
-  schemaPath?: string
-  queries?: AsyncIterable<ExtractedModule>
-  root?: string
+
   overloadClientMethods?: boolean
+  queries?: AsyncIterable<ExtractedModule>
   reporter?: WorkerChannelReporter<TypegenWorkerChannel>
+  root?: string
+  schemaPath?: string
 }
 
 type GetEvaluatedModulesOptions = GenerateTypesOptions & {
@@ -70,19 +72,51 @@ type GetQueryMapDeclarationOptions = GenerateTypesOptions & {
  * @beta
  */
 export class TypeGenerator {
-  private getInternalReferenceSymbolDeclaration = computeOnce(() => {
-    const typeOperator = t.tsTypeOperator(t.tsSymbolKeyword(), 'unique')
+  private getSchemaTypeGenerator = createSelector(
+    [(options: GenerateTypesOptions) => options.schema],
 
-    const id = INTERNAL_REFERENCE_SYMBOL
-    id.typeAnnotation = t.tsTypeAnnotation(typeOperator)
+    (schema) => new SchemaTypeGenerator(schema),
+  )
 
-    const declaration = t.variableDeclaration('const', [t.variableDeclarator(id)])
-    declaration.declare = true
-    const ast = t.exportNamedDeclaration(declaration)
-    const code = generateCode(ast)
+  private getSchemaTypeDeclarations = createSelector(
+    [
+      (options: GenerateTypesOptions) => options.root,
+      (options: GenerateTypesOptions) => options.schemaPath,
+      this.getSchemaTypeGenerator,
+    ],
 
-    return {id, code, ast}
-  })
+    (root = process.cwd(), schemaPath, schema) =>
+      [...schema].map(({id, name, tsType}, index) => {
+        const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
+        let ast = t.exportNamedDeclaration(typeAlias)
+
+        if (index === 0 && schemaPath) {
+          ast = t.addComments(ast, 'leading', [
+            {type: 'CommentLine', value: ` Source: ${normalizePath(root, schemaPath)}`},
+          ])
+        }
+        const code = generateCode(ast)
+        return {ast, code, id, name, tsType}
+      }),
+  )
+
+  private getAllSanitySchemaTypesDeclaration = createSelector(
+    [this.getSchemaTypeDeclarations],
+    (schemaTypes) => {
+      const ast = t.exportNamedDeclaration(
+        t.tsTypeAliasDeclaration(
+          ALL_SANITY_SCHEMA_TYPES,
+          null,
+          schemaTypes.length > 0
+            ? t.tsUnionType(schemaTypes.map(({id}) => t.tsTypeReference(id)))
+            : t.tsNeverKeyword(),
+        ),
+      )
+      const code = generateCode(ast)
+
+      return {ast, code, id: ALL_SANITY_SCHEMA_TYPES}
+    },
+  )
 
   private getArrayOfDeclaration = computeOnce(() => {
     // Creates: type ArrayOf<T> = Array<T & { _key: string }>;
@@ -105,59 +139,29 @@ export class TypeGenerator {
     )
     const code = generateCode(ast)
 
-    return {id: ARRAY_OF, code, ast}
+    return {ast, code, id: ARRAY_OF}
   })
 
-  private getSchemaTypeGenerator = createSelector(
-    [(options: GenerateTypesOptions) => options.schema],
-    (schema) => new SchemaTypeGenerator(schema),
-  )
+  private getInternalReferenceSymbolDeclaration = computeOnce(() => {
+    const typeOperator = t.tsTypeOperator(t.tsSymbolKeyword(), 'unique')
 
-  private getSchemaTypeDeclarations = createSelector(
-    [
-      (options: GenerateTypesOptions) => options.root,
-      (options: GenerateTypesOptions) => options.schemaPath,
-      this.getSchemaTypeGenerator,
-    ],
-    (root = process.cwd(), schemaPath, schema) =>
-      Array.from(schema).map(({id, name, tsType}, index) => {
-        const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
-        let ast = t.exportNamedDeclaration(typeAlias)
+    const id = INTERNAL_REFERENCE_SYMBOL
+    id.typeAnnotation = t.tsTypeAnnotation(typeOperator)
 
-        if (index === 0 && schemaPath) {
-          ast = t.addComments(ast, 'leading', [
-            {type: 'CommentLine', value: ` Source: ${normalizePath(root, schemaPath)}`},
-          ])
-        }
-        const code = generateCode(ast)
-        return {id, code, name, tsType, ast}
-      }),
-  )
+    const declaration = t.variableDeclaration('const', [t.variableDeclarator(id)])
+    declaration.declare = true
+    const ast = t.exportNamedDeclaration(declaration)
+    const code = generateCode(ast)
 
-  private getAllSanitySchemaTypesDeclaration = createSelector(
-    [this.getSchemaTypeDeclarations],
-    (schemaTypes) => {
-      const ast = t.exportNamedDeclaration(
-        t.tsTypeAliasDeclaration(
-          ALL_SANITY_SCHEMA_TYPES,
-          null,
-          schemaTypes.length
-            ? t.tsUnionType(schemaTypes.map(({id}) => t.tsTypeReference(id)))
-            : t.tsNeverKeyword(),
-        ),
-      )
-      const code = generateCode(ast)
-
-      return {id: ALL_SANITY_SCHEMA_TYPES, code, ast}
-    },
-  )
+    return {ast, code, id}
+  })
 
   private static async getEvaluatedModules({
-    root = process.cwd(),
-    reporter: report,
-    schemaTypeGenerator,
-    schemaTypeDeclarations,
     queries: extractedModules,
+    reporter: report,
+    root = process.cwd(),
+    schemaTypeDeclarations,
+    schemaTypeGenerator,
   }: GetEvaluatedModulesOptions) {
     if (!extractedModules) {
       report?.stream.evaluatedModules.end()
@@ -169,15 +173,15 @@ export class TypeGenerator {
 
     for await (const {filename, ...extractedModule} of extractedModules) {
       const queries: EvaluatedQuery[] = []
-      const errors: (QueryExtractionError | QueryEvaluationError)[] = [...extractedModule.errors]
+      const errors: (QueryEvaluationError | QueryExtractionError)[] = [...extractedModule.errors]
 
       for (const extractedQuery of extractedModule.queries) {
         const {variable} = extractedQuery
         try {
-          const {tsType, stats} = schemaTypeGenerator.evaluateQuery(extractedQuery)
+          const {stats, tsType} = schemaTypeGenerator.evaluateQuery(extractedQuery)
           const id = getUniqueIdentifierForName(resultSuffix(variable.id.name), currentIdentifiers)
           const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
-          const trimmedQuery = extractedQuery.query.replace(/(\r\n|\n|\r)/gm, '').trim()
+          const trimmedQuery = extractedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
           const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
             {type: 'CommentLine', value: ` Source: ${normalizePath(root, filename)}`},
             {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
@@ -185,9 +189,9 @@ export class TypeGenerator {
           ])
 
           const evaluatedQueryResult: EvaluatedQuery = {
-            id,
-            code: generateCode(ast),
             ast,
+            code: generateCode(ast),
+            id,
             stats,
             tsType,
             ...extractedQuery,
@@ -196,14 +200,14 @@ export class TypeGenerator {
           currentIdentifiers.add(id.name)
           queries.push(evaluatedQueryResult)
         } catch (cause) {
-          errors.push(new QueryEvaluationError({variable, cause, filename}))
+          errors.push(new QueryEvaluationError({cause, filename, variable}))
         }
       }
 
       const evaluatedModule: EvaluatedModule = {
+        errors,
         filename,
         queries,
-        errors,
       }
       report?.stream.evaluatedModules.emit(evaluatedModule)
       evaluatedModuleResults.push(evaluatedModule)
@@ -214,13 +218,13 @@ export class TypeGenerator {
   }
 
   private static async getQueryMapDeclaration({
-    overloadClientMethods = true,
     evaluatedModules,
+    overloadClientMethods = true,
   }: GetQueryMapDeclarationOptions) {
-    if (!overloadClientMethods) return {code: '', ast: t.program([])}
+    if (!overloadClientMethods) return {ast: t.program([]), code: ''}
 
     const queries = evaluatedModules.flatMap((module) => module.queries)
-    if (!queries.length) return {code: '', ast: t.program([])}
+    if (queries.length === 0) return {ast: t.program([]), code: ''}
 
     const typesByQuerystring: {[query: string]: string[]} = {}
     for (const {id, query} of queries) {
@@ -237,7 +241,7 @@ export class TypeGenerator {
           return t.tsPropertySignature(
             t.stringLiteral(query),
             t.tsTypeAnnotation(
-              types.length
+              types.length > 0
                 ? t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type))))
                 : t.tsNeverKeyword(),
             ),
@@ -259,7 +263,7 @@ export class TypeGenerator {
 
     const ast = t.program([clientImport, declareModule])
     const code = generateCode(ast)
-    return {code, ast}
+    return {ast, code}
   }
 
   async generateTypes(options: GenerateTypesOptions) {
@@ -270,9 +274,9 @@ export class TypeGenerator {
     const allSanitySchemaTypesDeclaration = this.getAllSanitySchemaTypesDeclaration(options)
 
     report?.event.generatedSchemaTypes({
+      allSanitySchemaTypesDeclaration,
       internalReferenceSymbol,
       schemaTypeDeclarations,
-      allSanitySchemaTypesDeclaration,
     })
 
     const program = t.program([])
@@ -313,6 +317,6 @@ export class TypeGenerator {
 
     report?.event.generatedQueryTypes({queryMapDeclaration})
 
-    return {code, ast: program}
+    return {ast: program, code}
   }
 }

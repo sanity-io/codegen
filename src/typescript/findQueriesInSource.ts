@@ -67,27 +67,27 @@ export function findQueriesInSource(
           return
         }
 
-        const {id, start, end} = node
+        const {end, id, start} = node
         const variable = {id, ...(start && {start}), ...(end && {end})}
 
         try {
           const query = resolveExpression({
-            node: init,
-            file,
-            scope,
             babelConfig,
+            file,
             filename,
+            node: init,
             resolver,
+            scope,
           })
-          queries.push({variable, query, filename})
+          queries.push({filename, query, variable})
         } catch (cause) {
-          errors.push(new QueryExtractionError({filename, variable, cause}))
+          errors.push(new QueryExtractionError({cause, filename, variable}))
         }
       }
     },
   })
 
-  return {filename, queries, errors}
+  return {errors, filename, queries}
 }
 
 function declarationLeadingCommentContains(path: NodePath, comment: string): boolean {

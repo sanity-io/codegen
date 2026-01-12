@@ -10,6 +10,6 @@ import {type SchemaType} from 'groq-js'
  * @beta
  **/
 export async function readSchema(path: string): Promise<SchemaType> {
-  const content = await readFile(path, 'utf-8')
+  const content = await readFile(path, 'utf8')
   return JSON.parse(content) // todo: ZOD validation?
 }

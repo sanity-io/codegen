@@ -23,7 +23,7 @@ export function resultSuffix(variableName: string): string {
   }
 
   // Fallback: clean weird chars and use camel-style suffix
-  const cleaned = variableName.replace(/[^A-Za-z0-9]/g, '')
+  const cleaned = variableName.replaceAll(/[^A-Za-z0-9]/g, '')
 
   return `${cleaned}Result`
 }

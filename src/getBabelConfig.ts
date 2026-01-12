@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  * @returns The path to the `babel.config.json` file
  * @internal
  */
-export function findBabelConfig(path: string): string {
+function findBabelConfig(path: string): string {
   const configPath = join(path, 'babel.config.json')
   if (existsSync(configPath)) {
     return configPath

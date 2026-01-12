@@ -14,27 +14,27 @@ describe(SchemaTypeGenerator.name, () => {
   test('takes in a schema and pre-computes all TS types and identifiers', () => {
     const schema = new SchemaTypeGenerator([
       {
-        type: 'type',
         name: 'foo',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _id: {type: 'objectAttribute', value: {type: 'string'}},
             _type: {type: 'objectAttribute', value: {type: 'string', value: 'foo'}},
-            foo: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+            foo: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
           },
+          type: 'object',
         },
       },
       {
-        type: 'type',
         name: 'bar',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {
             _id: {type: 'objectAttribute', value: {type: 'string'}},
             _type: {type: 'objectAttribute', value: {type: 'string', value: 'bar'}},
-            bar: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+            bar: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
           },
+          type: 'object',
         },
       },
     ])
@@ -43,7 +43,6 @@ describe(SchemaTypeGenerator.name, () => {
     expect(schema.getType('foo')).toEqual({
       id: {name: 'Foo', type: 'Identifier'},
       tsType: {
-        type: 'TSTypeLiteral',
         members: [
           {
             key: {name: '_id', type: 'Identifier'},
@@ -73,6 +72,7 @@ describe(SchemaTypeGenerator.name, () => {
             },
           },
         ],
+        type: 'TSTypeLiteral',
       },
     })
     expect(schema.hasType('baz')).toBe(false)
@@ -84,17 +84,17 @@ describe(SchemaTypeGenerator.name, () => {
       () =>
         new SchemaTypeGenerator([
           {
-            type: 'type',
             name: 'post',
+            type: 'type',
             value: {
-              type: 'object',
               attributes: {foo: {type: 'objectAttribute', value: {type: 'string'}}},
+              type: 'object',
             },
           },
           {
-            type: 'document',
-            name: 'post',
             attributes: {foo: {type: 'objectAttribute', value: {type: 'string'}}},
+            name: 'post',
+            type: 'document',
           },
         ]),
     ).toThrowErrorMatchingInlineSnapshot(
@@ -105,27 +105,27 @@ describe(SchemaTypeGenerator.name, () => {
   test('handles collisions when more than one type name sanitizes to the same identifier', () => {
     const schema = new SchemaTypeGenerator([
       {
-        type: 'type',
         name: 'foo.bar',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {foo: {type: 'objectAttribute', value: {type: 'string'}}},
+          type: 'object',
         },
       },
       {
-        type: 'type',
         name: 'foo-bar',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {bar: {type: 'objectAttribute', value: {type: 'number'}}},
+          type: 'object',
         },
       },
       {
-        type: 'type',
         name: 'foo--bar',
+        type: 'type',
         value: {
-          type: 'object',
           attributes: {baz: {type: 'objectAttribute', value: {type: 'number'}}},
+          type: 'object',
         },
       },
     ])
@@ -133,7 +133,7 @@ describe(SchemaTypeGenerator.name, () => {
     expect(typeNames.length).toBe(3)
     expect(new Set(typeNames).size).toBe(3) // ensure type names are unique
 
-    const [first, second, third] = Array.from(schema)
+    const [first, second, third] = [...schema]
     expect(first?.id.name).toBe('FooBar')
     expect(second?.id.name).toBe('FooBar_2')
     expect(third?.id.name).toBe('FooBar_3')
@@ -143,15 +143,15 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for strings', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'stringAlias',
+          type: 'type',
           value: {
             type: 'string',
           },
         },
         {
-          type: 'type',
           name: 'stringLiteralAlias',
+          type: 'type',
           value: {
             type: 'string',
             value: 'literalValue',
@@ -169,15 +169,15 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for numbers', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'numberAlias',
+          type: 'type',
           value: {
             type: 'number',
           },
         },
         {
-          type: 'type',
           name: 'numberLiteralAlias',
+          type: 'type',
           value: {
             type: 'number',
             value: 123,
@@ -195,15 +195,15 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for booleans', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'booleanAlias',
+          type: 'type',
           value: {
             type: 'boolean',
           },
         },
         {
-          type: 'type',
           name: 'booleanLiteralAlias',
+          type: 'type',
           value: {
             type: 'boolean',
             value: true,
@@ -221,8 +221,8 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for unknown', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'unknownAlias',
+          type: 'type',
           value: {
             type: 'unknown',
           },
@@ -237,8 +237,8 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for null', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'nullAlias',
+          type: 'type',
           value: {
             type: 'null',
           },
@@ -253,13 +253,13 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for arrays', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'arrayAlias',
+          type: 'type',
           value: {
-            type: 'array',
             of: {
               type: 'string',
             },
+            type: 'array',
           },
         },
       ])
@@ -272,16 +272,16 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for documents', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'document',
-          name: 'post',
           attributes: {
-            _id: {type: 'objectAttribute', value: {type: 'string'}},
-            _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
             _createdAt: {type: 'objectAttribute', value: {type: 'string'}},
-            _updatedAt: {type: 'objectAttribute', value: {type: 'string'}},
+            _id: {type: 'objectAttribute', value: {type: 'string'}},
             _rev: {type: 'objectAttribute', value: {type: 'string'}},
-            title: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+            _updatedAt: {type: 'objectAttribute', value: {type: 'string'}},
+            title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
           },
+          name: 'post',
+          type: 'document',
         },
       ])
 
@@ -289,11 +289,11 @@ describe(SchemaTypeGenerator.name, () => {
 
       expect(generateCode(post)).toMatchInlineSnapshot(`
         "{
-          _id: string;
-          _type: "post";
           _createdAt: string;
-          _updatedAt: string;
+          _id: string;
           _rev: string;
+          _type: "post";
+          _updatedAt: string;
           title?: string;
         }"
       `)
@@ -302,19 +302,19 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for unions', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'unionAlias',
-          value: {type: 'union', of: [{type: 'string'}, {type: 'number'}]},
+          type: 'type',
+          value: {of: [{type: 'string'}, {type: 'number'}], type: 'union'},
         },
         {
-          type: 'type',
           name: 'emptyUnionAlias',
-          value: {type: 'union', of: []},
+          type: 'type',
+          value: {of: [], type: 'union'},
         },
         {
-          type: 'type',
           name: 'unionOfOneAlias',
-          value: {type: 'union', of: [{type: 'string'}]},
+          type: 'type',
+          value: {of: [{type: 'string'}], type: 'union'},
         },
       ])
 
@@ -331,25 +331,25 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for inline types', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'inlineAlias',
-          value: {type: 'inline', name: 'person'},
+          type: 'type',
+          value: {name: 'person', type: 'inline'},
         },
         {
-          type: 'type',
           name: 'person',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {
-              name: {type: 'objectAttribute', value: {type: 'string'}},
               age: {type: 'objectAttribute', value: {type: 'number'}},
+              name: {type: 'objectAttribute', value: {type: 'string'}},
             },
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'inlineAliasWithNoMatchingType',
-          value: {type: 'inline', name: 'noMatchingType'},
+          type: 'type',
+          value: {name: 'noMatchingType', type: 'inline'},
         },
       ])
 
@@ -365,26 +365,26 @@ describe(SchemaTypeGenerator.name, () => {
     test('quotes non-identifier keys, preserves valid identifier keys', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'objectWithMixedKeys',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {
-              // Valid identifiers - should NOT be quoted
-              'normalKey': {type: 'objectAttribute', value: {type: 'string'}},
-              '_privateKey': {type: 'objectAttribute', value: {type: 'string'}},
+              '': {type: 'objectAttribute', value: {type: 'string'}},
+              '123startsWithNumber': {type: 'objectAttribute', value: {type: 'string'}},
               '$dollarKey': {type: 'objectAttribute', value: {type: 'string'}},
+              '_privateKey': {type: 'objectAttribute', value: {type: 'string'}},
               'camelCase': {type: 'objectAttribute', value: {type: 'string'}},
-              'PascalCase': {type: 'objectAttribute', value: {type: 'string'}},
-              'UPPER_SNAKE': {type: 'objectAttribute', value: {type: 'string'}},
+              'dot.notation': {type: 'objectAttribute', value: {type: 'string'}},
               // Invalid identifiers - MUST be quoted
               'kebab-case': {type: 'objectAttribute', value: {type: 'string'}},
-              'dot.notation': {type: 'objectAttribute', value: {type: 'string'}},
-              'with spaces': {type: 'objectAttribute', value: {type: 'string'}},
-              '123startsWithNumber': {type: 'objectAttribute', value: {type: 'string'}},
+              // Valid identifiers - should NOT be quoted
+              'normalKey': {type: 'objectAttribute', value: {type: 'string'}},
+              'PascalCase': {type: 'objectAttribute', value: {type: 'string'}},
               'special@char': {type: 'objectAttribute', value: {type: 'string'}},
-              '': {type: 'objectAttribute', value: {type: 'string'}},
+              'UPPER_SNAKE': {type: 'objectAttribute', value: {type: 'string'}},
+              'with spaces': {type: 'objectAttribute', value: {type: 'string'}},
             },
+            type: 'object',
           },
         },
       ])
@@ -392,18 +392,18 @@ describe(SchemaTypeGenerator.name, () => {
       const objectType = schema.getType('objectWithMixedKeys')?.tsType
       expect(generateCode(objectType)).toMatchInlineSnapshot(`
         "{
-          normalKey: string;
-          _privateKey: string;
-          $dollarKey: string;
-          camelCase: string;
-          PascalCase: string;
-          UPPER_SNAKE: string;
-          "kebab-case": string;
-          "dot.notation": string;
-          "with spaces": string;
-          "123startsWithNumber": string;
-          "special@char": string;
           "": string;
+          "123startsWithNumber": string;
+          $dollarKey: string;
+          _privateKey: string;
+          camelCase: string;
+          "dot.notation": string;
+          "kebab-case": string;
+          normalKey: string;
+          PascalCase: string;
+          "special@char": string;
+          UPPER_SNAKE: string;
+          "with spaces": string;
         }"
       `)
     })
@@ -411,71 +411,70 @@ describe(SchemaTypeGenerator.name, () => {
     test('generates TS Types for objects', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'type',
           name: 'objectAlias',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {name: {type: 'objectAttribute', value: {type: 'string'}}},
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'objectWithUnknownRest',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {name: {type: 'objectAttribute', value: {type: 'string'}}},
             rest: {type: 'unknown'},
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'objectWithInlineRest',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {name: {type: 'objectAttribute', value: {type: 'string'}}},
-            rest: {type: 'inline', name: 'person'},
+            rest: {name: 'person', type: 'inline'},
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'objectWithUnresolvableInlineRest',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {name: {type: 'objectAttribute', value: {type: 'string'}}},
-            rest: {type: 'inline', name: 'unresolvableInlineRest'},
+            rest: {name: 'unresolvableInlineRest', type: 'inline'},
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'objectWithObjectRest',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {name: {type: 'objectAttribute', value: {type: 'string'}}},
             rest: {
-              type: 'object',
               attributes: {
-                foo: {type: 'objectAttribute', value: {type: 'string'}},
                 bar: {type: 'objectAttribute', value: {type: 'number'}},
+                foo: {type: 'objectAttribute', value: {type: 'string'}},
               },
+              type: 'object',
             },
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'person',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {
-              name: {type: 'objectAttribute', value: {type: 'string'}},
               age: {type: 'objectAttribute', value: {type: 'number'}},
+              name: {type: 'objectAttribute', value: {type: 'string'}},
             },
+            type: 'object',
           },
         },
         {
-          type: 'type',
           name: 'dereferenceableObject',
+          type: 'type',
           value: {
-            type: 'object',
             attributes: {
               _ref: {
                 type: 'objectAttribute',
@@ -492,6 +491,7 @@ describe(SchemaTypeGenerator.name, () => {
               },
             },
             dereferencesTo: 'person',
+            type: 'object',
           },
         },
       ])
@@ -524,8 +524,8 @@ describe(SchemaTypeGenerator.name, () => {
       expect(generateCode(objectWithObjectRest)).toMatchInlineSnapshot(`
         "{
           name: string;
-          foo: string;
           bar: number;
+          foo: string;
         }"
       `)
       expect(generateCode(dereferenceableObject)).toMatchInlineSnapshot(`
@@ -542,19 +542,19 @@ describe(SchemaTypeGenerator.name, () => {
     test('evaluates a query against the schema and returns the TS Type and stats', () => {
       const schema = new SchemaTypeGenerator([
         {
-          type: 'document',
-          name: 'post',
           attributes: {
+            _createdAt: {type: 'objectAttribute', value: {type: 'string'}},
             _id: {type: 'objectAttribute', value: {type: 'string'}},
             _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
-            _createdAt: {type: 'objectAttribute', value: {type: 'string'}},
             _updatedAt: {type: 'objectAttribute', value: {type: 'string'}},
-            title: {type: 'objectAttribute', value: {type: 'string'}, optional: true},
+            title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
           },
+          name: 'post',
+          type: 'document',
         },
       ])
 
-      const {tsType, stats} = schema.evaluateQuery({
+      const {stats, tsType} = schema.evaluateQuery({
         query: '*[_type == "post"]{_id, title}',
       })
       expect(generateCode(tsType)).toMatchInlineSnapshot(`
@@ -579,8 +579,8 @@ describe(SchemaTypeGenerator.name, () => {
       const node: TypeNode = {type: 'unknown'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 1,
-        unknownTypes: 1,
         emptyUnions: 0,
+        unknownTypes: 1,
       })
     })
 
@@ -589,7 +589,7 @@ describe(SchemaTypeGenerator.name, () => {
       const numberNode: TypeNode = {type: 'number'}
       const booleanNode: TypeNode = {type: 'boolean'}
       const nullNode: TypeNode = {type: 'null'}
-      const expected = {allTypes: 1, unknownTypes: 0, emptyUnions: 0}
+      const expected = {allTypes: 1, emptyUnions: 0, unknownTypes: 0}
       expect(walkAndCountQueryTypeNodeStats(stringNode)).toEqual(expected)
       expect(walkAndCountQueryTypeNodeStats(numberNode)).toEqual(expected)
       expect(walkAndCountQueryTypeNodeStats(booleanNode)).toEqual(expected)
@@ -597,154 +597,154 @@ describe(SchemaTypeGenerator.name, () => {
     })
 
     test('counts array type', () => {
-      const node: TypeNode = {type: 'array', of: {type: 'string'}}
+      const node: TypeNode = {of: {type: 'string'}, type: 'array'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 2, // array + string
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts array with unknown element type', () => {
-      const node: TypeNode = {type: 'array', of: {type: 'unknown'}}
+      const node: TypeNode = {of: {type: 'unknown'}, type: 'array'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 2, // array + unknown
-        unknownTypes: 1,
         emptyUnions: 0,
+        unknownTypes: 1,
       })
     })
 
     test('counts nested array type', () => {
-      const node: TypeNode = {type: 'array', of: {type: 'array', of: {type: 'number'}}}
+      const node: TypeNode = {of: {of: {type: 'number'}, type: 'array'}, type: 'array'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 3, // outer array + inner array + number
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts simple object type', () => {
       const node: TypeNode = {
-        type: 'object',
         attributes: {foo: {type: 'objectAttribute', value: {type: 'string'}}},
+        type: 'object',
       }
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 2, // object + string
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts object type with multiple attributes', () => {
       const node: TypeNode = {
-        type: 'object',
         attributes: {
-          foo: {type: 'objectAttribute', value: {type: 'string'}},
           bar: {type: 'objectAttribute', value: {type: 'number'}},
+          foo: {type: 'objectAttribute', value: {type: 'string'}},
         },
+        type: 'object',
       }
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 3, // object + string + number
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts object type with unknown rest', () => {
       const node: TypeNode = {
-        type: 'object',
         attributes: {foo: {type: 'objectAttribute', value: {type: 'string'}}},
         rest: {type: 'unknown'},
+        type: 'object',
       }
       // object + unknown rest = 2 types, 1 of which is unknown
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 2,
-        unknownTypes: 1,
         emptyUnions: 0,
+        unknownTypes: 1,
       })
     })
 
     test('counts object type with object rest', () => {
       const node: TypeNode = {
-        type: 'object',
         attributes: {a: {type: 'objectAttribute', value: {type: 'string'}}},
         rest: {
-          type: 'object',
           attributes: {b: {type: 'objectAttribute', value: {type: 'number'}}},
+          type: 'object',
         },
+        type: 'object',
       }
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 4, // outer object + string 'a' + rest object + rest number 'b'
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts object type with non-unknown/non-object rest', () => {
       const node: TypeNode = {
-        type: 'object',
         attributes: {a: {type: 'objectAttribute', value: {type: 'string'}}},
-        rest: {type: 'inline', name: 'person'},
+        rest: {name: 'person', type: 'inline'},
+        type: 'object',
       }
 
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 3, // outer object + string 'a' + inline 'person'
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts empty union type', () => {
-      const node: TypeNode = {type: 'union', of: []}
+      const node: TypeNode = {of: [], type: 'union'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 1, // union
-        unknownTypes: 0,
         emptyUnions: 1,
+        unknownTypes: 0,
       })
     })
 
     test('counts simple union type', () => {
-      const node: TypeNode = {type: 'union', of: [{type: 'string'}, {type: 'number'}]}
+      const node: TypeNode = {of: [{type: 'string'}, {type: 'number'}], type: 'union'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 3, // union + string + number
-        unknownTypes: 0,
         emptyUnions: 0,
+        unknownTypes: 0,
       })
     })
 
     test('counts union type with unknown member', () => {
-      const node: TypeNode = {type: 'union', of: [{type: 'string'}, {type: 'unknown'}]}
+      const node: TypeNode = {of: [{type: 'string'}, {type: 'unknown'}], type: 'union'}
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 3, // union + string + unknown
-        unknownTypes: 1,
         emptyUnions: 0,
+        unknownTypes: 1,
       })
     })
 
     test('counts complex nested type', () => {
       const node: TypeNode = {
-        type: 'array',
         of: {
-          type: 'union',
           of: [
             {
-              type: 'object',
               attributes: {
                 a: {type: 'objectAttribute', value: {type: 'string'}},
                 b: {type: 'objectAttribute', value: {type: 'unknown'}},
               },
               rest: {
-                type: 'object',
                 attributes: {
                   c: {type: 'objectAttribute', value: {type: 'boolean'}},
                 },
-                rest: {type: 'inline', name: 'person'},
+                rest: {name: 'person', type: 'inline'},
+                type: 'object',
               },
+              type: 'object',
             },
             {type: 'number'},
-            {type: 'array', of: {type: 'boolean'}},
+            {of: {type: 'boolean'}, type: 'array'},
           ],
+          type: 'union',
         },
+        type: 'array',
       }
 
       // Calculation breakdown:
@@ -762,8 +762,8 @@ describe(SchemaTypeGenerator.name, () => {
       // = 11 total types
       expect(walkAndCountQueryTypeNodeStats(node)).toEqual({
         allTypes: 11,
-        unknownTypes: 1,
         emptyUnions: 0,
+        unknownTypes: 1,
       })
     })
   })

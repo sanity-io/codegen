@@ -11,13 +11,13 @@ export default defineConfig({
 
     customTags: [
       {
-        name: 'hidden',
         allowMultiple: true,
+        name: 'hidden',
         syntaxKind: 'block',
       },
       {
-        name: 'todo',
         allowMultiple: true,
+        name: 'todo',
         syntaxKind: 'block',
       },
     ],
@@ -27,9 +27,9 @@ export default defineConfig({
       'ae-missing-release-tag': 'off',
     },
   },
-  tsconfig: 'tsconfig.lib.json',
   strictOptions: {
     noImplicitBrowsersList: 'off',
     noImplicitSideEffects: 'error',
   },
+  tsconfig: 'tsconfig.lib.json',
 })

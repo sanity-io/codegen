@@ -13,6 +13,7 @@ const debug = createDebug('sanity:codegen:findQueries:debug')
 
 interface FindQueriesInPathOptions {
   path: string | string[]
+
   babelOptions?: TransformOptions
   resolver?: NodeJS.RequireResolve
 }
@@ -27,8 +28,8 @@ interface FindQueriesInPathOptions {
  * @internal
  */
 export function findQueriesInPath({
-  path,
   babelOptions = getBabelConfig(),
+  path,
   resolver = getResolver(),
 }: FindQueriesInPathOptions): {files: string[]; queries: AsyncIterable<ExtractedModule>} {
   const queryNames = new Set()
@@ -41,7 +42,7 @@ export function findQueriesInPath({
       ignore: ['**/node_modules/**'], // we never want to look in node_modules
       onlyFiles: true,
     })
-    .sort()
+    .toSorted()
 
   async function* getQueries(): AsyncGenerator<ExtractedModule> {
     for (const filename of files) {
@@ -68,9 +69,9 @@ export function findQueriesInPath({
         debug(`Error in file "${filename}"`, cause)
 
         yield {
+          errors: [new QueryExtractionError({cause, filename})],
           filename,
           queries: [],
-          errors: [new QueryExtractionError({cause, filename})],
         }
       }
     }
