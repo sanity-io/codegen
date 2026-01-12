@@ -1,4 +1,9 @@
-export {type CodegenConfig, configDefinition, readConfig, type TypeGenConfig} from '../readConfig.js'
+export {
+  type CodegenConfig,
+  configDefinition,
+  readConfig,
+  type TypeGenConfig,
+} from '../readConfig.js'
 export {readSchema} from '../readSchema.js'
 export {safeParseQuery} from '../safeParseQuery.js'
 export {findQueriesInPath} from '../typescript/findQueriesInPath.js'

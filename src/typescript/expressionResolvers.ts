@@ -342,10 +342,13 @@ function resolveImportSpecifier({
         return
       }
       for (const specifier of n.node.specifiers) {
-        if (babelTypes.isImportDefaultSpecifier(specifier) && specifier.local.loc?.identifierName === node.local.name) {
-            importDeclaration = n.node
-            break
-          }
+        if (
+          babelTypes.isImportDefaultSpecifier(specifier) &&
+          specifier.local.loc?.identifierName === node.local.name
+        ) {
+          importDeclaration = n.node
+          break
+        }
         if (specifier.local.name === node.local.name) {
           importDeclaration = n.node
         }

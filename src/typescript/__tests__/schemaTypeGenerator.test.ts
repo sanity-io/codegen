@@ -371,17 +371,17 @@ describe(SchemaTypeGenerator.name, () => {
             attributes: {
               '': {type: 'objectAttribute', value: {type: 'string'}},
               '123startsWithNumber': {type: 'objectAttribute', value: {type: 'string'}},
-              '$dollarKey': {type: 'objectAttribute', value: {type: 'string'}},
-              '_privateKey': {type: 'objectAttribute', value: {type: 'string'}},
-              'camelCase': {type: 'objectAttribute', value: {type: 'string'}},
+              $dollarKey: {type: 'objectAttribute', value: {type: 'string'}},
+              _privateKey: {type: 'objectAttribute', value: {type: 'string'}},
+              camelCase: {type: 'objectAttribute', value: {type: 'string'}},
               'dot.notation': {type: 'objectAttribute', value: {type: 'string'}},
               // Invalid identifiers - MUST be quoted
               'kebab-case': {type: 'objectAttribute', value: {type: 'string'}},
               // Valid identifiers - should NOT be quoted
-              'normalKey': {type: 'objectAttribute', value: {type: 'string'}},
-              'PascalCase': {type: 'objectAttribute', value: {type: 'string'}},
+              normalKey: {type: 'objectAttribute', value: {type: 'string'}},
+              PascalCase: {type: 'objectAttribute', value: {type: 'string'}},
               'special@char': {type: 'objectAttribute', value: {type: 'string'}},
-              'UPPER_SNAKE': {type: 'objectAttribute', value: {type: 'string'}},
+              UPPER_SNAKE: {type: 'objectAttribute', value: {type: 'string'}},
               'with spaces': {type: 'objectAttribute', value: {type: 'string'}},
             },
             type: 'object',

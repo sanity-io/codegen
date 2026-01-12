@@ -39,7 +39,8 @@
     "build": "pkg-utils build --strict --check --clean",
     "check:types": "tsgo --project tsconfig.lib.json --erasableSyntaxOnly",
     "clean": "rimraf lib coverage",
-    "lint": "eslint .",
+    "lint": "eslint . --fix",
+    "prepare": "husky",
     "prepublishOnly": "pnpm build",
     "test": "vitest",
     "watch": "pkg-utils watch"
@@ -75,6 +76,8 @@
     "@types/node": "^20.19.28",
     "@typescript/native-preview": "7.0.0-dev.20260111.1",
     "eslint": "^9.39.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "prettier-plugin-packagejson": "^2.5.20",
     "rimraf": "^5.0.10",
