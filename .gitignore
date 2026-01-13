@@ -15,3 +15,5 @@
 /dist
 
 oclif.manifest.json
+
+tmp/**

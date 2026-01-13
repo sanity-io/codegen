@@ -49,6 +49,7 @@
     "lint": "eslint . --fix",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
+    "pretest": "pnpm build",
     "test": "vitest",
     "watch": "swc src -d dist --strip-leading-paths --watch"
   },
@@ -63,13 +64,14 @@
     "@babel/types": "^7.28.5",
     "@oclif/core": "^4.8.0",
     "@oclif/plugin-help": "^6.2.36",
-    "@sanity/cli-core": "^0.1.0-alpha.5",
+    "@sanity/cli-core": "^0.1.0-alpha.7",
     "@sanity/worker-channels": "^1.1.0",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
     "groq": "^5.2.0",
     "groq-js": "^1.25.0",
     "json5": "^2.2.3",
+    "prettier": "^3.7.4",
     "reselect": "^5.1.1",
     "tsconfig-paths": "^4.2.0",
     "zod": "^3.25.76"
@@ -77,7 +79,8 @@
   "devDependencies": {
     "@eslint/compat": "^2.0.1",
     "@microsoft/api-extractor": "^7.55.2",
-    "@sanity/cli-test": "^0.0.2-alpha.4",
+    "@oclif/test": "^4.1.15",
+    "@sanity/cli-test": "^0.0.2-alpha.6",
     "@sanity/eslint-config-cli": "0.0.0-alpha.1",
     "@swc/cli": "^0.7.9",
     "@swc/core": "^1.15.8",
@@ -87,16 +90,17 @@
     "@types/babel__traverse": "^7.28.0",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.19.28",
+    "@vitest/coverage-istanbul": "^4.0.17",
     "chokidar": "^5.0.0",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "oclif": "^4.22.65",
-    "prettier": "^3.7.4",
     "prettier-plugin-packagejson": "^2.5.20",
     "rimraf": "^5.0.10",
+    "tinyglobby": "^0.2.15",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.17"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {
