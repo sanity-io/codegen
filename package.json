@@ -25,25 +25,32 @@
   "exports": {
     ".": {
       "source": "./src/_exports/index.ts",
-      "default": "./lib/index.js"
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./lib/index.cjs",
-  "types": "./lib/index.d.ts",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "sanity-typegen": "./bin/run.js"
+  },
   "files": [
-    "lib",
+    "dist",
+    "bin",
+    "oclif.manifest.json",
     "babel.config.json"
   ],
   "scripts": {
-    "build": "pkg-utils build --strict --check --clean",
-    "check:types": "tsgo --project tsconfig.lib.json --erasableSyntaxOnly",
-    "clean": "rimraf lib coverage",
+    "build": "swc --delete-dir-on-start src -d dist --strip-leading-paths --ignore '**/__tests__/**'  && pnpm run build:types",
+    "postbuild": "oclif manifest",
+    "build:api": "api-extractor run --local",
+    "build:types": "tsc --project tsconfig.lib.json && pnpm run build:api && rimraf dist/__tmp__",
+    "clean": "rimraf dist coverage",
     "lint": "eslint . --fix",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
     "test": "vitest",
-    "watch": "pkg-utils watch"
+    "watch": "swc src -d dist --strip-leading-paths --watch"
   },
   "dependencies": {
     "@babel/core": "^7.28.5",
@@ -54,6 +61,9 @@
     "@babel/register": "^7.28.3",
     "@babel/traverse": "^7.28.5",
     "@babel/types": "^7.28.5",
+    "@oclif/core": "^4.8.0",
+    "@oclif/plugin-help": "^6.2.36",
+    "@sanity/cli-core": "^0.1.0-alpha.5",
     "@sanity/worker-channels": "^1.1.0",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
@@ -66,21 +76,26 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.1",
+    "@microsoft/api-extractor": "^7.55.2",
+    "@sanity/cli-test": "^0.0.2-alpha.4",
     "@sanity/eslint-config-cli": "0.0.0-alpha.1",
-    "@sanity/pkg-utils": "^10.3.0",
+    "@swc/cli": "^0.7.9",
+    "@swc/core": "^1.15.8",
     "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__register": "^7.17.3",
     "@types/babel__traverse": "^7.28.0",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.19.28",
-    "@typescript/native-preview": "7.0.0-dev.20260111.1",
+    "chokidar": "^5.0.0",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
+    "oclif": "^4.22.65",
     "prettier": "^3.7.4",
     "prettier-plugin-packagejson": "^2.5.20",
     "rimraf": "^5.0.10",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
   "packageManager": "pnpm@10.28.0",
