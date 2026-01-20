@@ -1,3 +1,6 @@
+**/.DS_Store
+**/.tsbuildinfo
+
 # Logs
 /logs
 *.log
@@ -6,7 +9,7 @@
 /coverage
 
 # Dependency directories
-/node_modules
+**/node_modules
 
 # Compiled code
 /dist

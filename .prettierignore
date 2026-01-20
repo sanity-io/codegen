@@ -10,3 +10,6 @@ CHANGELOG.md
 .claude
 **/dist/**
 **/lib/**
+
+dev/**/sanity.types.ts
+dev/**/schema.json

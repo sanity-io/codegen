@@ -1,0 +1,13 @@
+{
+  "name": "playground",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "groq": "^5.5.0",
+    "sanity": "^5.5.0"
+  },
+  "devDependencies": {
+    "@sanity/codegen": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

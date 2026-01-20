@@ -6,5 +6,8 @@ import {defineConfig} from 'eslint/config'
 
 export default defineConfig([
   includeIgnoreFile(resolve(import.meta.dirname, '.gitignore')),
+  {
+    ignores: ['dev/**/sanity.types.ts'],
+  },
   ...eslintConfig,
 ])
