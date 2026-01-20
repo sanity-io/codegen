@@ -22,3 +22,4 @@ export {
   type ExtractedQuery,
   QueryExtractionError,
 } from '../typescript/types.js'
+export {type FilterByType, type Get} from '../typeUtils.js'
