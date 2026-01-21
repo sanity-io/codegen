@@ -105,7 +105,7 @@ describe(TypeGenerator.name, () => {
 
       "
     `)
-    expect(schemaTypeDeclarations.length).toBe(2)
+    expect(schemaTypeDeclarations).toHaveLength(2)
     const [fooDeclaration, barDeclaration] = schemaTypeDeclarations
 
     expect(fooDeclaration).toMatchObject({
@@ -120,7 +120,7 @@ describe(TypeGenerator.name, () => {
     })
 
     const evaluatedModules = await ArrayFromAsync(receiver.stream.evaluatedModules())
-    expect(evaluatedModules.length).toBe(4)
+    expect(evaluatedModules).toHaveLength(4)
 
     const [foo, noQueries, hasAnError, bar] = evaluatedModules
 
