@@ -10,15 +10,11 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      exclude: ['**/tmp/**', '.tmp/**', 'dev/**', '**/lib/**', '**/node_modules/**'],
       provider: 'istanbul',
     },
     disableConsoleIntercept: true, // helps @oclif/test helpers
     exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/node_modules/**'],
     globalSetup: ['test/workerBuild.ts', 'test/cliTestSetup.ts'],
     includeSource: ['./src/**/*.ts'],
-    typecheck: {
-      exclude: ['**/tmp/**', '.tmp/**', 'dev/**', '**/lib/**', '**/node_modules/**'],
-    },
   },
 })

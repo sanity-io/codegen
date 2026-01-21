@@ -2,38 +2,20 @@ import {stat} from 'node:fs/promises'
 import path from 'node:path'
 import {isMainThread, parentPort, workerData} from 'node:worker_threads'
 
-import {type WorkerChannel, WorkerChannelReporter} from '@sanity/worker-channels'
+import {WorkerChannelReporter} from '@sanity/worker-channels'
 
 import {readSchema} from '../readSchema.js'
 import {findQueriesInPath} from '../typescript/findQueriesInPath.js'
 import {getResolver} from '../typescript/moduleResolver.js'
 import {registerBabel} from '../typescript/registerBabel.js'
-import {
-  type TypegenWorkerChannel as CodegenTypegenWorkerChannel,
-  TypeGenerator,
-} from '../typescript/typeGenerator.js'
-
-export interface TypegenGenerateTypesWorkerData {
-  schemaPath: string
-  searchPath: string | string[]
-  workDir: string
-
-  overloadClientMethods?: boolean
-}
+import {TypeGenerator} from '../typescript/typeGenerator.js'
+import {TypegenGenerateTypesWorkerData, TypegenWorkerChannel} from './types.js'
 
 if (isMainThread || !parentPort) {
   throw new Error('This module must be run as a worker thread')
 }
 
 registerBabel()
-
-export type TypegenWorkerChannel = WorkerChannel.Definition<
-  CodegenTypegenWorkerChannel['__definition'] & {
-    loadedSchema: WorkerChannel.Event
-    typegenComplete: WorkerChannel.Event<{code: string}>
-    typegenStarted: WorkerChannel.Event<{expectedFileCount: number}>
-  }
->
 
 async function main({
   overloadClientMethods,
