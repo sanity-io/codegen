@@ -13,7 +13,7 @@ export default defineConfig({
       provider: 'istanbul',
     },
     disableConsoleIntercept: true, // helps @oclif/test helpers
-    exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/node_modules/**'],
+    exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/dist/**', '**/node_modules/**'],
     globalSetup: ['test/workerBuild.ts', 'test/cliTestSetup.ts'],
     includeSource: ['./src/**/*.ts'],
   },

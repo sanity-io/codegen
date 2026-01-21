@@ -6,6 +6,7 @@ import {Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 import createDebug from 'debug'
 
+import {formatPath} from '../utils/formatPath.js'
 import {parseSourceFile} from './parseSource.js'
 
 const debug = createDebug('sanity:codegen:findQueries:debug')
@@ -368,7 +369,7 @@ function resolveImportSpecifier({
       ? path.resolve(path.dirname(filename), importFileName)
       : importFileName
 
-  const resolvedFile = resolver(importPath)
+  const resolvedFile = resolver(formatPath(importPath))
   const source = fs.readFileSync(resolvedFile)
   const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
 
@@ -471,7 +472,7 @@ function resolveExportSpecifier({
 
   const importFileName = node.source.value
   const importPath = path.resolve(path.dirname(filename), importFileName)
-  const resolvedFile = resolver(importPath)
+  const resolvedFile = resolver(formatPath(importPath))
   const source = fs.readFileSync(resolvedFile)
   const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
 

@@ -4,12 +4,28 @@ import {CodeGenerator} from '@babel/generator'
 import * as t from '@babel/types'
 import {type ArrayTypeNode, type UnionTypeNode} from 'groq-js'
 
+import {formatPath} from '../utils/formatPath.js'
 import {RESERVED_IDENTIFIERS} from './constants.js'
 
 export function normalizePrintablePath(root: string, filename: string) {
   const resolved = path.resolve(root, filename)
   // Always use Unix-style paths for consistent output across platforms
-  return path.relative(root, resolved).replaceAll('\\', '/')
+  return formatPath(path.relative(root, resolved))
+}
+
+/**
+ * Normalizes a glob pattern to use forward slashes (POSIX-style paths).
+ * Glob patterns must use forward slashes, even on Windows.
+ *
+ * @param pattern - A glob pattern string or array of patterns
+ * @returns The normalized pattern(s) with forward slashes
+ * @see https://github.com/sindresorhus/globby#api
+ */
+export function normalizeGlobPattern(pattern: string | string[]): string | string[] {
+  if (Array.isArray(pattern)) {
+    return pattern.map((p) => formatPath(p))
+  }
+  return formatPath(pattern)
 }
 
 function sanitizeIdentifier(input: string): string {

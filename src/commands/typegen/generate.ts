@@ -15,6 +15,7 @@ import {
 } from '../../actions/types.js'
 import {configDefinition, readConfig, type TypeGenConfig} from '../../readConfig.js'
 import {count} from '../../utils/count.js'
+import {formatPath} from '../../utils/formatPath.js'
 import {getMessage} from '../../utils/getMessage.js'
 import {percent} from '../../utils/percent.js'
 
@@ -78,7 +79,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       configPath = result.path
       typegenConfigMethod = result.type
 
-      spin.succeed(`Config loaded from ${configPath?.replace(workDir, '.')}`)
+      spin.succeed(`Config loaded from ${formatPath(configPath?.replace(workDir, '.') ?? '')}`)
     } catch (error) {
       debug('error loading config', error)
       spin.fail()
@@ -116,7 +117,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     try {
       spin.start(`Loading schema…`)
       await receiver.event.loadedSchema()
-      spin.succeed(`Schema loaded from ${schemaPath}`)
+      spin.succeed(`Schema loaded from ${formatPath(schemaPath ?? '')}`)
 
       spin.start('Generating schema types…')
       const {expectedFileCount} = await receiver.event.typegenStarted()
@@ -214,7 +215,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         spin.warn(`Encountered errors in ${count(filesWithErrors, 'files')} while generating types`)
       }
 
-      spin.succeed(`Successfully generated types to ${generates}`)
+      spin.succeed(`Successfully generated types to ${formatPath(generates)}`)
     } catch (err) {
       // trace.error(err)
       debug('error generating types', err)
