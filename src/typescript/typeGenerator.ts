@@ -13,7 +13,12 @@ import {
   INTERNAL_REFERENCE_SYMBOL,
   SANITY_QUERIES,
 } from './constants.js'
-import {computeOnce, generateCode, getUniqueIdentifierForName, normalizePath} from './helpers.js'
+import {
+  computeOnce,
+  generateCode,
+  getUniqueIdentifierForName,
+  normalizePrintablePath,
+} from './helpers.js'
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
   type EvaluatedModule,
@@ -92,7 +97,7 @@ export class TypeGenerator {
 
         if (index === 0 && schemaPath) {
           ast = t.addComments(ast, 'leading', [
-            {type: 'CommentLine', value: ` Source: ${normalizePath(root, schemaPath)}`},
+            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, schemaPath)}`},
           ])
         }
         const code = generateCode(ast)
@@ -183,7 +188,7 @@ export class TypeGenerator {
           const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
           const trimmedQuery = extractedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
           const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
-            {type: 'CommentLine', value: ` Source: ${normalizePath(root, filename)}`},
+            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
             {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
             {type: 'CommentLine', value: ` Query: ${trimmedQuery}`},
           ])
