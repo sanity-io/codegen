@@ -26,7 +26,7 @@ export const prerender = true
     const parsed = parseSourceFile(source, 'foo.astro', {})
 
     expect(parsed.type).toBe('File')
-    expect(parsed.program.body.length).toBe(5)
+    expect(parsed.program.body).toHaveLength(5)
   })
   test('should parse vue', () => {
     const source = `
@@ -45,7 +45,7 @@ const query = groq('*[_type == "myType"]')
     const parsed = parseSourceFile(source, 'foo.vue', {})
 
     expect(parsed.type).toBe('File')
-    expect(parsed.program.body.length).toBe(2)
+    expect(parsed.program.body).toHaveLength(2)
   })
   test('should parse vue: with complex generics', () => {
     const source = `
@@ -64,7 +64,7 @@ const query = groq('*[_type == "myType"]')
     const parsed = parseSourceFile(source, 'foo.vue', {})
 
     expect(parsed.type).toBe('File')
-    expect(parsed.program.body.length).toBe(2)
+    expect(parsed.program.body).toHaveLength(2)
   })
   test('should parse vue: with multiple script tags', () => {
     const source = `
@@ -89,7 +89,7 @@ export default {
     const parsed = parseSourceFile(source, 'foo.vue', {})
 
     expect(parsed.type).toBe('File')
-    expect(parsed.program.body.length).toBe(3)
+    expect(parsed.program.body).toHaveLength(3)
   })
 
   test('should parse svelte', () => {
@@ -105,6 +105,6 @@ export default {
     const parsed = parseSourceFile(source, 'foo.svelte', {})
 
     expect(parsed.type).toBe('File')
-    expect(parsed.program.body.length).toBe(2)
+    expect(parsed.program.body).toHaveLength(2)
   })
 })

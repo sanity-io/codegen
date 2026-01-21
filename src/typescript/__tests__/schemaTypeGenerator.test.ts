@@ -130,7 +130,7 @@ describe(SchemaTypeGenerator.name, () => {
       },
     ])
     const typeNames = schema.typeNames()
-    expect(typeNames.length).toBe(3)
+    expect(typeNames).toHaveLength(3)
     expect(new Set(typeNames).size).toBe(3) // ensure type names are unique
 
     const [first, second, third] = [...schema]
