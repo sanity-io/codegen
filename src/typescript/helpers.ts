@@ -6,9 +6,10 @@ import {type ArrayTypeNode, type UnionTypeNode} from 'groq-js'
 
 import {RESERVED_IDENTIFIERS} from './constants.js'
 
-export function normalizePath(root: string, filename: string) {
+export function normalizePrintablePath(root: string, filename: string) {
   const resolved = path.resolve(root, filename)
-  return path.relative(root, resolved)
+  // Always use Unix-style paths for consistent output across platforms
+  return path.relative(root, resolved).replaceAll('\\', '/')
 }
 
 function sanitizeIdentifier(input: string): string {
