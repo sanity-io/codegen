@@ -1,5 +1,5 @@
 export default {
-  bin: 'sanity-typegen',
+  bin: 'sanity',
   commands: './dist/commands',
   dirname: 'sanity-typegen',
   plugins: ['@oclif/plugin-help'],

@@ -1,11 +1,20 @@
 import {defineConfig} from 'vitest/config'
 
 export default defineConfig({
-  test: {
-    exclude: ['**/*.tmp/**', '**/dist/**', '**/lib/**', 'dev/**', '**/node_modules/**'],
-    includeSource: ['./src/**/*.ts'],
-    typecheck: {
-      exclude: ['.tmp/**', './lib/**'],
+  // This is needed to avoid listening to changes in the tmp directory
+  // Without this, watch will go in an infinite loop
+  server: {
+    watch: {
+      ignored: ['**/tmp/**/*'],
     },
+  },
+  test: {
+    coverage: {
+      provider: 'istanbul',
+    },
+    disableConsoleIntercept: true, // helps @oclif/test helpers
+    exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/node_modules/**'],
+    globalSetup: ['test/workerBuild.ts', 'test/cliTestSetup.ts'],
+    includeSource: ['./src/**/*.ts'],
   },
 })
