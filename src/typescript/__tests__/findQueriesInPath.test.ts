@@ -20,7 +20,7 @@ async function ArrayFromAsync<T>(asyncIterable: AsyncIterable<T>) {
 describe('findQueriesInPath', () => {
   test('Can find queries in path', async () => {
     const {queries} = findQueriesInPath({
-      path: path.join('**', 'typescript', '__tests__', 'fixtures', 'source1.ts'),
+      path: path.posix.join('**', 'typescript', '__tests__', 'fixtures', 'source1.ts'),
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
@@ -33,7 +33,7 @@ describe('findQueriesInPath', () => {
   })
   test('should return an error if the query name already exists', async () => {
     const {queries} = findQueriesInPath({
-      path: path.join('**', 'fixtures', '{source1,source2}.ts'),
+      path: path.posix.join('**', 'fixtures', '{source1,source2}.ts'),
     })
 
     const res = await ArrayFromAsync(queries)
@@ -54,7 +54,7 @@ describe('findQueriesInPath', () => {
 
   test('can find and handle .astro files', async () => {
     const {queries} = findQueriesInPath({
-      path: [path.join('**', 'typescript', '__tests__', 'fixtures', '*.astro')],
+      path: [path.posix.join('**', 'typescript', '__tests__', 'fixtures', '*.astro')],
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
@@ -62,7 +62,7 @@ describe('findQueriesInPath', () => {
   })
   test('can find and handle .vue files', async () => {
     const {queries} = findQueriesInPath({
-      path: [path.join('**', 'typescript', '__tests__', 'fixtures', '*.vue')],
+      path: [path.posix.join('**', 'typescript', '__tests__', 'fixtures', '*.vue')],
     })
     const res = await ArrayFromAsync(queries)
     expect(res.length).toBe(1)
@@ -95,7 +95,7 @@ describe('findQueriesInPath', () => {
         }
         // try it 10000 times
         const {queries} = findQueriesInPath({
-          path: path.join(tmpDir, '*.ts'),
+          path: path.posix.join(tmpDir, '*.ts'),
         })
         for await (const result of queries) {
           if (result.errors.length > 0) {
@@ -116,7 +116,7 @@ describe('findQueriesInPath', () => {
         test(`run ${i}`, async () => {
           const compare: ExtractedQuery[] = []
           const {queries} = findQueriesInPath({
-            path: path.join(tmpDir, '*.ts'),
+            path: path.posix.join(tmpDir, '*.ts'),
           })
           await writeFile(path.join(tmpDir, `${i}.ts`), `import {defineQuery} from 'groq'\n`)
           await writeFile(
