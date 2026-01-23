@@ -1,6 +1,6 @@
 {
   "name": "@sanity/codegen",
-  "version": "5.5.0",
+  "version": "5.6.0",
   "description": "Codegen toolkit for Sanity.io",
   "keywords": [
     "sanity",
@@ -54,14 +54,14 @@
     "watch": "swc src -d dist --strip-leading-paths --watch"
   },
   "dependencies": {
-    "@babel/core": "^7.28.5",
-    "@babel/generator": "^7.28.5",
-    "@babel/preset-env": "^7.28.5",
+    "@babel/core": "^7.28.6",
+    "@babel/generator": "^7.28.6",
+    "@babel/preset-env": "^7.28.6",
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
-    "@babel/register": "^7.28.3",
-    "@babel/traverse": "^7.28.5",
-    "@babel/types": "^7.28.5",
+    "@babel/register": "^7.28.6",
+    "@babel/traverse": "^7.28.6",
+    "@babel/types": "^7.28.6",
     "@oclif/core": "^4.8.0",
     "@oclif/plugin-help": "^6.2.36",
     "@sanity/cli-core": "^0.1.0-alpha.7",
