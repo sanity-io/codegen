@@ -38,6 +38,7 @@
     "dist",
     "bin",
     "oclif.manifest.json",
+    "oclif.config.js",
     "babel.config.json"
   ],
   "scripts": {
