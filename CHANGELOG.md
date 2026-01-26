@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.7.1](https://github.com/sanity-io/codegen/compare/codegen-v5.7.0...codegen-v5.7.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* **cli:** fixes issue with missing config file ([#14](https://github.com/sanity-io/codegen/issues/14)) ([2b1d105](https://github.com/sanity-io/codegen/commit/2b1d105568bbd93fdcc046d37f2546d445f976f4))
+
 ## [5.7.0](https://github.com/sanity-io/codegen/compare/codegen-v5.6.0...codegen-v5.7.0) (2026-01-26)
 
 
