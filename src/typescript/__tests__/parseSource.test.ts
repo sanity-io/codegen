@@ -28,6 +28,35 @@ export const prerender = true
     expect(parsed.type).toBe('File')
     expect(parsed.program.body).toHaveLength(5)
   })
+
+  test('should parse astro with CRLF line endings', () => {
+    const source = [
+      '---\r\n',
+      "import Layout from '../layouts/Layout.astro';\r\n",
+      "import { project_dir } from '../libs/utils';\r\n",
+      '\r\n',
+      'const proj = "10_prerender"\r\n',
+      'const render_time = new Date()\r\n',
+      'export const prerender = true\r\n',
+      '---\r\n',
+      '<Layout title="Prerendered" />',
+    ].join('')
+
+    const parsed = parseSourceFile(source, 'foo.astro', {})
+
+    expect(parsed.type).toBe('File')
+    expect(parsed.program.body).toHaveLength(5)
+  })
+
+  test('should parse astro with mixed line endings', () => {
+    const source = "---\r\nimport groq from 'groq'\nconst x = 1\r\n---\n<Component />"
+
+    const parsed = parseSourceFile(source, 'foo.astro', {})
+
+    expect(parsed.type).toBe('File')
+    expect(parsed.program.body).toHaveLength(2)
+  })
+
   test('should parse vue', () => {
     const source = `
 <script setup lang="ts">

@@ -6,6 +6,7 @@ import glob from 'globby'
 
 import {getBabelConfig} from '../getBabelConfig.js'
 import {findQueriesInSource} from './findQueriesInSource.js'
+import {normalizeGlobPattern} from './helpers.js'
 import {getResolver} from './moduleResolver.js'
 import {type ExtractedModule, QueryExtractionError} from './types.js'
 
@@ -36,8 +37,11 @@ export function findQueriesInPath({
   // Holds all query names found in the source files
   debug(`Globing ${path}`)
 
+  // Normalize glob patterns to use forward slashes on all platforms
+  const normalizedPath = normalizeGlobPattern(path)
+
   const files = glob
-    .sync(path, {
+    .sync(normalizedPath, {
       absolute: false,
       ignore: ['**/node_modules/**'], // we never want to look in node_modules
       onlyFiles: true,

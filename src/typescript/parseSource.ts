@@ -37,14 +37,16 @@ export function parseSourceFile(
 
 function parseAstro(source: string): string {
   // find all code fences, the js code is between --- and ---
-  const codeFences = source.match(/---\n([\s\S]*?)\n---/g)
+  // Handle both Unix (\n) and Windows (\r\n) line endings
+  const codeFences = source.match(/---\r?\n([\s\S]*?)\r?\n---/g)
   if (!codeFences) {
     return ''
   }
 
   return codeFences
     .map((codeFence) => {
-      return codeFence.split('\n').slice(1, -1).join('\n')
+      // Split on either \n or \r\n
+      return codeFence.split(/\r?\n/).slice(1, -1).join('\n')
     })
     .join('\n')
 }
