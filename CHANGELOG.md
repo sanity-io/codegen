@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.7.0](https://github.com/sanity-io/codegen/compare/codegen-v5.6.0...codegen-v5.7.0) (2026-01-26)
+
+
+### Features
+
+* add typegen generate command ([#3](https://github.com/sanity-io/codegen/issues/3)) ([5c27b4e](https://github.com/sanity-io/codegen/commit/5c27b4e152a68ae839d53af0134d4b700f5b4fcb))
+
+
+### Bug Fixes
+
+* use unix-style paths in output to minimize git diffs ([#9](https://github.com/sanity-io/codegen/issues/9)) ([87b17fe](https://github.com/sanity-io/codegen/commit/87b17fe208b9eaf9b56a80ecdb423dc5647b188a))
+
 ## [5.6.0](https://github.com/sanity-io/sanity/compare/v5.5.0...v5.6.0) (2026-01-22)
 
 ### Features
