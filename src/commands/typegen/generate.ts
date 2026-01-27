@@ -42,6 +42,9 @@ ${chalk.bold('Note:')}
 
 const debug = subdebug('typegen:generate')
 
+/**
+ * @internal
+ */
 export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerateCommand> {
   static override description = description
 
