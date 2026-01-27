@@ -1,4 +1,94 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>sanity-io/renovate-config"]
+  "extends": ["local>sanity-io/renovate-config"],
+  "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
+  "schedule": ["before 5am"],
+  "prConcurrentLimit": 3,
+  "automerge": true,
+  "dependencyDashboardApproval": false,
+  "ignorePaths": ["**/node_modules/**", "**/tests/**", "**/fixtures/**"],
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "enabled": false,
+      "description": "Exclude peer dependencies from being updated",
+      "matchDepTypes": ["peerDependencies"]
+    },
+    {
+      "description": "Exclude sanity & @sanity/* packages from minimumReleaseAge (no delay for internal packages)",
+      "matchPackageNames": ["@sanity/*", "@portabletext/*", "react-rx", "groq-js", "sanity"],
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "devDependencies (non-major)",
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
+    },
+    {
+      "description": "Group swc related deps in a single PR, as they often have to update together",
+      "groupName": "swc-tooling",
+      "matchPackageNames": ["@swc/core", "@swc/cli", "@swc/helpers"],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
+    },
+    {
+      "description": "Group eslint related deps in a single PR, as they often have to update together",
+      "groupName": "eslint-tooling",
+      "matchPackageNames": [
+        "@eslint/*",
+        "eslint",
+        "eslint-plugin-*",
+        "eslint-config-*",
+        "typescript-eslint",
+        "@typescript-eslint/*",
+        "eslint-*",
+        "@stylistic/eslint-plugin"
+      ],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
+    },
+    {
+      "description": "Group sanity related deps in a single PR, as they often have to update together",
+      "groupName": "sanity-tooling",
+      "matchPackageNames": ["@sanity/*", "sanity", "groq", "groq-js"],
+      "group": {"semanticCommitType": "fix"},
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Group oclif related deps in a single PR, as they often have to update together",
+      "groupName": "oclif-tooling",
+      "matchPackageNames": ["@oclif/*", "oclif"],
+      "group": {"semanticCommitType": "fix"},
+      "semanticCommitType": "fix"
+    },
+    {
+      "group": {"semanticCommitType": "chore"},
+      "matchDepTypes": [
+        "dependencies",
+        "devDependencies",
+        "engines",
+        "optionalDependencies",
+        "peerDependencies"
+      ],
+      "matchManagers": ["npm"],
+      "semanticCommitType": "chore",
+      "description": "Group all dependencies from the examples directory",
+      "matchFileNames": ["examples/**/package.json"],
+      "groupName": "Examples dependencies"
+    },
+    {
+      "description": "Group vitest related deps in a single PR, as they often have to update together",
+      "groupName": "vitest-tooling",
+      "matchPackageNames": ["@vitest/*", "vitest", "vitest-*"],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
+    },
+    {
+      "matchDepTypes": ["dependencies", "peerDependencies"],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix"
+    }
+  ]
 }
