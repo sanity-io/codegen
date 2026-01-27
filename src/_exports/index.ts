@@ -1,3 +1,4 @@
+export {TypegenGenerateCommand} from '../commands/typegen/generate.js'
 export {
   type CodegenConfig,
   configDefinition,
