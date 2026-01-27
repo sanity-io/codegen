@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.7.2](https://github.com/sanity-io/codegen/compare/codegen-v5.7.1...codegen-v5.7.2) (2026-01-27)
+
+
+### Bug Fixes
+
+* **deps:** update zod to v4.3.6 ([#18](https://github.com/sanity-io/codegen/issues/18)) ([632c50c](https://github.com/sanity-io/codegen/commit/632c50ca002b2e63a2be9808135fa45006958e4b))
+* export the typegen command for internal use ([#31](https://github.com/sanity-io/codegen/issues/31)) ([4b95575](https://github.com/sanity-io/codegen/commit/4b955757fe1a30718344a239a36a0fbbe3d7ce21))
+
 ## [5.7.1](https://github.com/sanity-io/codegen/compare/codegen-v5.7.0...codegen-v5.7.1) (2026-01-26)
 
 
