@@ -40,7 +40,7 @@ export async function readConfig(path: string): Promise<TypeGenConfig> {
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(
-        `Error in config file\n ${error.errors.map((err) => err.message).join('\n')}`,
+        `Error in config file\n ${error.issues.map((err) => err.message).join('\n')}`,
         {cause: error},
       )
     }

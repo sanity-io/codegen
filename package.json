@@ -75,7 +75,7 @@
     "prettier": "^3.7.4",
     "reselect": "^5.1.1",
     "tsconfig-paths": "^4.2.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.1",
