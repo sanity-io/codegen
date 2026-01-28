@@ -4,8 +4,11 @@ import {join} from 'node:path'
 
 import {runCommand} from '@oclif/test'
 import {testCommand, testExample} from '@sanity/cli-test'
+import {once} from 'lodash-es'
 import {describe, expect, test} from 'vitest'
 
+import {formatPath} from '../../../utils/formatPath.js'
+import {testLongRunning} from '../../../utils/test/testLongRunning.js'
 import {TypegenGenerateCommand} from '../generate.js'
 
 describe('#typegen:generate', () => {
@@ -191,4 +194,42 @@ describe('#typegen:generate', () => {
     expect(error?.message).toContain('Typegen config file not found: typegen.json')
     expect(error?.oclif?.exit).toBe(1)
   })
+
+  describe('watch mode', () => {
+    test('generates on startup', async () => {
+      const cwd = await testExample('dev')
+      process.chdir(cwd)
+
+      await testLongRunning(['typegen', 'generate', '--watch'], {
+        async expect({stderr}) {
+          expect(stderr).toContain(
+            `Successfully generated types to ${formatPath(cwd)}/sanity.types.ts`,
+          )
+          expect(stderr).toContain('└─ 31 queries and 18 schema types')
+        },
+      })
+    })
+
+    test('generates when a file is created', async () => {
+      const cwd = await testExample('dev')
+      process.chdir(cwd)
+
+      const randomFilename = `${Math.random().toFixed(18)}file.ts`
+      const createAFile = once(() => {
+        writeFile(join(cwd, 'src', randomFilename), '')
+      })
+
+      await testLongRunning(['typegen', 'generate', '--watch'], {
+        async expect({stderr, stdout}) {
+          expect(stderr).toContain(
+            `Successfully generated types to ${formatPath(cwd)}/sanity.types.ts`,
+          )
+          expect(stderr).toContain('└─ found queries in 3 files after evaluating 4 files')
+          createAFile()
+          expect(stdout).toMatch(`add: ${join('src', randomFilename)}`)
+          expect(stderr).toContain('└─ found queries in 3 files after evaluating 5 files')
+        },
+      })
+    })
+  }, 30_000)
 })
