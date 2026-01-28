@@ -148,12 +148,12 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   }
 
   private async runSingle() {
-    const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
-
     const trace = telemetry.trace(TypesGeneratedTrace)
-    trace.start()
 
     try {
+      const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
+      trace.start()
+
       const result = await runTypegenGenerate({
         config: typegenConfig,
         workDir,
@@ -176,12 +176,12 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   }
 
   private async runWatcher() {
-    const {config: typegenConfig, workDir} = await this.getConfig()
-
     const trace = telemetry.trace(TypegenWatchModeTrace)
-    trace.start()
 
     try {
+      const {config: typegenConfig, workDir} = await this.getConfig()
+      trace.start()
+
       const {promise, resolve} = promiseWithResolvers()
 
       const typegenWatcher = runTypegenWatcher({
