@@ -89,16 +89,15 @@ describe('#typegen:generate', () => {
 
     expect(error).toBeUndefined()
     expect(stderr).toContain(`- Loading config…`)
-    expect(stderr).toContain(`Config loaded from ./sanity.config.ts`)
+    expect(stderr).toContain(`Config loaded from sanity.cli.ts`)
     expect(stderr).toContain(`- Loading schema…`)
     expect(stderr).toContain(`Schema loaded from ./schema.json`)
     expect(stderr).toContain(`- Generating schema types…`)
-    expect(stderr).toContain(`Generated 18 schema types`)
     expect(stderr).toContain(`- Generating query types…`)
-    expect(stderr).toContain(`Generated 31 query types from 3 files out of 4 scanned files`)
-    expect(stderr).toContain(`- Formatting generated types with prettier…`)
-    expect(stderr).toContain(`Formatted generated types with prettier`)
-    expect(stderr).toContain(`Successfully generated types to ./sanity.types.ts`)
+    expect(stderr).toContain(`Successfully generated types`)
+    expect(stderr).toContain(`└─ 31 queries and 18 schema types`)
+    expect(stderr).toContain(`└─ found queries in 3 files after evaluating 4 files`)
+    expect(stderr).toContain(`└─ formatted the generated code with prettier`)
   })
 
   test('does not format generated types when formatGeneratedCode is false', async () => {
