@@ -16,13 +16,14 @@ describe('#typegen:generate', () => {
       "Sanity TypeGen (Beta)
 
       USAGE
-        $ sanity typegen generate [--config-path <value>]
+        $ sanity typegen generate [--config-path <value>] [--watch]
 
       FLAGS
         --config-path=<value>  [Default: sanity-typegen.json] Specifies the path to
                                the typegen configuration file. This file should be a
                                JSON file that contains settings for the type
                                generation process.
+        --watch                [Default: false] Run the typegen in watch mode
 
       DESCRIPTION
         Sanity TypeGen (Beta)
