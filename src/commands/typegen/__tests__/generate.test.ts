@@ -5,13 +5,35 @@ import {join} from 'node:path'
 import {runCommand} from '@oclif/test'
 import {testCommand, testExample} from '@sanity/cli-test'
 import {once} from 'lodash-es'
-import {describe, expect, test} from 'vitest'
+import {beforeEach, describe, expect, test, vi} from 'vitest'
 
+import {TypesGeneratedTrace} from '../../../typegen.telemetry.js'
 import {formatPath} from '../../../utils/formatPath.js'
 import {testLongRunning} from '../../../utils/test/testLongRunning.js'
 import {TypegenGenerateCommand} from '../generate.js'
 
+// Mock telemetry logger
+const mockTrace = {
+  complete: vi.fn(),
+  error: vi.fn(),
+  log: vi.fn(),
+  start: vi.fn(),
+}
+
+vi.mock('../../../utils/telemetryLogger.js', () => ({
+  telemetry: {
+    trace: vi.fn(() => mockTrace),
+  },
+}))
+
+// Import mock after vi.mock to access it in tests
+const {telemetry} = await import('../../../utils/telemetryLogger.js')
+
 describe('#typegen:generate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   test('should print help', async () => {
     const {stdout} = await runCommand('typegen generate --help')
 
@@ -124,6 +146,49 @@ describe('#typegen:generate', () => {
     expect(error).toBeUndefined()
     expect(stderr).not.toContain('Formatting generated types with prettier…')
     expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
+  })
+
+  test('emits TypesGeneratedTrace telemetry on successful generation', async () => {
+    const cwd = await testExample('dev')
+    process.chdir(cwd)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeUndefined()
+
+    // Verify telemetry.trace was called with TypesGeneratedTrace
+    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+
+    // Verify the trace lifecycle methods were called in order
+    expect(mockTrace.start).toHaveBeenCalled()
+    expect(mockTrace.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configMethod: 'cli',
+        configOverloadClientMethods: expect.any(Boolean),
+        queriesCount: expect.any(Number),
+        schemaTypesCount: expect.any(Number),
+        typeNodesGenerated: expect.any(Number),
+        unknownTypeNodesGenerated: expect.any(Number),
+      }),
+    )
+    expect(mockTrace.complete).toHaveBeenCalled()
+    expect(mockTrace.error).not.toHaveBeenCalled()
+  })
+
+  test('emits TypesGeneratedTrace error on failed generation', async () => {
+    const cwd = await testExample('basic-studio')
+    process.chdir(cwd)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeDefined()
+
+    // Verify telemetry.trace was called with TypesGeneratedTrace
+    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+
+    // Verify error was logged
+    expect(mockTrace.error).toHaveBeenCalledWith(expect.any(Error))
+    expect(mockTrace.complete).toHaveBeenCalled()
   })
 
   test('shows warning when legacy config and cli config are present', async () => {

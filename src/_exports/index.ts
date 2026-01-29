@@ -10,6 +10,7 @@ export {
 } from '../readConfig.js'
 export {readSchema} from '../readSchema.js'
 export {safeParseQuery} from '../safeParseQuery.js'
+export {TypegenWatchModeTrace, TypesGeneratedTrace} from '../typegen.telemetry.js'
 export {findQueriesInPath} from '../typescript/findQueriesInPath.js'
 export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
 export {getResolver} from '../typescript/moduleResolver.js'
