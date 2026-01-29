@@ -24,12 +24,13 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "source": "./src/_exports/index.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/_exports/index.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/_exports/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
     "sanity-typegen": "./bin/run.js"
