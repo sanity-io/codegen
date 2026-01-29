@@ -221,11 +221,17 @@ describe('#typegen:generate', () => {
 
       await testLongRunning(['typegen', 'generate', '--watch'], {
         async expect({stderr, stdout}) {
+          // expect generation to happen once
           expect(stderr).toContain(
             `Successfully generated types to ${formatPath(cwd)}/sanity.types.ts`,
           )
           expect(stderr).toContain('└─ found queries in 3 files after evaluating 4 files')
+
+          // the first time is gets here is when the to expects above does not throw,
+          // and we're ready to create a file to trigger a reload
           createAFile()
+
+          // look for the output indicating that it evaluated 5 files (not 4 like before)
           expect(stdout).toMatch(`add: ${join('src', randomFilename)}`)
           expect(stderr).toContain('└─ found queries in 3 files after evaluating 5 files')
         },
