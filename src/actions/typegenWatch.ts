@@ -72,7 +72,8 @@ export function createTypegenRunner(onGenerate: () => Promise<unknown>): Typegen
  * Implements debouncing and concurrency control to prevent multiple generations.
  */
 export function runTypegenWatcher(options: RunTypegenOptions): {
-  stop: () => Promise<WatcherStats>
+  getStats: () => WatcherStats
+  stop: () => Promise<void>
   watcher: FSWatcher
 } {
   const {config, workDir} = options
@@ -126,15 +127,14 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
   })
 
   return {
+    getStats: () => ({
+      averageGenerationDuration: mean(stats.successfulDurations) || 0,
+      generationFailedCount: stats.failedCount,
+      generationSuccessfulCount: stats.successfulDurations.length,
+      watcherDuration: Date.now() - stats.startTime,
+    }),
     stop: async () => {
       await watcher.close()
-
-      return {
-        averageGenerationDuration: mean(stats.successfulDurations) || 0,
-        generationFailedCount: stats.failedCount,
-        generationSuccessfulCount: stats.successfulDurations.length,
-        watcherDuration: Date.now() - stats.startTime,
-      }
     },
     watcher,
   }

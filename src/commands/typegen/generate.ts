@@ -3,7 +3,7 @@ import {stat} from 'node:fs/promises'
 import {Flags} from '@oclif/core'
 import {SanityCommand} from '@sanity/cli-core'
 import {chalk, spinner} from '@sanity/cli-core/ux'
-import {once} from 'lodash-es'
+import {omit, once} from 'lodash-es'
 
 import {runTypegenGenerate} from '../../actions/typegenGenerate.js'
 import {runTypegenWatcher} from '../../actions/typegenWatch.js'
@@ -159,10 +159,12 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         workDir,
       })
 
+      const traceStats = omit(result, 'code', 'duration')
+
       trace.log({
-        ...result,
         configMethod: typegenConfigMethod,
         configOverloadClientMethods: typegenConfig.overloadClientMethods,
+        ...traceStats,
       })
       trace.complete()
     } catch (error) {
@@ -193,13 +195,12 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         process.off('SIGINT', stop)
         process.off('SIGTERM', stop)
 
-        const stats = await typegenWatcher.stop()
-
         trace.log({
           step: 'stopped',
-          ...stats,
+          ...typegenWatcher.getStats(),
         })
 
+        await typegenWatcher.stop()
         resolve()
       })
 
