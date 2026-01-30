@@ -5,6 +5,7 @@ import chokidar, {FSWatcher} from 'chokidar'
 import {debounce, mean} from 'lodash-es'
 
 import {TypegenWatchModeTraceAttributes} from '../typegen.telemetry.js'
+import {prepareConfig} from '../utils/config.js'
 import {runTypegenGenerate} from './typegenGenerate.js'
 import {type RunTypegenOptions} from './types.js'
 
@@ -77,7 +78,7 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
   watcher: FSWatcher
 } {
   const {config, workDir} = options
-  const {path, schema} = config
+  const {path, schema} = prepareConfig(config)
 
   const stats = {
     failedCount: 0,

@@ -5,12 +5,13 @@ import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
 import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
+import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
-import {type RunTypegenOptions, TypegenWorkerChannel} from './types.js'
+import {TypegenWorkerChannel} from './types.js'
 
 /**
  * Processes the event stream from a typegen worker thread.
@@ -24,7 +25,7 @@ import {type RunTypegenOptions, TypegenWorkerChannel} from './types.js'
  */
 export async function processTypegenWorkerStream(
   receiver: WorkerChannelReceiver<TypegenWorkerChannel>,
-  options: RunTypegenOptions['config'],
+  options: TypeGenConfig,
 ) {
   const start = Date.now()
   const {formatGeneratedCode, generates, schema} = options
