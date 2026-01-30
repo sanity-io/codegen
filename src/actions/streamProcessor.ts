@@ -1,19 +1,17 @@
 import {writeFile} from 'node:fs/promises'
 
-import {subdebug} from '@sanity/cli-core'
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
 import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
+import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
-
-const debug = subdebug('typegen:generate')
 
 /**
  * Processes the event stream from a typegen worker thread.

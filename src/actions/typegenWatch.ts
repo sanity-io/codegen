@@ -93,7 +93,7 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
       stats.successfulDurations.push(duration)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : err
-      console.error(` ${chalk.red('›')}   ${errorMessage}`)
+      error(` ${chalk.red('›')}   ${errorMessage}`)
       stats.failedCount++
     }
   })
