@@ -34,15 +34,18 @@ export async function processTypegenWorkerStream(
   let code = ''
 
   const spin = spinner().start(`Loading schema…`)
+
   try {
-    try {
-      await receiver.event.loadedSchema()
-      spin.succeed(`Schema loaded from ${formatPath(schema ?? '')}`)
-    } catch (err) {
-      throw new Error(`Schema processing failed ${err}`, {cause: err})
-    }
+    await receiver.event.loadedSchema()
+    spin.succeed(`Schema loaded from ${formatPath(schema ?? '')}`)
 
     spin.start('Generating schema types…')
+    const {expectedFileCount} = await receiver.event.typegenStarted()
+    const {schemaTypeDeclarations} = await receiver.event.generatedSchemaTypes()
+    const schemaTypesCount = schemaTypeDeclarations.length
+
+    spin.text = 'Generating query types…'
+
     let queriesCount = 0
     let evaluatedFiles = 0
     let filesWithErrors = 0
@@ -50,47 +53,36 @@ export async function processTypegenWorkerStream(
     let typeNodesGenerated = 0
     let unknownTypeNodesGenerated = 0
     let emptyUnionTypeNodesGenerated = 0
-    let schemaTypesCount = 0
 
-    try {
-      const {expectedFileCount} = await receiver.event.typegenStarted()
-      const {schemaTypeDeclarations} = await receiver.event.generatedSchemaTypes()
-      schemaTypesCount = schemaTypeDeclarations.length
+    for await (const {errors, queries} of receiver.stream.evaluatedModules()) {
+      evaluatedFiles++
+      queriesCount += queries.length
+      queryFilesCount += queries.length > 0 ? 1 : 0
+      filesWithErrors += errors.length > 0 ? 1 : 0
 
-      spin.text = 'Generating query types…'
-
-      for await (const {errors, queries} of receiver.stream.evaluatedModules()) {
-        evaluatedFiles++
-        queriesCount += queries.length
-        queryFilesCount += queries.length > 0 ? 1 : 0
-        filesWithErrors += errors.length > 0 ? 1 : 0
-
-        for (const {stats} of queries) {
-          typeNodesGenerated += stats.allTypes
-          unknownTypeNodesGenerated += stats.unknownTypes
-          emptyUnionTypeNodesGenerated += stats.emptyUnions
-        }
-
-        for (const error of errors) {
-          spin.fail(getMessage(error))
-        }
-
-        if (!spin.isSpinning) {
-          spin.start()
-        }
-
-        spin.text =
-          `Generating query types… (${percent(evaluatedFiles / expectedFileCount)})\n` +
-          `  └─ Processed ${count(evaluatedFiles)} of ${count(expectedFileCount, 'files')}. ` +
-          `Found ${count(queriesCount, 'queries', 'query')} from ${count(queryFilesCount, 'files')}.`
+      for (const {stats} of queries) {
+        typeNodesGenerated += stats.allTypes
+        unknownTypeNodesGenerated += stats.unknownTypes
+        emptyUnionTypeNodesGenerated += stats.emptyUnions
       }
 
-      const result = await receiver.event.typegenComplete()
-      code = `${generatedFileWarning}${result.code}`
-      await writeFile(generates, code)
-    } catch (err) {
-      throw new Error('Type generation failed', {cause: err})
+      for (const error of errors) {
+        spin.fail(getMessage(error))
+      }
+
+      if (!spin.isSpinning) {
+        spin.start()
+      }
+
+      spin.text =
+        `Generating query types… (${percent(evaluatedFiles / expectedFileCount)})\n` +
+        `  └─ Processed ${count(evaluatedFiles)} of ${count(expectedFileCount, 'files')}. ` +
+        `Found ${count(queriesCount, 'queries', 'query')} from ${count(queryFilesCount, 'files')}.`
     }
+
+    const result = await receiver.event.typegenComplete()
+    code = `${generatedFileWarning}${result.code}`
+    await writeFile(generates, code)
 
     let formattingError = false
     if (formatGeneratedCode) {
@@ -143,7 +135,7 @@ export async function processTypegenWorkerStream(
       code,
     }
   } catch (err) {
-    spin.fail(`${err}`)
+    spin.fail()
     debug('error generating types', err)
     throw err
   } finally {

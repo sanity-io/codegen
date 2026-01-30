@@ -1,6 +1,7 @@
 import {error, log} from 'node:console'
 import {isAbsolute, join, relative} from 'node:path'
 
+import {chalk} from '@sanity/cli-core/ux'
 import chokidar, {FSWatcher} from 'chokidar'
 import {debounce, mean} from 'lodash-es'
 
@@ -88,9 +89,11 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
 
   const {runGeneration} = createTypegenRunner(async () => {
     try {
-      const {duration} = await runTypegenGenerate(options)
+      const {duration} = await runTypegenGenerate({...options})
       stats.successfulDurations.push(duration)
-    } catch {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : err
+      console.error(` ${chalk.red('›')}   ${errorMessage}`)
       stats.failedCount++
     }
   })
