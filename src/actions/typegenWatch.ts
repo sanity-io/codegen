@@ -1,4 +1,4 @@
-import {debug, error} from 'node:console'
+import {error, log} from 'node:console'
 import {isAbsolute, join, relative} from 'node:path'
 
 import chokidar, {FSWatcher} from 'chokidar'
@@ -119,7 +119,7 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
   watcher.on('all', (event: string, filePath: string) => {
     const timestamp = new Date().toLocaleTimeString()
     const relativePath = isAbsolute(filePath) ? relative(workDir, filePath) : filePath
-    debug(`[${timestamp}] ${event}: ${relativePath}`)
+    log(`[${timestamp}] ${event}: ${relativePath}`)
     debouncedGenerate()
   })
 
