@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.8.0](https://github.com/sanity-io/codegen/compare/codegen-v5.7.2...codegen-v5.8.0) (2026-01-30)
+
+
+### Features
+
+* add watchmode to typegen generate ([#32](https://github.com/sanity-io/codegen/issues/32)) ([195c641](https://github.com/sanity-io/codegen/commit/195c64134868503d77e70006064c184d82ab0ea9))
+
 ## [5.7.2](https://github.com/sanity-io/codegen/compare/codegen-v5.7.1...codegen-v5.7.2) (2026-01-27)
 
 
