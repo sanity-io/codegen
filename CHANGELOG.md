@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.9.0](https://github.com/sanity-io/codegen/compare/codegen-v5.8.0...codegen-v5.9.0) (2026-01-30)
+
+
+### Features
+
+* allow calling generation with partial or no typegen config ([#36](https://github.com/sanity-io/codegen/issues/36)) ([87e0e59](https://github.com/sanity-io/codegen/commit/87e0e5942297b5b9f47caff1f2e9b3715f9c9ddc))
+
 ## [5.8.0](https://github.com/sanity-io/codegen/compare/codegen-v5.7.2...codegen-v5.8.0) (2026-01-30)
 
 
