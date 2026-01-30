@@ -13,7 +13,7 @@
 
 # Compiled code
 /dist
-src/actions/typegenGenerate.worker.js
+src/actions/*.worker.js
 
 oclif.manifest.json
 

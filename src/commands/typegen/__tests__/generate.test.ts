@@ -188,7 +188,7 @@ describe('#typegen:generate', () => {
 
     // Verify error was logged
     expect(mockTrace.error).toHaveBeenCalledWith(expect.any(Error))
-    expect(mockTrace.complete).toHaveBeenCalled()
+    expect(mockTrace.complete).not.toHaveBeenCalled()
   })
 
   test('shows warning when legacy config and cli config are present', async () => {

@@ -1,7 +1,7 @@
 import {stat} from 'node:fs/promises'
 
 import {Flags} from '@oclif/core'
-import {SanityCommand} from '@sanity/cli-core'
+import {SanityCommand, subdebug} from '@sanity/cli-core'
 import {chalk, spinner} from '@sanity/cli-core/ux'
 import {omit, once} from 'lodash-es'
 
@@ -11,6 +11,8 @@ import {configDefinition, readConfig, type TypeGenConfig} from '../../readConfig
 import {TypegenWatchModeTrace, TypesGeneratedTrace} from '../../typegen.telemetry.js'
 import {promiseWithResolvers} from '../../utils/promiseWithResolvers.js'
 import {telemetry} from '../../utils/telemetryLogger.js'
+
+const debug = subdebug('typegen:generate')
 
 const description = `Sanity TypeGen (Beta)
 This command is currently in beta and may undergo significant changes. Feedback is welcome!
@@ -52,6 +54,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         '[Default: sanity-typegen.json] Specifies the path to the typegen configuration file. This file should be a JSON file that contains settings for the type generation process.',
     }),
     watch: Flags.boolean({
+      default: false,
       description: '[Default: false] Run the typegen in watch mode',
     }),
   }
@@ -168,9 +171,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       })
       trace.complete()
     } catch (error) {
+      debug(error)
       trace.error(error as Error)
-      trace.complete()
-
       this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {
         exit: 1,
       })
@@ -199,6 +201,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
           step: 'stopped',
           ...typegenWatcher.getStats(),
         })
+        trace.complete()
 
         await typegenWatcher.stop()
         resolve()
@@ -209,9 +212,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
       await promise
     } catch (error) {
+      debug(error)
       trace.error(error as Error)
-      trace.complete()
-
       this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {
         exit: 1,
       })
