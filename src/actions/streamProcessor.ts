@@ -3,6 +3,7 @@ import {writeFile} from 'node:fs/promises'
 
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
+import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {count} from '../utils/count.js'
 import {formatPath} from '../utils/formatPath.js'
@@ -84,9 +85,8 @@ export async function processTypegenWorkerStream(
       spin.text = `Formatting generated types with prettier…`
 
       try {
-        const prettier = await import('prettier')
-        const prettierConfig = await prettier.resolveConfig(generates)
-        const formattedCode = await prettier.format(code, {
+        const prettierConfig = await resolvePrettierConfig(generates)
+        const formattedCode = await format(code, {
           ...prettierConfig,
           parser: 'typescript' as const,
         })
