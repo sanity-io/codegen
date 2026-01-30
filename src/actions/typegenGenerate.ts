@@ -6,6 +6,7 @@ import {Worker} from 'node:worker_threads'
 
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
 
+import {prepareConfig} from '../utils/config.js'
 import {processTypegenWorkerStream} from './streamProcessor.js'
 import {
   type GenerationResult,
@@ -26,7 +27,8 @@ import {
 export async function runTypegenGenerate(options: RunTypegenOptions): Promise<GenerationResult> {
   const {config, workDir} = options
 
-  const {formatGeneratedCode, generates, overloadClientMethods, path, schema} = config
+  const {formatGeneratedCode, generates, overloadClientMethods, path, schema} =
+    prepareConfig(config)
 
   const outputPath = isAbsolute(generates) ? generates : join(workDir, generates)
 

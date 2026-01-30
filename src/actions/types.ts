@@ -39,11 +39,11 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<
  * This is the programmatic API for one-off generation without file watching.
  */
 export interface RunTypegenOptions {
-  /** Typegen configuration */
-  config: TypeGenConfig
-
   /** Working directory (usually project root) */
   workDir: string
+
+  /** Typegen configuration */
+  config?: Partial<TypeGenConfig>
 
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
