@@ -1,14 +1,39 @@
 import {existsSync} from 'node:fs'
-import {writeFile} from 'node:fs/promises'
+import {readFile, writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
 import {runCommand} from '@oclif/test'
 import {testCommand, testExample} from '@sanity/cli-test'
-import {describe, expect, test} from 'vitest'
+import {once} from 'lodash-es'
+import {beforeEach, describe, expect, test, vi} from 'vitest'
 
+import {TypesGeneratedTrace} from '../../../typegen.telemetry.js'
+import {formatPath} from '../../../utils/formatPath.js'
+import {testLongRunning} from '../../../utils/test/testLongRunning.js'
 import {TypegenGenerateCommand} from '../generate.js'
 
+// Mock telemetry logger
+const mockTrace = {
+  complete: vi.fn(),
+  error: vi.fn(),
+  log: vi.fn(),
+  start: vi.fn(),
+}
+
+vi.mock('../../../utils/telemetryLogger.js', () => ({
+  telemetry: {
+    trace: vi.fn(() => mockTrace),
+  },
+}))
+
+// Import mock after vi.mock to access it in tests
+const {telemetry} = await import('../../../utils/telemetryLogger.js')
+
 describe('#typegen:generate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   test('should print help', async () => {
     const {stdout} = await runCommand('typegen generate --help')
 
@@ -16,13 +41,14 @@ describe('#typegen:generate', () => {
       "Sanity TypeGen (Beta)
 
       USAGE
-        $ sanity typegen generate [--config-path <value>]
+        $ sanity typegen generate [--config-path <value>] [--watch]
 
       FLAGS
         --config-path=<value>  [Default: sanity-typegen.json] Specifies the path to
                                the typegen configuration file. This file should be a
                                JSON file that contains settings for the type
                                generation process.
+        --watch                [Default: false] Run the typegen in watch mode
 
       DESCRIPTION
         Sanity TypeGen (Beta)
@@ -88,16 +114,18 @@ describe('#typegen:generate', () => {
 
     expect(error).toBeUndefined()
     expect(stderr).toContain(`- Loading config…`)
-    expect(stderr).toContain(`Config loaded from ./sanity.config.ts`)
+    expect(stderr).toContain(`Config loaded from sanity.cli.ts`)
     expect(stderr).toContain(`- Loading schema…`)
     expect(stderr).toContain(`Schema loaded from ./schema.json`)
     expect(stderr).toContain(`- Generating schema types…`)
-    expect(stderr).toContain(`Generated 18 schema types`)
     expect(stderr).toContain(`- Generating query types…`)
-    expect(stderr).toContain(`Generated 31 query types from 3 files out of 4 scanned files`)
-    expect(stderr).toContain(`- Formatting generated types with prettier…`)
-    expect(stderr).toContain(`Formatted generated types with prettier`)
-    expect(stderr).toContain(`Successfully generated types to ./sanity.types.ts`)
+    expect(stderr).toContain(`Successfully generated types`)
+    expect(stderr).toContain(`└─ 31 queries and 18 schema types`)
+    expect(stderr).toContain(`└─ found queries in 3 files after evaluating 4 files`)
+    expect(stderr).toContain(`└─ formatted the generated code with prettier`)
+
+    const generatedTypes = await readFile(join(cwd, 'sanity.types.ts'))
+    expect(generatedTypes.toString()).toMatchSnapshot()
   })
 
   test('does not format generated types when formatGeneratedCode is false', async () => {
@@ -121,6 +149,49 @@ describe('#typegen:generate', () => {
     expect(error).toBeUndefined()
     expect(stderr).not.toContain('Formatting generated types with prettier…')
     expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
+  })
+
+  test('emits TypesGeneratedTrace telemetry on successful generation', async () => {
+    const cwd = await testExample('dev')
+    process.chdir(cwd)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeUndefined()
+
+    // Verify telemetry.trace was called with TypesGeneratedTrace
+    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+
+    // Verify the trace lifecycle methods were called in order
+    expect(mockTrace.start).toHaveBeenCalled()
+    expect(mockTrace.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configMethod: 'cli',
+        configOverloadClientMethods: expect.any(Boolean),
+        queriesCount: expect.any(Number),
+        schemaTypesCount: expect.any(Number),
+        typeNodesGenerated: expect.any(Number),
+        unknownTypeNodesGenerated: expect.any(Number),
+      }),
+    )
+    expect(mockTrace.complete).toHaveBeenCalled()
+    expect(mockTrace.error).not.toHaveBeenCalled()
+  })
+
+  test('emits TypesGeneratedTrace error on failed generation', async () => {
+    const cwd = await testExample('basic-studio')
+    process.chdir(cwd)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeDefined()
+
+    // Verify telemetry.trace was called with TypesGeneratedTrace
+    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+
+    // Verify error was logged
+    expect(mockTrace.error).toHaveBeenCalledWith(expect.any(Error))
+    expect(mockTrace.complete).not.toHaveBeenCalled()
   })
 
   test('shows warning when legacy config and cli config are present', async () => {
@@ -191,4 +262,48 @@ describe('#typegen:generate', () => {
     expect(error?.message).toContain('Typegen config file not found: typegen.json')
     expect(error?.oclif?.exit).toBe(1)
   })
+
+  describe('watch mode', () => {
+    test('generates on startup', async () => {
+      const cwd = await testExample('dev')
+      process.chdir(cwd)
+
+      await testLongRunning(['typegen', 'generate', '--watch'], {
+        async expect({stderr}) {
+          expect(stderr).toContain(
+            `Successfully generated types to ${formatPath(cwd)}/sanity.types.ts`,
+          )
+          expect(stderr).toContain('└─ 31 queries and 18 schema types')
+        },
+      })
+    })
+
+    test('generates when a file is created', async () => {
+      const cwd = await testExample('dev')
+      process.chdir(cwd)
+
+      const randomFilename = `${Math.random().toFixed(18)}file.ts`
+      const createAFile = once(() => {
+        writeFile(join(cwd, 'src', randomFilename), '')
+      })
+
+      await testLongRunning(['typegen', 'generate', '--watch'], {
+        async expect({stderr, stdout}) {
+          // expect generation to happen once
+          expect(stderr).toContain(
+            `Successfully generated types to ${formatPath(cwd)}/sanity.types.ts`,
+          )
+          expect(stderr).toContain('└─ found queries in 3 files after evaluating 4 files')
+
+          // the first time is gets here is when the to expects above does not throw,
+          // and we're ready to create a file to trigger a reload
+          createAFile()
+
+          // look for the output indicating that it evaluated 5 files (not 4 like before)
+          expect(stdout).toMatch(`add: ${join('src', randomFilename)}`)
+          expect(stderr).toContain('└─ found queries in 3 files after evaluating 5 files')
+        },
+      })
+    })
+  }, 30_000)
 })
