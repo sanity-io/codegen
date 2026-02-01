@@ -1,5 +1,5 @@
 import {stat} from 'node:fs/promises'
-import path from 'node:path'
+import {isAbsolute, join} from 'node:path'
 import {isMainThread, parentPort, workerData} from 'node:worker_threads'
 
 import {WorkerChannelReporter} from '@sanity/worker-channels'
@@ -25,7 +25,7 @@ async function main({
 }: TypegenGenerateTypesWorkerData) {
   const report = WorkerChannelReporter.from<TypegenWorkerChannel>(parentPort)
 
-  const fullPath = path.join(workDir, schemaPath)
+  const fullPath = isAbsolute(schemaPath) ? schemaPath : join(workDir, schemaPath)
 
   try {
     const schemaStats = await stat(fullPath)
