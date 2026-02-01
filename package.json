@@ -67,7 +67,6 @@
     "@oclif/core": "^4.8.0",
     "@oclif/plugin-help": "^6.2.36",
     "@sanity/cli-core": "^0.1.0-alpha.8",
-    "@sanity/telemetry": "^0.8.1",
     "@sanity/worker-channels": "^1.1.0",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
@@ -83,6 +82,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.1",
+    "@sanity/telemetry": "^0.8.0",
     "@microsoft/api-extractor": "^7.55.2",
     "@oclif/test": "^4.1.15",
     "@sanity/cli-test": "^0.0.2-alpha.7",
@@ -106,6 +106,9 @@
     "tinyglobby": "^0.2.15",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
+  },
+  "peerDependencies": {
+    "@sanity/telemetry": "^0.8.0"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {
