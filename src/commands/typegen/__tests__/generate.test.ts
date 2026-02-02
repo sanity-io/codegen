@@ -128,6 +128,32 @@ describe('#typegen:generate', () => {
     expect(generatedTypes.toString()).toMatchSnapshot()
   })
 
+  test('should generate types when schema is an absolute path', async () => {
+    const cwd = await testExample('dev')
+    process.chdir(cwd)
+
+    // Create config with absolute schema path
+    const absoluteSchemaPath = join(cwd, 'schema.json')
+    await writeFile(
+      join(cwd, 'sanity.cli.ts'),
+      `import {defineCliConfig} from 'sanity/cli'
+
+      export default defineCliConfig({
+        typegen: {
+          schema: ${JSON.stringify(absoluteSchemaPath)},
+        }
+      })
+    `.trim(),
+    )
+
+    const {error, stderr} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeUndefined()
+    expect(stderr).toContain(`- Loading schema…`)
+    expect(stderr).toContain(`Schema loaded from ${formatPath(absoluteSchemaPath)}`)
+    expect(stderr).toContain(`Successfully generated types`)
+  })
+
   test('does not format generated types when formatGeneratedCode is false', async () => {
     const cwd = await testExample('dev')
     process.chdir(cwd)

@@ -41,9 +41,6 @@ importers:
       '@sanity/cli-core':
         specifier: ^0.1.0-alpha.8
         version: 0.1.0-alpha.8(@types/node@20.19.28)(@types/react@19.2.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
-      '@sanity/telemetry':
-        specifier: ^0.8.1
-        version: 0.8.1(react@19.2.3)
       '@sanity/worker-channels':
         specifier: ^1.1.0
         version: 1.1.0
@@ -96,6 +93,9 @@ importers:
       '@sanity/eslint-config-cli':
         specifier: 0.0.0-alpha.1
         version: 0.0.0-alpha.1(@typescript-eslint/eslint-plugin@8.52.0(@typescript-eslint/parser@8.52.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/parser@8.52.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
+      '@sanity/telemetry':
+        specifier: ^0.8.0
+        version: 0.8.1(react@19.2.3)
       '@swc/cli':
         specifier: ^0.7.9
         version: 0.7.9(@swc/core@1.15.10)(chokidar@3.6.0)

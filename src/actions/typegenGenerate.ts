@@ -1,4 +1,3 @@
-import {debug} from 'node:console'
 import {mkdir} from 'node:fs/promises'
 import {dirname, isAbsolute, join} from 'node:path'
 import {env} from 'node:process'
@@ -7,6 +6,7 @@ import {Worker} from 'node:worker_threads'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
 
 import {prepareConfig} from '../utils/config.js'
+import {debug} from '../utils/debug.js'
 import {processTypegenWorkerStream} from './streamProcessor.js'
 import {
   type GenerationResult,

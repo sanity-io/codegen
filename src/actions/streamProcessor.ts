@@ -1,4 +1,3 @@
-import {debug} from 'node:console'
 import {writeFile} from 'node:fs/promises'
 
 import {spinner} from '@sanity/cli-core/ux'
@@ -7,6 +6,7 @@ import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
+import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
@@ -31,9 +31,9 @@ export async function processTypegenWorkerStream(
   const {formatGeneratedCode, generates, schema} = options
   let code = ''
 
-  try {
-    const spin = spinner().start(`Loading schema…`)
+  const spin = spinner().start(`Loading schema…`)
 
+  try {
     await receiver.event.loadedSchema()
     spin.succeed(`Schema loaded from ${formatPath(schema ?? '')}`)
 
@@ -43,6 +43,7 @@ export async function processTypegenWorkerStream(
     const schemaTypesCount = schemaTypeDeclarations.length
 
     spin.text = 'Generating query types…'
+
     let queriesCount = 0
     let evaluatedFiles = 0
     let filesWithErrors = 0
@@ -132,6 +133,7 @@ export async function processTypegenWorkerStream(
       code,
     }
   } catch (err) {
+    spin.fail()
     debug('error generating types', err)
     throw err
   } finally {
