@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.9.1](https://github.com/sanity-io/codegen/compare/codegen-v5.9.0...codegen-v5.9.1) (2026-02-02)
+
+
+### Bug Fixes
+
+* absolute paths, error flow and debug info ([#38](https://github.com/sanity-io/codegen/issues/38)) ([12d9528](https://github.com/sanity-io/codegen/commit/12d9528f4b152b590ff032fee6ece9e38684740b))
+
 ## [5.9.0](https://github.com/sanity-io/codegen/compare/codegen-v5.8.0...codegen-v5.9.0) (2026-01-30)
 
 
