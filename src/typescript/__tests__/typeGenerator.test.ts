@@ -183,10 +183,6 @@ describe(TypeGenerator.name, () => {
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
 
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
-
       // Source: foo.ts
       // Variable: queryFoo
       // Query: *[_type == "foo"]
@@ -292,10 +288,6 @@ describe(TypeGenerator.name, () => {
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
 
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
-
       // Source: foo.ts
       // Variable: queryFoo
       // Query: *[_type == "foo"]
@@ -363,10 +355,6 @@ describe(TypeGenerator.name, () => {
       export type AllSanitySchemaTypes = Foo | Bar;
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
-
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
 
       "
     `)
@@ -940,11 +928,32 @@ describe(TypeGenerator.name, () => {
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
 
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
-
       "
     `)
+  })
+
+  test('ArrayOf should NOT be generated when not used (no inline type references)', async () => {
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          title: {
+            type: 'objectAttribute',
+            value: {type: 'string'},
+          },
+        },
+        name: 'post',
+        type: 'document',
+      },
+    ]
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      schema,
+    })
+
+    // ArrayOf should NOT be in the output
+    expect(code).not.toContain('ArrayOf')
   })
 })
