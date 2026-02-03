@@ -931,4 +931,29 @@ describe(TypeGenerator.name, () => {
       "
     `)
   })
+
+  test('ArrayOf should NOT be generated when not used (no inline type references)', async () => {
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          title: {
+            type: 'objectAttribute',
+            value: {type: 'string'},
+          },
+        },
+        name: 'post',
+        type: 'document',
+      },
+    ]
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      schema,
+    })
+
+    // ArrayOf should NOT be in the output
+    expect(code).not.toContain('ArrayOf')
+  })
 })
