@@ -274,7 +274,7 @@ export class TypeGenerator {
   async generateTypes(options: GenerateTypesOptions) {
     const {reporter: report} = options
     const internalReferenceSymbol = this.getInternalReferenceSymbolDeclaration()
-    const arrayOfDeclaration = this.getArrayOfDeclaration()
+    const schemaTypeGenerator = this.getSchemaTypeGenerator(options)
     const schemaTypeDeclarations = this.getSchemaTypeDeclarations(options)
     const allSanitySchemaTypesDeclaration = this.getAllSanitySchemaTypesDeclaration(options)
 
@@ -298,14 +298,19 @@ export class TypeGenerator {
     program.body.push(internalReferenceSymbol.ast)
     code += internalReferenceSymbol.code
 
-    program.body.push(arrayOfDeclaration.ast)
-    code += arrayOfDeclaration.code
-
     const evaluatedModules = await TypeGenerator.getEvaluatedModules({
       ...options,
       schemaTypeDeclarations,
-      schemaTypeGenerator: this.getSchemaTypeGenerator(options),
+      schemaTypeGenerator,
     })
+
+    // Only generate ArrayOf if it's actually used
+    if (schemaTypeGenerator.isArrayOfUsed()) {
+      const arrayOfDeclaration = this.getArrayOfDeclaration()
+      program.body.push(arrayOfDeclaration.ast)
+      code += arrayOfDeclaration.code
+    }
+
     for (const {queries} of evaluatedModules) {
       for (const query of queries) {
         program.body.push(query.ast)

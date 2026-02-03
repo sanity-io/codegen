@@ -183,10 +183,6 @@ describe(TypeGenerator.name, () => {
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
 
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
-
       // Source: foo.ts
       // Variable: queryFoo
       // Query: *[_type == "foo"]
@@ -292,10 +288,6 @@ describe(TypeGenerator.name, () => {
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
 
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
-
       // Source: foo.ts
       // Variable: queryFoo
       // Query: *[_type == "foo"]
@@ -363,10 +355,6 @@ describe(TypeGenerator.name, () => {
       export type AllSanitySchemaTypes = Foo | Bar;
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
-
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
 
       "
     `)
@@ -939,10 +927,6 @@ describe(TypeGenerator.name, () => {
       export type AllSanitySchemaTypes = Author;
 
       export declare const internalGroqTypeReferenceTo: unique symbol;
-
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
 
       "
     `)

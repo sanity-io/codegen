@@ -34,6 +34,8 @@ export class SchemaTypeGenerator {
       return {stats, tsType}
     },
   )
+  private arrayOfUsed = false
+
   private identifiers = new Map<string, t.Identifier>()
 
   private tsTypes = new Map<string, t.TSType>()
@@ -73,6 +75,10 @@ export class SchemaTypeGenerator {
     return this.tsTypes.has(typeName)
   }
 
+  isArrayOfUsed(): boolean {
+    return this.arrayOfUsed
+  }
+
   *[Symbol.iterator]() {
     for (const {name} of this.schema) {
       yield {name, ...this.getType(name)!}
@@ -88,6 +94,7 @@ export class SchemaTypeGenerator {
    * wrapped in the ArrayOf wrapper that adds _key prop
    */
   private generateArrayOfTsType(typeNode: ArrayTypeNode): t.TSTypeReference {
+    this.arrayOfUsed = true
     const typeNodes = this.generateTsType(typeNode.of)
     return t.tsTypeReference(ARRAY_OF, t.tsTypeParameterInstantiation([typeNodes]))
   }
