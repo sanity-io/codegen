@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.9.2](https://github.com/sanity-io/codegen/compare/codegen-v5.9.1...codegen-v5.9.2) (2026-02-03)
+
+
+### Bug Fixes
+
+* only generate ArrayOf helper when referenced ([#40](https://github.com/sanity-io/codegen/issues/40)) ([97b28e1](https://github.com/sanity-io/codegen/commit/97b28e12beaf228415693a061503e6513070f9ba))
+
 ## [5.9.1](https://github.com/sanity-io/codegen/compare/codegen-v5.9.0...codegen-v5.9.1) (2026-02-02)
 
 
