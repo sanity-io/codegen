@@ -1,7 +1,7 @@
 import {error, log} from 'node:console'
 import {isAbsolute, join, relative} from 'node:path'
+import {styleText} from 'node:util'
 
-import {chalk} from '@sanity/cli-core/ux'
 import chokidar, {FSWatcher} from 'chokidar'
 import {debounce, mean} from 'lodash-es'
 
@@ -19,7 +19,7 @@ const IGNORED_PATTERNS = [
 ]
 
 /** State for tracking generation status */
-export interface WatchState {
+interface WatchState {
   isGenerating: boolean
   pendingGeneration: boolean
 }
@@ -37,7 +37,7 @@ type WatcherStats = Omit<Extract<TypegenWatchModeTraceAttributes, {step: 'stoppe
  * If generation is already running, queues one more generation to run after completion.
  * Multiple queued requests are coalesced into a single pending generation.
  */
-export function createTypegenRunner(onGenerate: () => Promise<unknown>): TypegenRunner {
+function createTypegenRunner(onGenerate: () => Promise<unknown>): TypegenRunner {
   const state: WatchState = {
     isGenerating: false,
     pendingGeneration: false,
@@ -93,7 +93,7 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
       stats.successfulDurations.push(duration)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : err
-      error(` ${chalk.red('›')}   ${errorMessage}`)
+      error(` ${styleText('red', '›')}   ${errorMessage}`)
       stats.failedCount++
     }
   })

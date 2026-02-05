@@ -3,7 +3,7 @@ import {type TestProject} from 'vitest/node'
 
 export function setup(project: TestProject) {
   return cliSetup(project, {
-    additionalExamples: ['dev'],
+    additionalFixtures: ['dev'],
   })
 }
 

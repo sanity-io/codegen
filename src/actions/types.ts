@@ -3,7 +3,6 @@ import {WorkerChannel} from '@sanity/worker-channels'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../typescript/typeGenerator.js'
-import {telemetry} from '../utils/telemetryLogger.js'
 
 /**
  * Data passed to the typegen worker thread.
@@ -47,9 +46,6 @@ export interface RunTypegenOptions {
 
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
-
-  /** Optional telemetry instance for tracking usage */
-  telemetry?: typeof telemetry
 }
 
 /**

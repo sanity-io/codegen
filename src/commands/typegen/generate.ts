@@ -1,8 +1,9 @@
 import {stat} from 'node:fs/promises'
+import {styleText} from 'node:util'
 
 import {Flags} from '@oclif/core'
 import {SanityCommand} from '@sanity/cli-core'
-import {chalk, spinner} from '@sanity/cli-core/ux'
+import {spinner} from '@sanity/cli-core/ux'
 import {omit, once} from 'lodash-es'
 
 import {runTypegenGenerate} from '../../actions/typegenGenerate.js'
@@ -11,12 +12,11 @@ import {configDefinition, readConfig, type TypeGenConfig} from '../../readConfig
 import {TypegenWatchModeTrace, TypesGeneratedTrace} from '../../typegen.telemetry.js'
 import {debug} from '../../utils/debug.js'
 import {promiseWithResolvers} from '../../utils/promiseWithResolvers.js'
-import {telemetry} from '../../utils/telemetryLogger.js'
 
 const description = `Sanity TypeGen (Beta)
 This command is currently in beta and may undergo significant changes. Feedback is welcome!
 
-${chalk.bold('Configuration:')}
+${styleText('bold', 'Configuration:')}
 This command can utilize configuration settings defined in a \`sanity-typegen.json\` file. These settings include:
 
 - "path": Specifies a glob pattern to locate your TypeScript or JavaScript files.
@@ -30,7 +30,7 @@ This command can utilize configuration settings defined in a \`sanity-typegen.js
 
 The default configuration values listed above are used if not overridden in your \`sanity-typegen.json\` configuration file. To customize the behavior of the type generation, adjust these properties in the configuration file according to your project's needs.
 
-${chalk.bold('Note:')}
+${styleText('bold', 'Note:')}
 - The \`sanity schema extract\` command is a prerequisite for extracting your Sanity Studio schema into a \`schema.json\` file, which is then used by the \`sanity typegen generate\` command to generate type definitions.
 - While this tool is in beta, we encourage you to experiment with these configurations and provide feedback to help improve its functionality and usability.`.trim()
 
@@ -109,7 +109,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       // we have both legacy and cli config with typegen
       if (config?.typegen && hasLegacyConfig) {
         spin.warn(
-          chalk.yellow(
+          styleText(
+            'yellow',
             `You've specified typegen in your Sanity CLI config, but also have a typegen config.
 
     The config from the Sanity CLI config is used.
@@ -128,7 +129,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       // we only have legacy typegen config
       if (hasLegacyConfig) {
         spin.warn(
-          chalk.yellow(
+          styleText(
+            'yellow',
             `The separate typegen config has been deprecated. Use \`typegen\` in the sanity CLI config instead.
 
     See: https://www.sanity.io/docs/help/configuring-typegen-in-sanity-cli-config`,
@@ -158,7 +160,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   }
 
   private async runSingle() {
-    const trace = telemetry.trace(TypesGeneratedTrace)
+    const trace = this.telemetry.trace(TypesGeneratedTrace)
 
     try {
       const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
@@ -187,7 +189,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   }
 
   private async runWatcher() {
-    const trace = telemetry.trace(TypegenWatchModeTrace)
+    const trace = this.telemetry.trace(TypegenWatchModeTrace)
 
     try {
       const {config: typegenConfig, workDir} = await this.getConfig()
