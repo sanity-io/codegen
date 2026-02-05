@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {execute} from '@oclif/core'
+import {CLI_TELEMETRY_SYMBOL} from '@sanity/cli-core'
 
 const err = '\u001B[31m\u001B[1mERROR:\u001B[22m\u001B[39m '
 const nodeVersionParts = process.version.replace(/^v/i, '').split('.').map(Number)
@@ -21,11 +22,30 @@ function isSupportedNodeVersion(major, minor, patch) {
 }
 
 if (!isSupportedNodeVersion(majorVersion, minorVersion, patchVersion)) {
+  // eslint-disable-next-line no-console
   console.error(
     `${err}Node.js version >=20.19.1 <22 or >=22.12 required. You are running ${process.version}`,
   )
+  // eslint-disable-next-line no-console
   console.error('')
   process.exit(1)
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  /**
+   * Telemetry is added via a plugin in the main CLI.
+   * This adds a mock implementation of the telemetry API to allow running this CLI for testing.
+   *
+   * We won't be exposing this API to the public, so it's ok to use a globalThis assignment.
+   */
+  globalThis[CLI_TELEMETRY_SYMBOL] = {
+    trace: () => ({
+      complete: () => {},
+      error: () => {},
+      log: () => {},
+      start: () => {},
+    }),
+  }
 }
 
 await execute({dir: import.meta.url})

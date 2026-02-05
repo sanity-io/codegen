@@ -3,7 +3,7 @@ import {readFile, writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
 import {runCommand} from '@oclif/test'
-import {testCommand, testExample} from '@sanity/cli-test'
+import {testCommand, testFixture} from '@sanity/cli-test'
 import {once} from 'lodash-es'
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
@@ -19,15 +19,6 @@ const mockTrace = {
   log: vi.fn(),
   start: vi.fn(),
 }
-
-vi.mock('../../../utils/telemetryLogger.js', () => ({
-  telemetry: {
-    trace: vi.fn(() => mockTrace),
-  },
-}))
-
-// Import mock after vi.mock to access it in tests
-const {telemetry} = await import('../../../utils/telemetryLogger.js')
 
 describe('#typegen:generate', () => {
   beforeEach(() => {
@@ -95,7 +86,7 @@ describe('#typegen:generate', () => {
   })
 
   test('should error when no extracted schema is found', async () => {
-    const cwd = await testExample('basic-studio')
+    const cwd = await testFixture('basic-studio')
     process.chdir(cwd)
 
     const {error} = await testCommand(TypegenGenerateCommand, [])
@@ -107,7 +98,7 @@ describe('#typegen:generate', () => {
   })
 
   test('should generate types from queries', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     const {error, stderr} = await testCommand(TypegenGenerateCommand, [])
@@ -129,7 +120,7 @@ describe('#typegen:generate', () => {
   })
 
   test('should generate types when schema is an absolute path', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     // Create config with absolute schema path
@@ -155,7 +146,7 @@ describe('#typegen:generate', () => {
   })
 
   test('does not format generated types when formatGeneratedCode is false', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     await writeFile(
@@ -178,15 +169,21 @@ describe('#typegen:generate', () => {
   })
 
   test('emits TypesGeneratedTrace telemetry on successful generation', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
-    const {error} = await testCommand(TypegenGenerateCommand, [])
+    const mockTelemetry = vi.fn(() => mockTrace)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [], {
+      mocks: {
+        trace: mockTelemetry,
+      },
+    })
 
     expect(error).toBeUndefined()
 
     // Verify telemetry.trace was called with TypesGeneratedTrace
-    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+    expect(mockTelemetry).toHaveBeenCalledWith(TypesGeneratedTrace)
 
     // Verify the trace lifecycle methods were called in order
     expect(mockTrace.start).toHaveBeenCalled()
@@ -205,15 +202,21 @@ describe('#typegen:generate', () => {
   })
 
   test('emits TypesGeneratedTrace error on failed generation', async () => {
-    const cwd = await testExample('basic-studio')
+    const cwd = await testFixture('basic-studio')
     process.chdir(cwd)
 
-    const {error} = await testCommand(TypegenGenerateCommand, [])
+    const mockTelemetry = vi.fn(() => mockTrace)
+
+    const {error} = await testCommand(TypegenGenerateCommand, [], {
+      mocks: {
+        trace: mockTelemetry,
+      },
+    })
 
     expect(error).toBeDefined()
 
     // Verify telemetry.trace was called with TypesGeneratedTrace
-    expect(telemetry.trace).toHaveBeenCalledWith(TypesGeneratedTrace)
+    expect(mockTelemetry).toHaveBeenCalledWith(TypesGeneratedTrace)
 
     // Verify error was logged
     expect(mockTrace.error).toHaveBeenCalledWith(expect.any(Error))
@@ -221,7 +224,7 @@ describe('#typegen:generate', () => {
   })
 
   test('shows warning when legacy config and cli config are present', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     await writeFile(
@@ -255,7 +258,7 @@ describe('#typegen:generate', () => {
   })
 
   test('shows warning when only legacy config is present', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     await writeFile(
@@ -279,7 +282,7 @@ describe('#typegen:generate', () => {
   })
 
   test('shows an error when the legacy config file passed as a flag does not exist', async () => {
-    const cwd = await testExample('dev')
+    const cwd = await testFixture('dev')
     process.chdir(cwd)
 
     const {error} = await testCommand(TypegenGenerateCommand, ['--config-path', 'typegen.json'])
@@ -291,7 +294,7 @@ describe('#typegen:generate', () => {
 
   describe('watch mode', () => {
     test('generates on startup', async () => {
-      const cwd = await testExample('dev')
+      const cwd = await testFixture('dev')
       process.chdir(cwd)
 
       await testLongRunning(['typegen', 'generate', '--watch'], {
@@ -305,7 +308,7 @@ describe('#typegen:generate', () => {
     })
 
     test('generates when a file is created', async () => {
-      const cwd = await testExample('dev')
+      const cwd = await testFixture('dev')
       process.chdir(cwd)
 
       const randomFilename = `${Math.random().toFixed(18)}file.ts`
