@@ -5,7 +5,7 @@ export default {
   plugins: ['@oclif/plugin-help'],
   topics: {
     typegen: {
-      description: 'Beta: Generate TypeScript types for schema and GROQ',
+      description: 'Generate TypeScript types for schema and GROQ',
     },
   },
   topicSeparator: ' ',

@@ -13,8 +13,7 @@ import {TypegenWatchModeTrace, TypesGeneratedTrace} from '../../typegen.telemetr
 import {debug} from '../../utils/debug.js'
 import {promiseWithResolvers} from '../../utils/promiseWithResolvers.js'
 
-const description = `Sanity TypeGen (Beta)
-This command is currently in beta and may undergo significant changes. Feedback is welcome!
+const description = `Sanity TypeGen
 
 ${styleText('bold', 'Configuration:')}
 This command can utilize configuration settings defined in a \`sanity-typegen.json\` file. These settings include:
@@ -31,8 +30,7 @@ This command can utilize configuration settings defined in a \`sanity-typegen.js
 The default configuration values listed above are used if not overridden in your \`sanity-typegen.json\` configuration file. To customize the behavior of the type generation, adjust these properties in the configuration file according to your project's needs.
 
 ${styleText('bold', 'Note:')}
-- The \`sanity schema extract\` command is a prerequisite for extracting your Sanity Studio schema into a \`schema.json\` file, which is then used by the \`sanity typegen generate\` command to generate type definitions.
-- While this tool is in beta, we encourage you to experiment with these configurations and provide feedback to help improve its functionality and usability.`.trim()
+- The \`sanity schema extract\` command is a prerequisite for extracting your Sanity Studio schema into a \`schema.json\` file, which is then used by the \`sanity typegen generate\` command to generate type definitions.`.trim()
 
 /**
  * @internal
