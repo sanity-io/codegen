@@ -29,7 +29,7 @@ describe('#typegen:generate', () => {
     const {stdout} = await runCommand('typegen generate --help')
 
     expect(stdout).toMatchInlineSnapshot(`
-      "Sanity TypeGen (Beta)
+      "Sanity TypeGen
 
       USAGE
         $ sanity typegen generate [--config-path <value>] [--watch]
@@ -42,9 +42,7 @@ describe('#typegen:generate', () => {
         --watch                [Default: false] Run the typegen in watch mode
 
       DESCRIPTION
-        Sanity TypeGen (Beta)
-        This command is currently in beta and may undergo significant changes.
-        Feedback is welcome!
+        Sanity TypeGen
 
         Configuration:
         This command can utilize configuration settings defined in a
@@ -71,9 +69,6 @@ describe('#typegen:generate', () => {
         - The \`sanity schema extract\` command is a prerequisite for extracting your
         Sanity Studio schema into a \`schema.json\` file, which is then used by the
         \`sanity typegen generate\` command to generate type definitions.
-        - While this tool is in beta, we encourage you to experiment with these
-        configurations and provide feedback to help improve its functionality and
-        usability.
 
       EXAMPLES
         Generate TypeScript type definitions from a Sanity Studio schema extracted
