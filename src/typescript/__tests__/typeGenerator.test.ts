@@ -956,4 +956,87 @@ describe(TypeGenerator.name, () => {
     // ArrayOf should NOT be in the output
     expect(code).not.toContain('ArrayOf')
   })
+
+  test('regression: support using document type as field type', async () => {
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'hero'}},
+          title: {
+            type: 'objectAttribute',
+            value: {type: 'string'},
+          },
+        },
+        name: 'hero',
+        type: 'document',
+      },
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'page'}},
+          pageContent: {
+            type: 'objectAttribute',
+            value: {
+              of: {
+                of: [
+                  {
+                    attributes: {
+                      _key: {
+                        type: 'objectAttribute',
+                        value: {
+                          type: 'string',
+                        },
+                      },
+                    },
+                    rest: {
+                      name: 'hero',
+                      type: 'inline',
+                    },
+                    type: 'object',
+                  },
+                ],
+                type: 'union',
+              },
+              type: 'array',
+            },
+          },
+          title: {
+            type: 'objectAttribute',
+            value: {type: 'string'},
+          },
+        },
+        name: 'page',
+        type: 'document',
+      },
+    ]
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    async function* getQueries(): AsyncGenerator<ExtractedModule> {
+      yield {
+        errors: [],
+        filename: '/src/queries.ts',
+        queries: [
+          {
+            filename: '/src/queries.ts',
+            query: `*[_type == "page"].pageContent[]{...}[].title`,
+            variable: {id: {name: 'DOC_TYPE_SPREAD_FIELD_QUERY', type: 'Identifier'}},
+          },
+          {
+            filename: '/src/queries.ts',
+            query: `*[_type == "page"].pageContent[].title`,
+            variable: {id: {name: 'DOC_TYPE_FIELD_QUERY', type: 'Identifier'}},
+          },
+        ],
+      }
+    }
+
+    const typeGenerator = new TypeGenerator()
+    const result = await typeGenerator.generateTypes({
+      queries: getQueries(),
+      schema,
+    })
+
+    expect(result.code).toMatchSnapshot()
+  })
 })
