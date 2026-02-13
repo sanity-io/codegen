@@ -47,3 +47,45 @@ export type STRANGE_QUERY_RESULT = Array<{
 
 "
 `;
+
+exports[`TypeGenerator > regression: support using document type as field type 1`] = `
+"export type Hero = {
+  _id: string;
+  _type: "hero";
+  title: string;
+};
+
+export type Page = {
+  _id: string;
+  _type: "page";
+  pageContent: Array<{
+    _key: string;
+  } & Hero>;
+  title: string;
+};
+
+export type AllSanitySchemaTypes = Hero | Page;
+
+export declare const internalGroqTypeReferenceTo: unique symbol;
+
+// Source: ../../../../../src/queries.ts
+// Variable: DOC_TYPE_SPREAD_FIELD_QUERY
+// Query: *[_type == "page"].pageContent[]{...}[].title
+export type DOC_TYPE_SPREAD_FIELD_QUERY_RESULT = Array<string>;
+
+// Source: ../../../../../src/queries.ts
+// Variable: DOC_TYPE_FIELD_QUERY
+// Query: *[_type == "page"].pageContent[].title
+export type DOC_TYPE_FIELD_QUERY_RESULT = Array<string>;
+
+// Query TypeMap
+import "@sanity/client";
+declare module "@sanity/client" {
+  interface SanityQueries {
+    "*[_type == \\"page\\"].pageContent[]{...}[].title": DOC_TYPE_SPREAD_FIELD_QUERY_RESULT;
+    "*[_type == \\"page\\"].pageContent[].title": DOC_TYPE_FIELD_QUERY_RESULT;
+  }
+}
+
+"
+`;
