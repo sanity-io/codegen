@@ -1,82 +1,8 @@
 import * as t from '@babel/types'
-import {type ObjectTypeNode, type TypeNode} from 'groq-js'
+import {hashTypeNode, type ObjectTypeNode, type TypeNode} from 'groq-js'
 
 import {singularize} from '../utils/singularize.js'
 import {getUniqueIdentifierForName} from './helpers.js'
-
-const fingerprintCache = new WeakMap<TypeNode, string>()
-
-/**
- * Computes a canonical string fingerprint for a TypeNode.
- * Structurally identical TypeNodes produce identical fingerprints.
- * Results are cached per object identity to avoid redundant walks.
- */
-export function fingerprintTypeNode(typeNode: TypeNode): string {
-  const cached = fingerprintCache.get(typeNode)
-  if (cached !== undefined) return cached
-
-  const result = computeFingerprint(typeNode)
-  fingerprintCache.set(typeNode, result)
-  return result
-}
-
-function computeFingerprint(typeNode: TypeNode): string {
-  switch (typeNode.type) {
-    case 'array': {
-      return `[${fingerprintTypeNode(typeNode.of)}]`
-    }
-    case 'boolean': {
-      return typeNode.value === undefined ? 'b' : `b:${typeNode.value}`
-    }
-    case 'inline': {
-      return `@${typeNode.name}`
-    }
-    case 'null': {
-      return 'null'
-    }
-    case 'number': {
-      return typeNode.value === undefined ? 'n' : `n:${typeNode.value}`
-    }
-    case 'object': {
-      return fingerprintObjectTypeNode(typeNode)
-    }
-    case 'string': {
-      return typeNode.value === undefined ? 's' : `s:${JSON.stringify(typeNode.value)}`
-    }
-    case 'union': {
-      const members = typeNode.of.map((tn) => fingerprintTypeNode(tn)).toSorted()
-      return `(${members.join('|')})`
-    }
-    case 'unknown': {
-      return '?'
-    }
-    default: {
-      // Safety net for unknown node types
-      return `unknown:${(typeNode as {type: string}).type}`
-    }
-  }
-}
-
-function fingerprintObjectTypeNode(typeNode: ObjectTypeNode): string {
-  const entries = Object.entries(typeNode.attributes)
-    .map(([key, attr]) => {
-      const optMarker = attr.optional ? '?' : ''
-      return `${key}${optMarker}:${fingerprintTypeNode(attr.value)}`
-    })
-    .toSorted()
-
-  let rest = ''
-  if (typeNode.rest) {
-    rest = `@rest${fingerprintTypeNode(typeNode.rest)}`
-  }
-
-  let deref = ''
-  if (typeNode.dereferencesTo) {
-    deref = `->>${typeNode.dereferencesTo}`
-  }
-
-  return `{${entries.join(',')}${rest}${deref}}`
-}
 
 /**
  * Walks all TypeNodes recursively, fingerprints every object node, and counts occurrences.
@@ -107,7 +33,7 @@ function walkTypeNode(
       break
     }
     case 'object': {
-      const fp = fingerprintTypeNode(typeNode)
+      const fp = hashTypeNode(typeNode)
       const existing = result.get(fp)
       if (existing) {
         existing.count++

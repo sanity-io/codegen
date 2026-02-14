@@ -57,8 +57,8 @@ importers:
         specifier: ^5.10.0
         version: 5.10.0
       groq-js:
-        specifier: ^1.27.1
-        version: 1.27.1
+        specifier: 1.27.0-type-node-hasher.0
+        version: 1.27.0-type-node-hasher.0
       json5:
         specifier: ^2.2.3
         version: 2.2.3
@@ -4523,6 +4523,10 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  groq-js@1.27.0-type-node-hasher.0:
+    resolution: {integrity: sha512-EiRUsDL2eY6gvau83NmOKzv7PwfWTKM9QFW+kRMmVzK4suoQQ+R+HPanLLwk4QSK9Xl1ng9QWsZSKPLjbzn9kg==}
+    engines: {node: '>= 14'}
 
   groq-js@1.27.1:
     resolution: {integrity: sha512-75Ckwdqw/VXf06pHKhSiwi8HbU2L+HQQzyZHvKbNPuW8z5f+D6srNBkTpSxO5cJy03bOC58FhjMeSsBD9AwgpA==}
@@ -12847,6 +12851,12 @@ snapshots:
   graceful-fs@4.2.10: {}
 
   graceful-fs@4.2.11: {}
+
+  groq-js@1.27.0-type-node-hasher.0:
+    dependencies:
+      debug: 4.4.3(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
 
   groq-js@1.27.1:
     dependencies:

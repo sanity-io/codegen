@@ -1,14 +1,10 @@
 import {CodeGenerator} from '@babel/generator'
 import * as t from '@babel/types'
-import {type ObjectTypeNode, type TypeNode} from 'groq-js'
+import {hashTypeNode, type ObjectTypeNode, type TypeNode} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
 import {SchemaTypeGenerator, walkAndCountQueryTypeNodeStats} from '../schemaTypeGenerator.js'
-import {
-  buildDeduplicationRegistry,
-  collectObjectFingerprints,
-  fingerprintTypeNode,
-} from '../typeNodeFingerprint.js'
+import {buildDeduplicationRegistry, collectObjectFingerprints} from '../typeNodeFingerprint.js'
 
 function generateCode(node: t.Node | undefined) {
   if (!node) throw new Error('Node is undefined')
@@ -664,7 +660,7 @@ describe(SchemaTypeGenerator.name, () => {
         type: 'object',
       }
 
-      const fp = fingerprintTypeNode(imageObj)
+      const fp = hashTypeNode(imageObj)
       const fingerprints = new Map([[fp, {candidateName: 'image', count: 2, typeNode: imageObj}]])
       const registry = buildDeduplicationRegistry(fingerprints, new Set())
       gen.setDeduplicationRegistry(registry)
