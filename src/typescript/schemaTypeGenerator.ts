@@ -2,6 +2,7 @@ import * as t from '@babel/types'
 import {
   type ArrayTypeNode,
   type DocumentSchemaType,
+  hashTypeNode,
   type InlineTypeNode,
   type ObjectAttribute,
   type ObjectTypeNode,
@@ -20,7 +21,7 @@ import {
   isIdentifierName,
   weakMapMemo,
 } from './helpers.js'
-import {type DeduplicationRegistry, fingerprintTypeNode} from './typeNodeFingerprint.js'
+import {type DeduplicationRegistry} from './typeNodeFingerprint.js'
 import {type ExtractedQuery, type TypeEvaluationStats} from './types.js'
 
 export class SchemaTypeGenerator {
@@ -194,7 +195,7 @@ export class SchemaTypeGenerator {
   // Helper function used to generate TS types for object type nodes.
   private generateObjectTsType(typeNode: ObjectTypeNode): t.TSType {
     if (this.deduplicationRegistry) {
-      const fp = fingerprintTypeNode(typeNode)
+      const fp = hashTypeNode(typeNode)
       if (fp !== this.excludedFingerprint) {
         const extracted = this.deduplicationRegistry.extractedTypes.get(fp)
         if (extracted) return t.tsTypeReference(extracted.id)
