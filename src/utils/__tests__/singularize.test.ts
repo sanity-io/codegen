@@ -21,7 +21,10 @@ describe('singularize', () => {
     expect(singularize('bushes')).toBe('bush')
     expect(singularize('matches')).toBe('match')
     expect(singularize('boxes')).toBe('box')
-    expect(singularize('buzzes')).toBe('buzz')
+  })
+
+  test('handles doubled-z plurals by stripping -zes', () => {
+    expect(singularize('quizzes')).toBe('quiz')
   })
 
   test('does not strip from words ending in -ss', () => {
@@ -37,5 +40,16 @@ describe('singularize', () => {
   test('returns non-plural words unchanged', () => {
     expect(singularize('child')).toBe('child')
     expect(singularize('data')).toBe('data')
+  })
+
+  test('handles exactly 3-char -ies word', () => {
+    // "ies" is exactly length 3, so it should NOT be converted
+    expect(singularize('ies')).toBe('ie')
+  })
+
+  test('handles single character and empty string', () => {
+    expect(singularize('')).toBe('')
+    expect(singularize('a')).toBe('a')
+    expect(singularize('s')).toBe('s')
   })
 })

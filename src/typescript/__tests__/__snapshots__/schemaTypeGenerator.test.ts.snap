@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SchemaTypeGenerator > deduplication > snapshot of dedup output for queries with shared inline objects 1`] = `
+{
+  "query1": "Array<{
+  title: string | null;
+  mainImage: InlineImage | null;
+}>",
+  "query2": "Array<{
+  name: string | null;
+  avatar: InlineImage | null;
+}>",
+}
+`;

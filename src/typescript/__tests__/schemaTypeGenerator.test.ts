@@ -1,9 +1,14 @@
 import {CodeGenerator} from '@babel/generator'
 import * as t from '@babel/types'
-import {type TypeNode} from 'groq-js'
+import {type ObjectTypeNode, type TypeNode} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
 import {SchemaTypeGenerator, walkAndCountQueryTypeNodeStats} from '../schemaTypeGenerator.js'
+import {
+  buildDeduplicationRegistry,
+  collectObjectFingerprints,
+  fingerprintTypeNode,
+} from '../typeNodeFingerprint.js'
 
 function generateCode(node: t.Node | undefined) {
   if (!node) throw new Error('Node is undefined')
@@ -571,6 +576,130 @@ describe(SchemaTypeGenerator.name, () => {
           "unknownTypes": 0,
         }
       `)
+    })
+  })
+
+  describe('deduplication', () => {
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    function buildSchemaWithDuplicateInlineObjects() {
+      // The inline image object has 2+ meaningful attributes (url, alt) beyond _type,
+      // which meets the deduplication extraction threshold
+      const imageAttributes = {
+        _type: {type: 'objectAttribute' as const, value: {type: 'string' as const, value: 'image'}},
+        alt: {optional: true, type: 'objectAttribute' as const, value: {type: 'string' as const}},
+        url: {type: 'objectAttribute' as const, value: {type: 'string' as const}},
+      }
+
+      return new SchemaTypeGenerator([
+        {
+          attributes: {
+            _id: {type: 'objectAttribute', value: {type: 'string'}},
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+            mainImage: {
+              optional: true,
+              type: 'objectAttribute',
+              value: {attributes: imageAttributes, type: 'object'},
+            },
+            title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          name: 'post',
+          type: 'document',
+        },
+        {
+          attributes: {
+            _id: {type: 'objectAttribute', value: {type: 'string'}},
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'author'}},
+            avatar: {
+              optional: true,
+              type: 'objectAttribute',
+              value: {attributes: imageAttributes, type: 'object'},
+            },
+            name: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          name: 'author',
+          type: 'document',
+        },
+      ])
+    }
+
+    test('setDeduplicationRegistry enables type references in object generation', () => {
+      const gen = buildSchemaWithDuplicateInlineObjects()
+
+      // Evaluate two queries that produce the same inline image object
+      const {typeNode: tn1} = gen.evaluateQueryTypeNode({
+        query: '*[_type == "post"]{title, mainImage}',
+      })
+      const {typeNode: tn2} = gen.evaluateQueryTypeNode({
+        query: '*[_type == "author"]{name, avatar}',
+      })
+
+      // Build registry from collected type nodes
+      const fingerprints = collectObjectFingerprints([tn1, tn2])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set(['Author', 'Post']))
+      gen.setDeduplicationRegistry(registry)
+
+      // After setting registry, generating TS type should reference the extracted type
+      const tsType = gen.generateQueryTsType(tn1)
+      const code = generateCode(tsType)
+
+      // We should have exactly one extracted type (the image type)
+      expect(registry.extractedTypes.size).toBe(1)
+
+      // Verify the generated code contains a reference to an extracted type
+      const extractedNames = [...registry.extractedTypes.values()].map((e) => e.id.name)
+      const hasRef = extractedNames.some((name) => code.includes(name))
+      expect(extractedNames).includes('InlineImage')
+      expect(hasRef).toBe(true)
+    })
+
+    test('generateExtractedTypeTsType expands the object without self-referencing', () => {
+      const gen = buildSchemaWithDuplicateInlineObjects()
+
+      const imageObj: ObjectTypeNode = {
+        attributes: {
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'image'}},
+          alt: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          url: {type: 'objectAttribute', value: {type: 'string'}},
+        },
+        type: 'object',
+      }
+
+      const fp = fingerprintTypeNode(imageObj)
+      const fingerprints = new Map([[fp, {candidateName: 'image', count: 2, typeNode: imageObj}]])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+      gen.setDeduplicationRegistry(registry)
+
+      // Generate the extracted type body — it should NOT produce a self-reference
+      const imageTypeBody = gen.generateExtractedTypeTsType(imageObj, fp)
+
+      expect(generateCode(imageTypeBody)).toMatchInlineSnapshot(String.raw`
+      "{
+        _type: "image";
+        alt?: string;
+        url: string;
+      }"
+      `)
+    })
+
+    test('snapshot of dedup output for queries with shared inline objects', () => {
+      const gen = buildSchemaWithDuplicateInlineObjects()
+
+      const {typeNode: tn1} = gen.evaluateQueryTypeNode({
+        query: '*[_type == "post"]{title, mainImage}',
+      })
+      const {typeNode: tn2} = gen.evaluateQueryTypeNode({
+        query: '*[_type == "author"]{name, avatar}',
+      })
+
+      const fingerprints = collectObjectFingerprints([tn1, tn2])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set(['Author', 'Post']))
+      gen.setDeduplicationRegistry(registry)
+
+      const code1 = generateCode(gen.generateQueryTsType(tn1))
+      const code2 = generateCode(gen.generateQueryTsType(tn2))
+
+      // Both queries should reference the same extracted type for image
+      expect({query1: code1, query2: code2}).toMatchSnapshot()
     })
   })
 

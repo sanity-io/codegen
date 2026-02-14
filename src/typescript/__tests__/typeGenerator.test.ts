@@ -932,6 +932,223 @@ describe(TypeGenerator.name, () => {
     `)
   })
 
+  test('deduplicates repeated inline object types across queries', async () => {
+    const imageAttributes = {
+      _type: {type: 'objectAttribute' as const, value: {type: 'string' as const, value: 'image'}},
+      alt: {optional: true, type: 'objectAttribute' as const, value: {type: 'string' as const}},
+      url: {type: 'objectAttribute' as const, value: {type: 'string' as const}},
+    }
+
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          mainImage: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {attributes: imageAttributes, type: 'object'},
+          },
+          title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+        },
+        name: 'post',
+        type: 'document',
+      },
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'author'}},
+          avatar: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {attributes: imageAttributes, type: 'object'},
+          },
+          name: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+        },
+        name: 'author',
+        type: 'document',
+      },
+    ]
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    async function* getQueries(): AsyncGenerator<ExtractedModule> {
+      yield {
+        errors: [],
+        filename: '/src/posts.ts',
+        queries: [
+          {
+            filename: '/src/posts.ts',
+            query: '*[_type == "post"]{_id, title, mainImage}',
+            variable: {id: {name: 'allPostsQuery', type: 'Identifier'}},
+          },
+        ],
+      }
+      yield {
+        errors: [],
+        filename: '/src/authors.ts',
+        queries: [
+          {
+            filename: '/src/authors.ts',
+            query: '*[_type == "author"]{_id, name, avatar}',
+            variable: {id: {name: 'allAuthorsQuery', type: 'Identifier'}},
+          },
+        ],
+      }
+    }
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      overloadClientMethods: false,
+      queries: getQueries(),
+      root: '/src',
+      schema,
+    })
+
+    // The image type should be extracted as a named type, not inlined in each query
+    expect(code).toContain('InlineImage')
+
+    // Both query results should reference InlineImage instead of inlining the object
+    expect(code).toMatchSnapshot()
+  })
+
+  test('deduplication does not extract objects that appear only once', async () => {
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          metadata: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              attributes: {
+                likes: {type: 'objectAttribute', value: {type: 'number'}},
+                views: {type: 'objectAttribute', value: {type: 'number'}},
+              },
+              type: 'object',
+            },
+          },
+          title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+        },
+        name: 'post',
+        type: 'document',
+      },
+    ]
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    async function* getQueries(): AsyncGenerator<ExtractedModule> {
+      yield {
+        errors: [],
+        filename: '/src/posts.ts',
+        queries: [
+          {
+            filename: '/src/posts.ts',
+            query: '*[_type == "post"]{title, metadata}',
+            variable: {id: {name: 'postsQuery', type: 'Identifier'}},
+          },
+        ],
+      }
+    }
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      overloadClientMethods: false,
+      queries: getQueries(),
+      root: '/src',
+      schema,
+    })
+
+    // metadata only appears once, so no Inline type should be extracted
+    expect(code).not.toMatch(/^type Inline/m)
+  })
+
+  test('deduplication with deeply nested shared objects', async () => {
+    const schema: SchemaType = [
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'page'}},
+          footer: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              attributes: {
+                image: {
+                  optional: true,
+                  type: 'objectAttribute',
+                  value: {
+                    attributes: {
+                      alt: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+                      url: {type: 'objectAttribute', value: {type: 'string'}},
+                    },
+                    type: 'object',
+                  },
+                },
+                text: {type: 'objectAttribute', value: {type: 'string'}},
+              },
+              type: 'object',
+            },
+          },
+          hero: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              attributes: {
+                image: {
+                  optional: true,
+                  type: 'objectAttribute',
+                  value: {
+                    attributes: {
+                      alt: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+                      url: {type: 'objectAttribute', value: {type: 'string'}},
+                    },
+                    type: 'object',
+                  },
+                },
+                title: {type: 'objectAttribute', value: {type: 'string'}},
+              },
+              type: 'object',
+            },
+          },
+        },
+        name: 'page',
+        type: 'document',
+      },
+    ]
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    async function* getQueries(): AsyncGenerator<ExtractedModule> {
+      yield {
+        errors: [],
+        filename: '/src/pages.ts',
+        queries: [
+          {
+            filename: '/src/pages.ts',
+            query: '*[_type == "page"]{hero, footer}',
+            variable: {id: {name: 'pagesQuery', type: 'Identifier'}},
+          },
+          {
+            filename: '/src/pages.ts',
+            query: '*[_type == "page"][0]{hero, footer}',
+            variable: {id: {name: 'singlePageQuery', type: 'Identifier'}},
+          },
+        ],
+      }
+    }
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      overloadClientMethods: false,
+      queries: getQueries(),
+      root: '/src',
+      schema,
+    })
+
+    // The image object appears 4 times (2 queries × 2 image fields), should be extracted
+    expect(code).toContain('InlineImage')
+    expect(code).toMatchSnapshot()
+  })
+
   test('ArrayOf should NOT be generated when not used (no inline type references)', async () => {
     const schema: SchemaType = [
       {

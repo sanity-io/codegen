@@ -273,5 +273,205 @@ describe('typeNodeFingerprint', () => {
       expect(names).toContain('InlineItem')
       expect(names).toContain('InlineItem_2')
     })
+
+    test('preserves typeNode reference in extracted entries', () => {
+      const node = obj({body: attr(str()), title: attr(str())})
+      const fp = fingerprintTypeNode(node)
+      const fingerprints = new Map([[fp, {candidateName: 'post', count: 3, typeNode: node}]])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+      expect(registry.extractedTypes.get(fp)?.typeNode).toBe(node)
+    })
+
+    test('capitalizes first letter of candidate name', () => {
+      const node = obj({x: attr(num()), y: attr(num())})
+      const fp = fingerprintTypeNode(node)
+      const fingerprints = new Map([[fp, {candidateName: 'point', count: 2, typeNode: node}]])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+      expect(registry.extractedTypes.get(fp)?.id.name).toBe('InlinePoint')
+    })
+
+    test('exactly 2 meaningful attributes is the threshold for extraction', () => {
+      const twoMeaningful = obj({
+        _type: attr(str('img')),
+        alt: attr(str()),
+        url: attr(str()),
+      })
+      const fp = fingerprintTypeNode(twoMeaningful)
+      const fingerprints = new Map([
+        [fp, {candidateName: 'img', count: 2, typeNode: twoMeaningful}],
+      ])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+      expect(registry.extractedTypes.size).toBe(1)
+    })
+  })
+
+  describe('end-to-end: collectObjectFingerprints → buildDeduplicationRegistry', () => {
+    test('full pipeline extracts duplicated nested objects', () => {
+      const inner = obj({slug: attr(str()), title: attr(str())})
+      const outer1 = obj({extra: attr(num()), post: attr(inner)})
+      const outer2 = obj({other: attr(bool()), post: attr(inner)})
+
+      const fingerprints = collectObjectFingerprints([outer1, outer2])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      const innerFp = fingerprintTypeNode(inner)
+      expect(registry.extractedTypes.has(innerFp)).toBe(true)
+      expect(registry.extractedTypes.get(innerFp)?.id.name).toBe('InlinePost')
+    })
+
+    test('does not extract objects that only appear once', () => {
+      const a = obj({bio: attr(str()), name: attr(str())})
+      const b = obj({slug: attr(str()), title: attr(str())})
+
+      const fingerprints = collectObjectFingerprints([a, b])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      expect(registry.extractedTypes.size).toBe(0)
+    })
+
+    test('does not merge objects that differ only in value types', () => {
+      const a = obj({name: attr(str()), score: attr(num())})
+      const b = obj({name: attr(str()), score: attr(str())})
+
+      expect(fingerprintTypeNode(a)).not.toBe(fingerprintTypeNode(b))
+
+      const fingerprints = collectObjectFingerprints([a, a, b, b])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      // Both appear 2+ times, so both should be extracted — separately
+      expect(registry.extractedTypes.size).toBe(2)
+    })
+
+    test('does not merge objects that differ only in optionality', () => {
+      const required = obj({email: attr(str()), name: attr(str())})
+      const optional = obj({email: attr(str(), true), name: attr(str())})
+
+      expect(fingerprintTypeNode(required)).not.toBe(fingerprintTypeNode(optional))
+
+      const fingerprints = collectObjectFingerprints([required, required, optional, optional])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      expect(registry.extractedTypes.size).toBe(2)
+    })
+
+    test('does not merge objects with different keys', () => {
+      const withTitle = obj({name: attr(str()), title: attr(str())})
+      const withSlug = obj({name: attr(str()), slug: attr(str())})
+
+      expect(fingerprintTypeNode(withTitle)).not.toBe(fingerprintTypeNode(withSlug))
+
+      const fingerprints = collectObjectFingerprints([withTitle, withTitle, withSlug, withSlug])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      expect(registry.extractedTypes.size).toBe(2)
+      const names = [...registry.extractedTypes.values()].map((e) => e.id.name)
+      expect(names).not.toContain(names[0] === names[1] ? names[0] : undefined)
+    })
+
+    test('does not merge objects that differ only in _type literal value', () => {
+      const post = obj({_type: attr(str('post')), body: attr(str()), title: attr(str())})
+      const page = obj({_type: attr(str('page')), body: attr(str()), title: attr(str())})
+
+      expect(fingerprintTypeNode(post)).not.toBe(fingerprintTypeNode(page))
+
+      const fingerprints = collectObjectFingerprints([post, post, page, page])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      expect(registry.extractedTypes.size).toBe(2)
+      const names = [...registry.extractedTypes.values()].map((e) => e.id.name).toSorted()
+      expect(names).toEqual(['InlinePage', 'InlinePost'])
+    })
+
+    test('does not merge objects that differ in nested structure', () => {
+      const innerA = obj({x: attr(num()), y: attr(num())})
+      const innerB = obj({x: attr(str()), y: attr(str())})
+      const outerA = obj({coords: attr(innerA), label: attr(str())})
+      const outerB = obj({coords: attr(innerB), label: attr(str())})
+
+      expect(fingerprintTypeNode(outerA)).not.toBe(fingerprintTypeNode(outerB))
+
+      const fingerprints = collectObjectFingerprints([outerA, outerA, outerB, outerB])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      // outerA, outerB, innerA, innerB are all distinct — 4 extracted types
+      expect(registry.extractedTypes.size).toBe(4)
+    })
+
+    test('snapshot of registry for complex type tree', () => {
+      const image = obj({
+        _type: attr(str('image')),
+        alt: attr(str()),
+        url: attr(str()),
+      })
+      const author = obj({
+        _type: attr(str('author')),
+        avatar: attr(image),
+        name: attr(str()),
+      })
+      const post1 = obj({
+        author: attr(author),
+        hero: attr(image),
+        title: attr(str()),
+      })
+      const post2 = obj({
+        author: attr(author),
+        thumbnail: attr(image),
+        title: attr(str()),
+      })
+
+      const fingerprints = collectObjectFingerprints([post1, post2])
+      const registry = buildDeduplicationRegistry(fingerprints, new Set())
+
+      const extracted = [...registry.extractedTypes.values()].map((e) => e.id.name).toSorted()
+      expect(extracted).toEqual(['InlineAuthor', 'InlineImage'])
+    })
+  })
+
+  describe('fingerprintTypeNode snapshots', () => {
+    test('snapshot of fingerprints for various node shapes', () => {
+      const results = {
+        array_of_objects: fingerprintTypeNode(arr(obj({id: attr(str()), name: attr(str())}))),
+        boolean_literal: fingerprintTypeNode(bool(true)),
+        deeply_nested: fingerprintTypeNode(
+          obj({
+            items: attr(
+              arr(
+                obj({
+                  tags: attr(arr(str())),
+                  value: attr(num()),
+                }),
+              ),
+            ),
+          }),
+        ),
+        empty_object: fingerprintTypeNode(obj({})),
+        inline: fingerprintTypeNode(inline('Slug')),
+        null: fingerprintTypeNode(nullNode()),
+        number: fingerprintTypeNode(num()),
+        object_with_deref: fingerprintTypeNode(obj({_ref: attr(str())}, {dereferencesTo: 'post'})),
+        object_with_rest: fingerprintTypeNode(obj({a: attr(str())}, {rest: obj({b: attr(num())})})),
+        simple_object: fingerprintTypeNode(obj({age: attr(num()), name: attr(str())})),
+        string: fingerprintTypeNode(str()),
+        string_literal: fingerprintTypeNode(str('hello')),
+        union: fingerprintTypeNode(union(str(), num(), nullNode())),
+        unknown: fingerprintTypeNode(unknown()),
+      }
+      expect(results).toEqual({
+        array_of_objects: '[{id:s,name:s}]',
+        boolean_literal: 'b:true',
+        deeply_nested: '{items:[{tags:[s],value:n}]}',
+        empty_object: '{}',
+        inline: '@Slug',
+        null: 'null',
+        number: 'n',
+        object_with_deref: '{_ref:s->>post}',
+        object_with_rest: '{a:s@rest{b:n}}',
+        simple_object: '{age:n,name:s}',
+        string: 's',
+        string_literal: 's:"hello"',
+        union: '(n|null|s)',
+        unknown: '?',
+      })
+    })
   })
 })
