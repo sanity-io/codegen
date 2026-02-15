@@ -47,3 +47,114 @@ export type STRANGE_QUERY_RESULT = Array<{
 
 "
 `;
+
+exports[`TypeGenerator > deduplicates repeated inline object types across queries 1`] = `
+"export type Post = {
+  _id: string;
+  _type: "post";
+  mainImage?: {
+    _type: "image";
+    alt?: string;
+    url: string;
+  };
+  title?: string;
+};
+
+export type Author = {
+  _id: string;
+  _type: "author";
+  avatar?: {
+    _type: "image";
+    alt?: string;
+    url: string;
+  };
+  name?: string;
+};
+
+export type AllSanitySchemaTypes = Post | Author;
+
+export declare const internalGroqTypeReferenceTo: unique symbol;
+
+type InlineImage = {
+  _type: "image";
+  alt?: string;
+  url: string;
+};
+
+// Source: posts.ts
+// Variable: allPostsQuery
+// Query: *[_type == "post"]{_id, title, mainImage}
+export type AllPostsQueryResult = Array<{
+  _id: string;
+  title: string | null;
+  mainImage: InlineImage | null;
+}>;
+
+// Source: authors.ts
+// Variable: allAuthorsQuery
+// Query: *[_type == "author"]{_id, name, avatar}
+export type AllAuthorsQueryResult = Array<{
+  _id: string;
+  name: string | null;
+  avatar: InlineImage | null;
+}>;
+
+"
+`;
+
+exports[`TypeGenerator > deduplication with deeply nested shared objects 1`] = `
+"export type Page = {
+  _id: string;
+  _type: "page";
+  footer?: {
+    image?: {
+      alt?: string;
+      url: string;
+    };
+    text: string;
+  };
+  hero?: {
+    image?: {
+      alt?: string;
+      url: string;
+    };
+    title: string;
+  };
+};
+
+export type AllSanitySchemaTypes = Page;
+
+export declare const internalGroqTypeReferenceTo: unique symbol;
+
+type InlineType = {
+  hero: InlineHero | null;
+  footer: InlineFooter | null;
+};
+
+type InlineHero = {
+  image?: InlineImage;
+  title: string;
+};
+
+type InlineImage = {
+  alt?: string;
+  url: string;
+};
+
+type InlineFooter = {
+  image?: InlineImage;
+  text: string;
+};
+
+// Source: pages.ts
+// Variable: pagesQuery
+// Query: *[_type == "page"]{hero, footer}
+export type PagesQueryResult = Array<InlineType>;
+
+// Source: pages.ts
+// Variable: singlePageQuery
+// Query: *[_type == "page"][0]{hero, footer}
+export type SinglePageQueryResult = InlineType | null;
+
+"
+`;

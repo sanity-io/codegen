@@ -276,6 +276,92 @@ export type AllSanitySchemaTypes =
 
 export declare const internalGroqTypeReferenceTo: unique symbol
 
+type InlineAuthor = {
+  _id: string
+  _type: 'author'
+  name: string | null
+  slug: Slug | null
+  image: InlineImage | null
+  bio: Array<InlineBlock> | null
+}
+
+type InlineImage = {
+  asset?: SanityImageAssetReference
+  media?: unknown
+  hotspot?: SanityImageHotspot
+  crop?: SanityImageCrop
+  _type: 'image'
+}
+
+type InlineBlock = {
+  children?: Array<InlineSpan>
+  style?: 'normal'
+  listItem?: never
+  markDefs?: Array<{
+    href?: string
+    _type: 'link'
+    _key: string
+  }>
+  level?: number
+  _type: 'block'
+  _key: string
+}
+
+type InlineSpan = {
+  marks?: Array<string>
+  text?: string
+  _type: 'span'
+  _key: string
+}
+
+type InlineDimensions = {
+  width: number | null
+  height: number | null
+  aspectRatio: number | null
+}
+
+type InlineDominant = {
+  background: string | null
+  foreground: string | null
+}
+
+type InlineRecentPost = {
+  _id: string
+  title: string | null
+  slug: Slug | null
+  publishedAt: string | null
+  excerpt: string
+}
+
+type InlinePost = {
+  _id: string
+  title: string | null
+  slug: Slug | null
+  publishedAt: string | null
+}
+
+type InlineCategory = {
+  _id: string
+  _type: 'category'
+  title: string | null
+  description: string | null
+}
+
+type InlineAuthor_2 = {
+  name: string | null
+  slug: Slug | null
+}
+
+type InlinePost_2 = {
+  _id: string
+  _type: 'post'
+  title: string | null
+  slug: Slug | null
+  body: BlockContent | null
+  publishedAt: string | null
+  mainImage: InlineImage | null
+}
+
 // Source: src/queries/authorQueries.ts
 // Variable: allAuthorsQuery
 // Query: *[_type == "author"]{  _id,  name,  slug}
@@ -288,72 +374,12 @@ export type AllAuthorsQueryResult = Array<{
 // Source: src/queries/authorQueries.ts
 // Variable: authorByIdQuery
 // Query: *[_type == "author" && _id == $id][0]{  _id,  _type,  name,  slug,  image,  bio}
-export type AuthorByIdQueryResult = {
-  _id: string
-  _type: 'author'
-  name: string | null
-  slug: Slug | null
-  image: {
-    asset?: SanityImageAssetReference
-    media?: unknown
-    hotspot?: SanityImageHotspot
-    crop?: SanityImageCrop
-    _type: 'image'
-  } | null
-  bio: Array<{
-    children?: Array<{
-      marks?: Array<string>
-      text?: string
-      _type: 'span'
-      _key: string
-    }>
-    style?: 'normal'
-    listItem?: never
-    markDefs?: Array<{
-      href?: string
-      _type: 'link'
-      _key: string
-    }>
-    level?: number
-    _type: 'block'
-    _key: string
-  }> | null
-} | null
+export type AuthorByIdQueryResult = InlineAuthor | null
 
 // Source: src/queries/authorQueries.ts
 // Variable: authorBySlugQuery
 // Query: *[_type == "author" && slug.current == $slug][0]{    _id,    _type,    name,    slug,    image,    bio  }
-export type AuthorBySlugQueryResult = {
-  _id: string
-  _type: 'author'
-  name: string | null
-  slug: Slug | null
-  image: {
-    asset?: SanityImageAssetReference
-    media?: unknown
-    hotspot?: SanityImageHotspot
-    crop?: SanityImageCrop
-    _type: 'image'
-  } | null
-  bio: Array<{
-    children?: Array<{
-      marks?: Array<string>
-      text?: string
-      _type: 'span'
-      _key: string
-    }>
-    style?: 'normal'
-    listItem?: never
-    markDefs?: Array<{
-      href?: string
-      _type: 'link'
-      _key: string
-    }>
-    level?: number
-    _type: 'block'
-    _key: string
-  }> | null
-} | null
+export type AuthorBySlugQueryResult = InlineAuthor | null
 
 // Source: src/queries/authorQueries.ts
 // Variable: authorWithImageQuery
@@ -368,16 +394,9 @@ export type AuthorWithImageQueryResult = {
       url: string | null
       originalFilename: string | null
       metadata: {
-        dimensions: {
-          width: number | null
-          height: number | null
-          aspectRatio: number | null
-        } | null
+        dimensions: InlineDimensions | null
         palette: {
-          dominant: {
-            background: string | null
-            foreground: string | null
-          } | null
+          dominant: InlineDominant | null
         } | null
         lqip: string | null
       } | null
@@ -432,20 +451,8 @@ export type AuthorWithRecentPostsQueryResult = {
   _id: string
   name: string | null
   slug: Slug | null
-  image: {
-    asset?: SanityImageAssetReference
-    media?: unknown
-    hotspot?: SanityImageHotspot
-    crop?: SanityImageCrop
-    _type: 'image'
-  } | null
-  recentPosts: Array<{
-    _id: string
-    title: string | null
-    slug: Slug | null
-    publishedAt: string | null
-    excerpt: string
-  }>
+  image: InlineImage | null
+  recentPosts: Array<InlineRecentPost>
 } | null
 
 // Source: src/queries/authorQueries.ts
@@ -456,24 +463,7 @@ export type AuthorDetailQueryResult = {
   _type: 'author'
   name: string | null
   slug: Slug | null
-  bio: Array<{
-    children?: Array<{
-      marks?: Array<string>
-      text?: string
-      _type: 'span'
-      _key: string
-    }>
-    style?: 'normal'
-    listItem?: never
-    markDefs?: Array<{
-      href?: string
-      _type: 'link'
-      _key: string
-    }>
-    level?: number
-    _type: 'block'
-    _key: string
-  }> | null
+  bio: Array<InlineBlock> | null
   image: {
     asset: {
       _id: string
@@ -486,12 +476,7 @@ export type AuthorDetailQueryResult = {
     } | null
   } | null
   postCount: number
-  posts: Array<{
-    _id: string
-    title: string | null
-    slug: Slug | null
-    publishedAt: string | null
-  }>
+  posts: Array<InlinePost>
 } | null
 
 // Source: src/queries/categoryQueries.ts
@@ -506,12 +491,7 @@ export type AllCategoriesQueryResult = Array<{
 // Source: src/queries/categoryQueries.ts
 // Variable: categoryByIdQuery
 // Query: *[_type == "category" && _id == $id][0]{  _id,  _type,  title,  description}
-export type CategoryByIdQueryResult = {
-  _id: string
-  _type: 'category'
-  title: string | null
-  description: string | null
-} | null
+export type CategoryByIdQueryResult = InlineCategory | null
 
 // Source: src/queries/categoryQueries.ts
 // Variable: categoryWithPostCountQuery
@@ -537,10 +517,7 @@ export type CategoryWithPostsQueryResult = {
     title: string | null
     slug: Slug | null
     publishedAt: string | null
-    author: {
-      name: string | null
-      slug: Slug | null
-    } | null
+    author: InlineAuthor_2 | null
   }>
 } | null
 
@@ -558,10 +535,7 @@ export type CategoryWithRecentPostsQueryResult = {
     slug: Slug | null
     publishedAt: string | null
     excerpt: string
-    author: {
-      name: string | null
-      slug: Slug | null
-    } | null
+    author: InlineAuthor_2 | null
   }>
 } | null
 
@@ -604,50 +578,17 @@ export type CategoriesWithStatsQueryResult = Array<{
 // Source: src/queries/postQueries.ts
 // Variable: allPostsQuery
 // Query: *[_type == "post"]{  _id,  title,  slug,  publishedAt}
-export type AllPostsQueryResult = Array<{
-  _id: string
-  title: string | null
-  slug: Slug | null
-  publishedAt: string | null
-}>
+export type AllPostsQueryResult = Array<InlinePost>
 
 // Source: src/queries/postQueries.ts
 // Variable: postByIdQuery
 // Query: *[_type == "post" && _id == $id][0]{  _id,  _type,  title,  slug,  body,  publishedAt,  mainImage}
-export type PostByIdQueryResult = {
-  _id: string
-  _type: 'post'
-  title: string | null
-  slug: Slug | null
-  body: BlockContent | null
-  publishedAt: string | null
-  mainImage: {
-    asset?: SanityImageAssetReference
-    media?: unknown
-    hotspot?: SanityImageHotspot
-    crop?: SanityImageCrop
-    _type: 'image'
-  } | null
-} | null
+export type PostByIdQueryResult = InlinePost_2 | null
 
 // Source: src/queries/postQueries.ts
 // Variable: postBySlugQuery
 // Query: *[_type == "post" && slug.current == $slug][0]{    _id,    _type,    title,    slug,    body,    publishedAt,    mainImage  }
-export type PostBySlugQueryResult = {
-  _id: string
-  _type: 'post'
-  title: string | null
-  slug: Slug | null
-  body: BlockContent | null
-  publishedAt: string | null
-  mainImage: {
-    asset?: SanityImageAssetReference
-    media?: unknown
-    hotspot?: SanityImageHotspot
-    crop?: SanityImageCrop
-    _type: 'image'
-  } | null
-} | null
+export type PostBySlugQueryResult = InlinePost_2 | null
 
 // Source: src/queries/postQueries.ts
 // Variable: recentPostsQuery
@@ -688,34 +629,18 @@ export type PostWithCategoriesQueryResult = {
   _id: string
   title: string | null
   slug: Slug | null
-  categories: Array<{
-    _id: string
-    _type: 'category'
-    title: string | null
-    description: string | null
-  }> | null
+  categories: Array<InlineCategory> | null
 } | null
 
 // Source: src/queries/postQueries.ts
 // Variable: postsByAuthorQuery
 // Query: *[_type == "post" && author._ref == $authorId] | order(publishedAt desc){    _id,    title,    slug,    publishedAt,    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."  }
-export type PostsByAuthorQueryResult = Array<{
-  _id: string
-  title: string | null
-  slug: Slug | null
-  publishedAt: string | null
-  excerpt: string
-}>
+export type PostsByAuthorQueryResult = Array<InlineRecentPost>
 
 // Source: src/queries/postQueries.ts
 // Variable: postsByCategoryQuery
 // Query: *[_type == "post" && $categoryId in categories[]._ref] | order(publishedAt desc){    _id,    title,    slug,    publishedAt  }
-export type PostsByCategoryQueryResult = Array<{
-  _id: string
-  title: string | null
-  slug: Slug | null
-  publishedAt: string | null
-}>
+export type PostsByCategoryQueryResult = Array<InlinePost>
 
 // Source: src/queries/postQueries.ts
 // Variable: postDetailQuery
@@ -737,24 +662,11 @@ export type PostDetailQueryResult = {
       extension: string | null
       size: number | null
       metadata: {
-        dimensions: {
-          width: number | null
-          height: number | null
-          aspectRatio: number | null
-        } | null
+        dimensions: InlineDimensions | null
         palette: {
-          dominant: {
-            background: string | null
-            foreground: string | null
-          } | null
-          darkMuted: {
-            background: string | null
-            foreground: string | null
-          } | null
-          vibrant: {
-            background: string | null
-            foreground: string | null
-          } | null
+          dominant: InlineDominant | null
+          darkMuted: InlineDominant | null
+          vibrant: InlineDominant | null
         } | null
         lqip: string | null
         hasAlpha: boolean | null
@@ -774,12 +686,7 @@ export type PostDetailQueryResult = {
       } | null
     } | null
   } | null
-  categories: Array<{
-    _id: string
-    _type: 'category'
-    title: string | null
-    description: string | null
-  }> | null
+  categories: Array<InlineCategory> | null
 } | null
 
 // Source: src/queries/postQueries.ts
@@ -792,10 +699,7 @@ export type PaginatedPostsQueryResult = Array<{
   slug: Slug | null
   publishedAt: string
   excerpt: string
-  author: {
-    name: string | null
-    slug: Slug | null
-  } | null
+  author: InlineAuthor_2 | null
 }>
 
 // Source: src/queries/postQueries.ts
@@ -814,23 +718,12 @@ export type PostsWithExcerptQueryResult = Array<{
 // Source: src/queries/postQueries.ts
 // Variable: searchPostsQuery
 // Query: *[_type == "post" && title match $searchTerm]{    _id,    title,    slug,    publishedAt,    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."  }
-export type SearchPostsQueryResult = Array<{
-  _id: string
-  title: string | null
-  slug: Slug | null
-  publishedAt: string | null
-  excerpt: string
-}>
+export type SearchPostsQueryResult = Array<InlineRecentPost>
 
 // Source: src/queries/postQueries.ts
 // Variable: postsByDateRangeQuery
 // Query: *[_type == "post" && publishedAt >= $startDate && publishedAt <= $endDate] | order(publishedAt desc){    _id,    title,    slug,    publishedAt  }
-export type PostsByDateRangeQueryResult = Array<{
-  _id: string
-  title: string | null
-  slug: Slug | null
-  publishedAt: string | null
-}>
+export type PostsByDateRangeQueryResult = Array<InlinePost>
 
 // Source: src/queries/postQueries.ts
 // Variable: postWithRelatedQuery
