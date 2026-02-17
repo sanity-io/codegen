@@ -215,6 +215,29 @@ export function resolveExpression({
     })
   }
 
+  if (babelTypes.isMemberExpression(node)) {
+    const propertyName = getMemberPropertyName(node)
+    const objExpr = resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: node.object,
+      resolver,
+      scope,
+    })
+    const prop = findObjectProperty(objExpr, propertyName, filename, node)
+    return resolveExpression({
+      babelConfig,
+      file,
+      filename,
+      fnArguments,
+      node: prop.value,
+      params,
+      resolver,
+      scope,
+    })
+  }
+
   throw new Error(
     `Unsupported expression type: ${node.type} in ${filename}:${node.loc?.start.line}:${node.loc?.start.column}`,
   )
@@ -501,5 +524,193 @@ function resolveExportSpecifier({
 
   throw new Error(`Could not find binding for export "${importName}" in ${importFileName}`, {
     cause: `noBinding:${importName}`,
+  })
+}
+
+function getMemberPropertyName(node: babelTypes.MemberExpression): string {
+  const {computed, loc, property} = node
+  if (!computed && babelTypes.isIdentifier(property)) {
+    return property.name
+  }
+  if (computed && babelTypes.isStringLiteral(property)) {
+    return property.value
+  }
+  const locInfo = loc ? `${loc.filename}:${loc.start.line}:${loc.start.column}` : 'unknown location'
+  throw new Error(`Unsupported MemberExpression property type: ${property.type} @ ${locInfo}`)
+}
+
+function findObjectProperty(
+  objExpr: babelTypes.ObjectExpression,
+  propertyName: string,
+  filename: string,
+  node: babelTypes.Node,
+): babelTypes.ObjectProperty {
+  for (const prop of objExpr.properties) {
+    if (!babelTypes.isObjectProperty(prop)) continue
+    if (babelTypes.isIdentifier(prop.key) && prop.key.name === propertyName) {
+      return prop
+    }
+    if (babelTypes.isStringLiteral(prop.key) && prop.key.value === propertyName) {
+      return prop
+    }
+  }
+  throw new Error(
+    `Could not find property "${propertyName}" in object expression in ${filename}:${node.loc?.start.line}:${node.loc?.start.column}`,
+  )
+}
+
+function resolveToObjectExpression({
+  babelConfig,
+  file,
+  filename,
+  node,
+  resolver,
+  scope,
+}: {
+  babelConfig: TransformOptions
+  file: babelTypes.File
+  filename: string
+  node: babelTypes.Node
+  resolver: NodeJS.RequireResolve
+  scope: Scope
+}): babelTypes.ObjectExpression {
+  if (babelTypes.isObjectExpression(node)) {
+    return node
+  }
+  if (babelTypes.isTSAsExpression(node)) {
+    return resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: node.expression,
+      resolver,
+      scope,
+    })
+  }
+  if (babelTypes.isIdentifier(node)) {
+    const binding = scope.getBinding(node.name)
+    if (!binding) {
+      throw new Error(`Could not find binding for "${node.name}" in ${filename}`)
+    }
+    return resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: binding.path.node,
+      resolver,
+      scope,
+    })
+  }
+  if (babelTypes.isVariableDeclarator(node)) {
+    if (!node.init) {
+      throw new Error(`Variable declarator has no init`)
+    }
+    return resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: node.init,
+      resolver,
+      scope,
+    })
+  }
+  if (babelTypes.isMemberExpression(node)) {
+    const propertyName = getMemberPropertyName(node)
+    const objExpr = resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: node.object,
+      resolver,
+      scope,
+    })
+    const prop = findObjectProperty(objExpr, propertyName, filename, node)
+    return resolveToObjectExpression({
+      babelConfig,
+      file,
+      filename,
+      node: prop.value,
+      resolver,
+      scope,
+    })
+  }
+  if (babelTypes.isImportDefaultSpecifier(node) || babelTypes.isImportSpecifier(node)) {
+    return resolveImportToObjectExpression({babelConfig, file, filename, node, resolver})
+  }
+  throw new Error(
+    `Cannot resolve node type "${node.type}" to ObjectExpression in ${filename}:${node.loc?.start.line}:${node.loc?.start.column}`,
+  )
+}
+
+function resolveImportToObjectExpression({
+  babelConfig,
+  file,
+  filename,
+  node,
+  resolver,
+}: {
+  babelConfig: TransformOptions
+  file: babelTypes.File
+  filename: string
+  node: babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
+  resolver: NodeJS.RequireResolve
+}): babelTypes.ObjectExpression {
+  let importDeclaration: babelTypes.ImportDeclaration | undefined
+  traverse(file, {
+    ImportDeclaration(n) {
+      if (!babelTypes.isImportDeclaration(n.node)) return
+      for (const specifier of n.node.specifiers) {
+        if (
+          babelTypes.isImportDefaultSpecifier(specifier) &&
+          specifier.local.loc?.identifierName === node.local.name
+        ) {
+          importDeclaration = n.node
+          break
+        }
+        if (specifier.local.name === node.local.name) {
+          importDeclaration = n.node
+        }
+      }
+    },
+  })
+
+  if (!importDeclaration) {
+    throw new Error(`Could not find import declaration for ${node.local.name}`)
+  }
+
+  const importName = node.local.name
+  const importFileName = importDeclaration.source.value
+
+  const importPath =
+    importFileName.startsWith('./') || importFileName.startsWith('../')
+      ? path.resolve(path.dirname(filename), importFileName)
+      : importFileName
+
+  const resolvedFile = resolver(formatPath(importPath))
+  const source = fs.readFileSync(resolvedFile)
+  const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
+
+  let newScope: Scope | undefined
+  traverse(tree, {
+    Program(p) {
+      newScope = p.scope
+    },
+  })
+  if (!newScope) {
+    throw new Error(`Could not find scope for ${filename}`)
+  }
+
+  const binding = newScope.getBinding(importName)
+  if (!binding) {
+    throw new Error(`Could not find binding for import "${importName}" in ${importFileName}`)
+  }
+
+  return resolveToObjectExpression({
+    babelConfig,
+    file: tree,
+    filename: resolvedFile,
+    node: binding.path.node,
+    resolver,
+    scope: newScope,
   })
 }
