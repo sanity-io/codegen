@@ -185,7 +185,7 @@ export function resolveExpression({
   }
 
   if (babelTypes.isImportDefaultSpecifier(node) || babelTypes.isImportSpecifier(node)) {
-    return resolveImportSpecifier({babelConfig, file, filename, fnArguments, node, resolver, scope})
+    return resolveImportSpecifier({babelConfig, file, filename, fnArguments, node, resolver})
   }
 
   if (babelTypes.isAssignmentPattern(node)) {
@@ -343,22 +343,19 @@ function resolveCallExpression({
   })
 }
 
-function resolveImportSpecifier({
+function resolveImportBinding({
   babelConfig,
   file,
   filename,
-  fnArguments,
   node,
   resolver,
 }: {
   babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
-  fnArguments: babelTypes.Node[]
   node: babelTypes.ExportSpecifier | babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
   resolver: NodeJS.RequireResolve
-  scope: Scope
-}): resolveExpressionReturnType {
+}) {
   let importDeclaration: babelTypes.ImportDeclaration | undefined
   traverse(file, {
     ImportDeclaration(n) {
@@ -384,8 +381,8 @@ function resolveImportSpecifier({
     throw new Error(`Could not find import declaration for ${node.local.name}`)
   }
 
-  const importName = node.local.name // the name of the variable to import
-  const importFileName = importDeclaration.source.value // the file to import from
+  const importName = node.local.name
+  const importFileName = importDeclaration.source.value
 
   const importPath =
     importFileName.startsWith('./') || importFileName.startsWith('../')
@@ -396,17 +393,43 @@ function resolveImportSpecifier({
   const source = fs.readFileSync(resolvedFile)
   const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
 
-  let newScope: Scope | undefined
+  let scope: Scope | undefined
   traverse(tree, {
     Program(p) {
-      newScope = p.scope
+      scope = p.scope
     },
   })
-  if (!newScope) {
+  if (!scope) {
     throw new Error(`Could not find scope for ${filename}`)
   }
 
-  const binding = newScope.getBinding(importName)
+  const binding = scope.getBinding(importName)
+  return {binding, importFileName, importName, resolvedFile, scope, tree}
+}
+
+function resolveImportSpecifier({
+  babelConfig,
+  file,
+  filename,
+  fnArguments,
+  node,
+  resolver,
+}: {
+  babelConfig: TransformOptions
+  file: babelTypes.File
+  filename: string
+  fnArguments: babelTypes.Node[]
+  node: babelTypes.ExportSpecifier | babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
+  resolver: NodeJS.RequireResolve
+}): resolveExpressionReturnType {
+  const {binding, importFileName, importName, resolvedFile, scope, tree} = resolveImportBinding({
+    babelConfig,
+    file,
+    filename,
+    node,
+    resolver,
+  })
+
   if (binding) {
     return resolveExpression({
       babelConfig,
@@ -415,7 +438,7 @@ function resolveImportSpecifier({
       fnArguments,
       node: binding.path.node,
       resolver,
-      scope: newScope,
+      scope,
     })
   }
 
@@ -655,52 +678,14 @@ function resolveImportToObjectExpression({
   node: babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
   resolver: NodeJS.RequireResolve
 }): babelTypes.ObjectExpression {
-  let importDeclaration: babelTypes.ImportDeclaration | undefined
-  traverse(file, {
-    ImportDeclaration(n) {
-      if (!babelTypes.isImportDeclaration(n.node)) return
-      for (const specifier of n.node.specifiers) {
-        if (
-          babelTypes.isImportDefaultSpecifier(specifier) &&
-          specifier.local.loc?.identifierName === node.local.name
-        ) {
-          importDeclaration = n.node
-          break
-        }
-        if (specifier.local.name === node.local.name) {
-          importDeclaration = n.node
-        }
-      }
-    },
+  const {binding, importFileName, importName, resolvedFile, scope, tree} = resolveImportBinding({
+    babelConfig,
+    file,
+    filename,
+    node,
+    resolver,
   })
 
-  if (!importDeclaration) {
-    throw new Error(`Could not find import declaration for ${node.local.name}`)
-  }
-
-  const importName = node.local.name
-  const importFileName = importDeclaration.source.value
-
-  const importPath =
-    importFileName.startsWith('./') || importFileName.startsWith('../')
-      ? path.resolve(path.dirname(filename), importFileName)
-      : importFileName
-
-  const resolvedFile = resolver(formatPath(importPath))
-  const source = fs.readFileSync(resolvedFile)
-  const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
-
-  let newScope: Scope | undefined
-  traverse(tree, {
-    Program(p) {
-      newScope = p.scope
-    },
-  })
-  if (!newScope) {
-    throw new Error(`Could not find scope for ${filename}`)
-  }
-
-  const binding = newScope.getBinding(importName)
   if (!binding) {
     throw new Error(`Could not find binding for import "${importName}" in ${importFileName}`)
   }
@@ -711,6 +696,6 @@ function resolveImportToObjectExpression({
     filename: resolvedFile,
     node: binding.path.node,
     resolver,
-    scope: newScope,
+    scope,
   })
 }
