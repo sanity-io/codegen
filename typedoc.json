@@ -1,0 +1,12 @@
+{
+  "entryPoints": [
+    "src/_exports/index.ts"
+  ],
+  "json": "docs/typedoc.json",
+  "html": "docs/html",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "includeVersion": true,
+  "skipErrorChecking": true
+}
