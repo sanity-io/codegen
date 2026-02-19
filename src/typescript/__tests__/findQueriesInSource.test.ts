@@ -162,6 +162,58 @@ describe('findQueries with the groq template', () => {
     expect(queryResult?.query).toBe('*[_type == "foo"]')
   })
 
+  test('with object member access', () => {
+    const source = `
+      import { groq } from "groq";
+      const OPTS = { FOO: "foo" };
+      const postQuery = groq\`*[_type == "\${OPTS.FOO}"]\`
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "foo"]')
+  })
+
+  test('with nested member access', () => {
+    const source = `
+      import { groq } from "groq";
+      const C = { T: { A: "author" } };
+      const postQuery = groq\`*[_type == "\${C.T.A}"]\`
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "author"]')
+  })
+
+  test('with as const object member access', () => {
+    const source = `
+      import { groq } from "groq";
+      const OPTS = { FOO: "foo" } as const;
+      const postQuery = groq\`*[_type == "\${OPTS.FOO}"]\`
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "foo"]')
+  })
+
+  test('with imported object member access', () => {
+    const source = `
+      import { groq } from "groq";
+      import { PAGE_OPTIONS } from "./fixtures/exportObj.js";
+      const postQuery = groq\`*[_type == "\${PAGE_OPTIONS.RSS_FEED}"]\`
+    `
+
+    const {queries} = findQueriesInSource(source, __filename, undefined)
+    expect(queries).toHaveLength(1)
+    const [queryResult] = queries
+    expect(queryResult?.query).toBe('*[_type == "rssFeed"]')
+  })
+
   test('will ignore declarations with ignore tag', () => {
     const source = `
       import { groq } from "groq";
@@ -354,6 +406,58 @@ describe('findQueries with defineQuery', () => {
     expect(queries).toHaveLength(1)
     const [queryResult] = queries
     expect(queryResult?.query).toBe('*[_type == "foo bar"]')
+  })
+
+  test('with object member access', () => {
+    const source = `
+      import {defineQuery} from "groq";
+      const OPTS = { FOO: "foo" };
+      const postQuery = defineQuery(\`*[_type == "\${OPTS.FOO}"]\`);
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "foo"]')
+  })
+
+  test('with nested member access', () => {
+    const source = `
+      import {defineQuery} from "groq";
+      const C = { T: { A: "author" } };
+      const postQuery = defineQuery(\`*[_type == "\${C.T.A}"]\`);
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "author"]')
+  })
+
+  test('with as const object member access', () => {
+    const source = `
+      import {defineQuery} from "groq";
+      const OPTS = { FOO: "foo" } as const;
+      const postQuery = defineQuery(\`*[_type == "\${OPTS.FOO}"]\`);
+    `
+
+    const {queries} = findQueriesInSource(source, 'test.ts')
+    const [queryResult] = queries
+
+    expect(queryResult?.query).toEqual('*[_type == "foo"]')
+  })
+
+  test('with imported object member access', () => {
+    const source = `
+      import {defineQuery} from "groq";
+      import { PAGE_OPTIONS } from "./fixtures/exportObj.js";
+      const postQuery = defineQuery(\`*[_type == "\${PAGE_OPTIONS.RSS_FEED}"]\`);
+    `
+
+    const {queries} = findQueriesInSource(source, __filename, undefined)
+    expect(queries).toHaveLength(1)
+    const [queryResult] = queries
+    expect(queryResult?.query).toBe('*[_type == "rssFeed"]')
   })
 
   test('will ignore declarations with ignore tag', () => {
