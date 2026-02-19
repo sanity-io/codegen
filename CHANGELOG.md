@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.9.4](https://github.com/sanity-io/codegen/compare/codegen-v5.9.3...codegen-v5.9.4) (2026-02-19)
+
+
+### Bug Fixes
+
+* **deps:** update sanity-tooling ([4016498](https://github.com/sanity-io/codegen/commit/40164982dc535ddbcf0c440f89597b2fb1754de0))
+
 ## [5.9.3](https://github.com/sanity-io/codegen/compare/codegen-v5.9.2...codegen-v5.9.3) (2026-02-05)
 
 
