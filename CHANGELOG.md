@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.10.0](https://github.com/sanity-io/codegen/compare/codegen-v5.9.4...codegen-v5.10.0) (2026-02-23)
+
+
+### Features
+
+* **resolver:** resolve member expression when traversing query expressions ([709b251](https://github.com/sanity-io/codegen/commit/709b2519a54f15e70b8a70b2659a3ba5b3c4a070))
+
 ## [5.9.4](https://github.com/sanity-io/codegen/compare/codegen-v5.9.3...codegen-v5.9.4) (2026-02-19)
 
 
