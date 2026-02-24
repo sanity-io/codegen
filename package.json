@@ -75,7 +75,7 @@
     "groq-js": "^1.27.1",
     "json5": "^2.2.3",
     "lodash-es": "^4.17.23",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "reselect": "^5.1.1",
     "tsconfig-paths": "^4.2.0",
     "zod": "^4.3.6"
