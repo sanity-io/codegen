@@ -2,6 +2,7 @@ import * as t from '@babel/types'
 import {
   type ArrayTypeNode,
   type DocumentSchemaType,
+  hashTypeNode,
   type InlineTypeNode,
   type ObjectAttribute,
   type ObjectTypeNode,
@@ -20,23 +21,41 @@ import {
   isIdentifierName,
   weakMapMemo,
 } from './helpers.js'
+import {type DeduplicationRegistry} from './typeNodeFingerprint.js'
 import {type ExtractedQuery, type TypeEvaluationStats} from './types.js'
 
 export class SchemaTypeGenerator {
   public readonly schema: SchemaType
+  evaluateQueryTypeNode = weakMapMemo(
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    ({query}: Pick<ExtractedQuery, 'query'>): {stats: TypeEvaluationStats; typeNode: TypeNode} => {
+      const ast = safeParseQuery(query)
+      const typeNode = typeEvaluate(ast, this.schema)
+      const stats = walkAndCountQueryTypeNodeStats(typeNode)
+      return {stats, typeNode}
+    },
+  )
+
   evaluateQuery = weakMapMemo(
     // eslint-disable-next-line unicorn/consistent-function-scoping
     ({query}: Pick<ExtractedQuery, 'query'>): {stats: TypeEvaluationStats; tsType: t.TSType} => {
-      const ast = safeParseQuery(query)
-      const typeNode = typeEvaluate(ast, this.schema)
-      const tsType = this.generateTsType(typeNode)
-      const stats = walkAndCountQueryTypeNodeStats(typeNode)
+      const {stats, typeNode} = this.evaluateQueryTypeNode({query})
+      const tsType = this.generateQueryTsType(typeNode)
       return {stats, tsType}
     },
   )
   private arrayOfUsed = false
+  private deduplicationRegistry: DeduplicationRegistry | null = null
+
+  /**
+   * Fingerprint of the type node we're currently defining. Used to prevent its body from being
+   * replaced with a self-reference during deduplication.
+   */
+  private excludedFingerprint: string | null = null
 
   private identifiers = new Map<string, t.Identifier>()
+
+  private queryTsTypeCache = new WeakMap<TypeNode, t.TSType>()
 
   private tsTypes = new Map<string, t.TSType>()
 
@@ -64,6 +83,23 @@ export class SchemaTypeGenerator {
     }
   }
 
+  generateExtractedTypeTsType(typeNode: ObjectTypeNode, fingerprint: string): t.TSType {
+    this.excludedFingerprint = fingerprint
+    try {
+      return this.generateObjectTsType(typeNode)
+    } finally {
+      this.excludedFingerprint = null
+    }
+  }
+
+  generateQueryTsType(typeNode: TypeNode): t.TSType {
+    const cached = this.queryTsTypeCache.get(typeNode)
+    if (cached) return cached
+    const result = this.generateTsType(typeNode)
+    this.queryTsTypeCache.set(typeNode, result)
+    return result
+  }
+
   getType(typeName: string): {id: t.Identifier; tsType: t.TSType} | undefined {
     const tsType = this.tsTypes.get(typeName)
     const id = this.identifiers.get(typeName)
@@ -77,6 +113,10 @@ export class SchemaTypeGenerator {
 
   isArrayOfUsed(): boolean {
     return this.arrayOfUsed
+  }
+
+  setDeduplicationRegistry(registry: DeduplicationRegistry): void {
+    this.deduplicationRegistry = registry
   }
 
   *[Symbol.iterator]() {
@@ -159,6 +199,14 @@ export class SchemaTypeGenerator {
 
   // Helper function used to generate TS types for object type nodes.
   private generateObjectTsType(typeNode: ObjectTypeNode): t.TSType {
+    if (this.deduplicationRegistry) {
+      const fp = hashTypeNode(typeNode)
+      if (fp !== this.excludedFingerprint) {
+        const extracted = this.deduplicationRegistry.extractedTypes.get(fp)
+        if (extracted) return t.tsTypeReference(extracted.id)
+      }
+    }
+
     const props: t.TSPropertySignature[] = []
     for (const [key, attribute] of Object.entries(typeNode.attributes)) {
       props.push(this.generateTsObjectProperty(key, attribute))

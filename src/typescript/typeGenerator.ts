@@ -3,7 +3,7 @@ import process from 'node:process'
 
 import * as t from '@babel/types'
 import {type WorkerChannel, type WorkerChannelReporter} from '@sanity/worker-channels'
-import {type SchemaType} from 'groq-js'
+import {type SchemaType, type TypeNode} from 'groq-js'
 import {createSelector} from 'reselect'
 
 import {resultSuffix} from '../casing.js'
@@ -20,12 +20,15 @@ import {
   normalizePrintablePath,
 } from './helpers.js'
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
+import {buildDeduplicationRegistry, collectObjectFingerprints} from './typeNodeFingerprint.js'
 import {
   type EvaluatedModule,
   type EvaluatedQuery,
   type ExtractedModule,
+  type ExtractedQuery,
   QueryEvaluationError,
   type QueryExtractionError,
+  type TypeEvaluationStats,
 } from './types.js'
 
 export type TypegenWorkerChannel = WorkerChannel.Definition<{
@@ -64,12 +67,19 @@ export interface GenerateTypesOptions {
   schemaPath?: string
 }
 
-type GetEvaluatedModulesOptions = GenerateTypesOptions & {
-  schemaTypeDeclarations: ReturnType<TypeGenerator['getSchemaTypeDeclarations']>
-  schemaTypeGenerator: SchemaTypeGenerator
-}
 type GetQueryMapDeclarationOptions = GenerateTypesOptions & {
   evaluatedModules: EvaluatedModule[]
+}
+
+interface CollectedModule {
+  errors: (QueryEvaluationError | QueryExtractionError)[]
+  filename: string
+  queries: CollectedQuery[]
+}
+
+interface CollectedQuery extends ExtractedQuery {
+  stats: TypeEvaluationStats
+  typeNode: TypeNode
 }
 
 /**
@@ -161,57 +171,88 @@ export class TypeGenerator {
     return {ast, code, id}
   })
 
-  private static async getEvaluatedModules({
-    queries: extractedModules,
-    reporter: report,
-    root = process.cwd(),
-    schemaTypeDeclarations,
-    schemaTypeGenerator,
-  }: GetEvaluatedModulesOptions) {
-    if (!extractedModules) {
-      report?.stream.evaluatedModules.end()
-      return []
-    }
+  /**
+   * Phase 1: Collect TypeNodes from all extracted modules without generating TS types.
+   */
+  private static async collectModules(
+    extractedModules: AsyncIterable<ExtractedModule> | undefined,
+    schemaTypeGenerator: SchemaTypeGenerator,
+  ): Promise<CollectedModule[]> {
+    if (!extractedModules) return []
 
-    const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
-    const evaluatedModuleResults: EvaluatedModule[] = []
+    const collectedModules: CollectedModule[] = []
 
     for await (const {filename, ...extractedModule} of extractedModules) {
-      const queries: EvaluatedQuery[] = []
+      const queries: CollectedQuery[] = []
       const errors: (QueryEvaluationError | QueryExtractionError)[] = [...extractedModule.errors]
 
       for (const extractedQuery of extractedModule.queries) {
         const {variable} = extractedQuery
         try {
-          const {stats, tsType} = schemaTypeGenerator.evaluateQuery(extractedQuery)
-          const id = getUniqueIdentifierForName(resultSuffix(variable.id.name), currentIdentifiers)
-          const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
-          const trimmedQuery = extractedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
-          const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
-            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
-            {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
-            {type: 'CommentLine', value: ` Query: ${trimmedQuery}`},
-          ])
-
-          const evaluatedQueryResult: EvaluatedQuery = {
-            ast,
-            code: generateCode(ast),
-            id,
-            stats,
-            tsType,
-            ...extractedQuery,
-          }
-
-          currentIdentifiers.add(id.name)
-          queries.push(evaluatedQueryResult)
+          const {stats, typeNode} = schemaTypeGenerator.evaluateQueryTypeNode(extractedQuery)
+          queries.push({...extractedQuery, stats, typeNode})
         } catch (cause) {
           errors.push(new QueryEvaluationError({cause, filename, variable}))
         }
       }
 
+      collectedModules.push({errors, filename, queries})
+    }
+
+    return collectedModules
+  }
+
+  /**
+   * Phase 3: Generate TS types from collected modules (after dedup registry is set).
+   */
+  private static generateEvaluatedModules({
+    collectedModules,
+    currentIdentifiers,
+    reporter: report,
+    root = process.cwd(),
+    schemaTypeGenerator,
+  }: {
+    collectedModules: CollectedModule[]
+    currentIdentifiers: Set<string>
+    reporter?: WorkerChannelReporter<TypegenWorkerChannel>
+    root?: string
+    schemaTypeGenerator: SchemaTypeGenerator
+  }): EvaluatedModule[] {
+    const evaluatedModuleResults: EvaluatedModule[] = []
+
+    for (const collectedModule of collectedModules) {
+      const queries: EvaluatedQuery[] = []
+
+      for (const collectedQuery of collectedModule.queries) {
+        const {variable} = collectedQuery
+        const tsType = schemaTypeGenerator.generateQueryTsType(collectedQuery.typeNode)
+        const id = getUniqueIdentifierForName(resultSuffix(variable.id.name), currentIdentifiers)
+        const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
+        const trimmedQuery = collectedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
+        const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
+          {
+            type: 'CommentLine',
+            value: ` Source: ${normalizePrintablePath(root, collectedModule.filename)}`,
+          },
+          {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
+          {type: 'CommentLine', value: ` Query: ${trimmedQuery}`},
+        ])
+
+        const evaluatedQueryResult: EvaluatedQuery = {
+          ...collectedQuery,
+          ast,
+          code: generateCode(ast),
+          id,
+          tsType,
+        }
+
+        currentIdentifiers.add(id.name)
+        queries.push(evaluatedQueryResult)
+      }
+
       const evaluatedModule: EvaluatedModule = {
-        errors,
-        filename,
+        errors: collectedModule.errors,
+        filename: collectedModule.filename,
         queries,
       }
       report?.stream.evaluatedModules.emit(evaluatedModule)
@@ -298,11 +339,42 @@ export class TypeGenerator {
     program.body.push(internalReferenceSymbol.ast)
     code += internalReferenceSymbol.code
 
-    const evaluatedModules = await TypeGenerator.getEvaluatedModules({
-      ...options,
-      schemaTypeDeclarations,
+    // Phase 1: Collect TypeNodes from all queries
+    const collectedModules = await TypeGenerator.collectModules(
+      options.queries,
+      schemaTypeGenerator,
+    )
+
+    // Phase 2: Build deduplication registry from all collected TypeNodes
+    const allTypeNodes = collectedModules.flatMap((m) => m.queries.map((q) => q.typeNode))
+    const fingerprints = collectObjectFingerprints(allTypeNodes)
+    const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
+    const registry = buildDeduplicationRegistry(fingerprints, currentIdentifiers)
+    schemaTypeGenerator.setDeduplicationRegistry(registry)
+
+    // Emit extracted deduplicated type declarations
+    for (const [fp, {id, typeNode}] of registry.extractedTypes) {
+      currentIdentifiers.add(id.name)
+      const body = schemaTypeGenerator.generateExtractedTypeTsType(typeNode, fp)
+      const typeAlias = t.tsTypeAliasDeclaration(id, null, body)
+      const ast = typeAlias
+      const extractedCode = generateCode(ast)
+      program.body.push(ast)
+      code += extractedCode
+    }
+
+    // Phase 3: Generate TS types from collected modules (with dedup active)
+    const evaluatedModules = TypeGenerator.generateEvaluatedModules({
+      collectedModules,
+      currentIdentifiers,
+      reporter: report,
+      root: options.root,
       schemaTypeGenerator,
     })
+
+    if (!options.queries) {
+      report?.stream.evaluatedModules.end()
+    }
 
     // Only generate ArrayOf if it's actually used
     if (schemaTypeGenerator.isArrayOfUsed()) {
