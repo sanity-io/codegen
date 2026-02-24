@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.10.1](https://github.com/sanity-io/codegen/compare/codegen-v5.10.0...codegen-v5.10.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency prettier to ^3.8.1 ([#54](https://github.com/sanity-io/codegen/issues/54)) ([c8d5781](https://github.com/sanity-io/codegen/commit/c8d5781cc0557b1f54d591ff5975cb07d6f7bb89))
+* **deps:** update oclif-tooling ([#55](https://github.com/sanity-io/codegen/issues/55)) ([2a61786](https://github.com/sanity-io/codegen/commit/2a61786fbc7eee28c8a80a133a7538fbf5b88e09))
+* **deps:** update sanity-tooling ([#57](https://github.com/sanity-io/codegen/issues/57)) ([5898b53](https://github.com/sanity-io/codegen/commit/5898b5379d132e910211586995e6b975815c517f))
+
 ## [5.10.0](https://github.com/sanity-io/codegen/compare/codegen-v5.9.4...codegen-v5.10.0) (2026-02-23)
 
 
