@@ -48,6 +48,7 @@
     "build:api": "api-extractor run --local",
     "build:types": "tsc --project tsconfig.lib.json && pnpm run build:api && rimraf dist/__tmp__",
     "clean": "rimraf dist coverage",
+    "docs:generate": "typedoc",
     "lint": "eslint . --fix",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
@@ -104,6 +105,7 @@
     "prettier-plugin-packagejson": "^2.5.22",
     "rimraf": "^5.0.10",
     "tinyglobby": "^0.2.15",
+    "typedoc": "^0.28.17",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
   },
