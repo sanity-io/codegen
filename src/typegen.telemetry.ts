@@ -14,6 +14,7 @@ interface TypesGeneratedTraceAttributes {
   unknownTypeNodesRatio: number
 }
 
+/** @public */
 export const TypesGeneratedTrace = defineTrace<TypesGeneratedTraceAttributes>({
   description: 'Trace emitted when generating TypeScript types for queries',
   name: 'Types Generated',
@@ -36,6 +37,7 @@ export type TypegenWatchModeTraceAttributes =
       step: 'started'
     }
 
+/** @public */
 export const TypegenWatchModeTrace = defineTrace<TypegenWatchModeTraceAttributes>({
   description: 'Trace emitted when typegen watch mode is run',
   name: 'Typegen Watch Mode Started',

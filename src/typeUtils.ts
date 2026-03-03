@@ -66,6 +66,7 @@ type GetAtPath<T, Path extends unknown[]> = Path extends []
  * type Link = Get<POST_QUERY_RESULT, 'links', number, 'label'>;
  * // → string
  * ```
+ * @public
  */
 export type Get<
   T,
@@ -147,5 +148,6 @@ export type Get<
  * type CalloutModule = FilterByType<Content, 'callout'>
  * // → { _key: string } & Callout
  * ```
+ * @public
  */
 export type FilterByType<U extends {_type: string}, T extends U['_type']> = Extract<U, {_type: T}>
