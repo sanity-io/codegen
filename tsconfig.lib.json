@@ -6,7 +6,6 @@
     "rootDir": "./src",
     "noEmit": false,
     "emitDeclarationOnly": true,
-    "outDir": "./dist",
-    "declarationDir": "./dist/__tmp__"
+    "outDir": "./dist"
   }
 }

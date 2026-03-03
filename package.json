@@ -24,14 +24,13 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "source": "./src/_exports/index.ts",
       "default": "./dist/_exports/index.js"
     },
     "./package.json": "./package.json"
   },
   "main": "./dist/_exports/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/_exports/index.d.ts",
   "bin": {
     "sanity-typegen": "./bin/run.js"
   },
@@ -45,8 +44,7 @@
   "scripts": {
     "build": "swc --delete-dir-on-start src -d dist --strip-leading-paths --ignore '**/__tests__/**'  && pnpm run build:types",
     "postbuild": "oclif manifest",
-    "build:api": "api-extractor run --local",
-    "build:types": "tsc --project tsconfig.lib.json && pnpm run build:api && rimraf dist/__tmp__",
+    "build:types": "pkg-utils build --emitDeclarationOnly",
     "clean": "rimraf dist coverage",
     "lint": "eslint . --fix",
     "prepare": "husky",
@@ -82,7 +80,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
-    "@microsoft/api-extractor": "^7.57.2",
+    "@sanity/pkg-utils": "^10.4.5",
     "@oclif/test": "^4.1.16",
     "@sanity/cli-test": "^0.0.2-alpha.14",
     "@sanity/eslint-config-cli": "0.0.0-alpha.2",
