@@ -23,6 +23,7 @@ import {
  *
  * @param options - Configuration options including typegen config and working directory
  * @returns Generation result containing the generated code and statistics
+ * @public
  */
 export async function runTypegenGenerate(options: RunTypegenOptions): Promise<GenerationResult> {
   const {config, workDir} = options

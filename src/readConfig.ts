@@ -4,7 +4,7 @@ import json5 from 'json5'
 import * as z from 'zod'
 
 /**
- * @internal
+ * @public
  */
 export const configDefinition = z.object({
   formatGeneratedCode: z.boolean().default(true),
@@ -21,10 +21,12 @@ export const configDefinition = z.object({
   schema: z.string().default('./schema.json'),
 })
 
+/** @public */
 export type TypeGenConfig = z.infer<typeof configDefinition>
 
 /**
  * @deprecated use TypeGenConfig
+ * @public
  */
 export type CodegenConfig = TypeGenConfig
 

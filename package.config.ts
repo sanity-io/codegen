@@ -4,9 +4,7 @@ export default defineConfig({
   extract: {
     checkTypes: false,
     rules: {
-      'ae-incompatible-release-tags': 'off',
       'ae-internal-missing-underscore': 'off',
-      'ae-missing-release-tag': 'off',
     },
   },
   tsconfig: 'tsconfig.lib.json',

@@ -36,6 +36,7 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<
 /**
  * Options for running a single typegen generation.
  * This is the programmatic API for one-off generation without file watching.
+ * @public
  */
 export interface RunTypegenOptions {
   /** Working directory (usually project root) */
@@ -50,7 +51,7 @@ export interface RunTypegenOptions {
 
 /**
  * Result from a single generation run.
- * @internal
+ * @public
  */
 export interface GenerationResult {
   code: string

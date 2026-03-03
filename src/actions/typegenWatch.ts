@@ -72,6 +72,7 @@ function createTypegenRunner(onGenerate: () => Promise<unknown>): TypegenRunner 
  * Starts a file watcher that triggers typegen on changes.
  * Watches both query files (via patterns) and the schema JSON file.
  * Implements debouncing and concurrency control to prevent multiple generations.
+ * @public
  */
 export function runTypegenWatcher(options: RunTypegenOptions): {
   getStats: () => WatcherStats

@@ -28,6 +28,7 @@ import {
   type QueryExtractionError,
 } from './types.js'
 
+/** @public */
 export type TypegenWorkerChannel = WorkerChannel.Definition<{
   evaluatedModules: WorkerChannel.Stream<EvaluatedModule>
   generatedQueryTypes: WorkerChannel.Event<{
@@ -54,6 +55,7 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<{
   }>
 }>
 
+/** @public */
 export interface GenerateTypesOptions {
   schema: SchemaType
 
