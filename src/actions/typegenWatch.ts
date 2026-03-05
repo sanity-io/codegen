@@ -3,7 +3,8 @@ import {isAbsolute, join, relative} from 'node:path'
 import {styleText} from 'node:util'
 
 import chokidar, {FSWatcher} from 'chokidar'
-import {debounce, mean} from 'lodash-es'
+import debounce from 'lodash-es/debounce.js'
+import mean from 'lodash-es/mean.js'
 
 import {TypegenWatchModeTraceAttributes} from '../typegen.telemetry.js'
 import {prepareConfig} from '../utils/config.js'
