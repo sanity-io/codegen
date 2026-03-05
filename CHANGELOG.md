@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.10.2](https://github.com/sanity-io/codegen/compare/codegen-v5.10.1...codegen-v5.10.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* add release tags to public API symbols and fix incompatible release tags ([#67](https://github.com/sanity-io/codegen/issues/67)) ([93061d0](https://github.com/sanity-io/codegen/commit/93061d008b901ca95cc701f0bd11cd9e67646345))
+* **deps:** update [@sanity](https://github.com/sanity) dependencies to latest versions ([#69](https://github.com/sanity-io/codegen/issues/69)) ([d64978b](https://github.com/sanity-io/codegen/commit/d64978b8ca91e6d51d0c1ac15ed5555e04ff04d2))
+
 ## [5.10.1](https://github.com/sanity-io/codegen/compare/codegen-v5.10.0...codegen-v5.10.1) (2026-02-24)
 
 
