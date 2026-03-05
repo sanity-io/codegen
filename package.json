@@ -64,8 +64,8 @@
     "@babel/types": "^7.28.6",
     "@oclif/core": "^4.8.0",
     "@oclif/plugin-help": "^6.2.37",
-    "@sanity/cli-core": "^0.1.0-alpha.15",
-    "@sanity/worker-channels": "^1.1.0",
+    "@sanity/cli-core": "^0.1.0-alpha.19",
+    "@sanity/worker-channels": "^2.0.0",
     "chokidar": "^3.6.0",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
@@ -80,10 +80,10 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
-    "@sanity/cli-test": "^0.0.2-alpha.14",
-    "@sanity/eslint-config-cli": "0.0.0-alpha.2",
-    "@sanity/pkg-utils": "^10.4.5",
-    "@sanity/telemetry": "^0.8.0",
+    "@sanity/cli-test": "^0.1.0-alpha.17",
+    "@sanity/eslint-config-cli": "0.0.0-alpha.4",
+    "@sanity/pkg-utils": "^10.4.6",
+    "@sanity/telemetry": "^0.8.1",
     "@swc/cli": "^0.7.9",
     "@swc/core": "^1.15.8",
     "@types/babel__core": "^7.20.5",
@@ -105,7 +105,7 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "@sanity/telemetry": "^0.8.0"
+    "@sanity/telemetry": "^0.8.1"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {

@@ -3,7 +3,7 @@ import {readFile, writeFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
 import {testCommand, testFixture} from '@sanity/cli-test'
-import {once} from 'lodash-es'
+import once from 'lodash-es/once.js'
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
 import {TypesGeneratedTrace} from '../../../typegen.telemetry.js'
