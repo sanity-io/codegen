@@ -35,12 +35,6 @@ importers:
       '@oclif/core':
         specifier: ^4.8.0
         version: 4.8.3
-      '@oclif/plugin-help':
-        specifier: ^6.2.37
-        version: 6.2.37
-      '@sanity/cli-core':
-        specifier: ^0.1.0-alpha.19
-        version: 0.1.0-alpha.19(@noble/hashes@2.0.1)(@sanity/telemetry@0.8.1(react@19.2.3))(@types/node@20.19.35)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.1)(yaml@2.8.2)
       '@sanity/worker-channels':
         specifier: ^2.0.0
         version: 2.0.0
@@ -81,6 +75,9 @@ importers:
       '@eslint/compat':
         specifier: ^2.0.2
         version: 2.0.2(eslint@9.39.3(jiti@2.6.1))
+      '@sanity/cli-core':
+        specifier: ^0.1.0-alpha.19
+        version: 0.1.0-alpha.19(@noble/hashes@2.0.1)(@sanity/telemetry@0.8.1(react@19.2.3))(@types/node@20.19.35)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.1)(yaml@2.8.2)
       '@sanity/cli-test':
         specifier: ^0.1.0-alpha.17
         version: 0.1.0-alpha.17(@oclif/core@4.8.3)(@sanity/cli-core@0.1.0-alpha.19(@noble/hashes@2.0.1)(@sanity/telemetry@0.8.1(react@19.2.3))(@types/node@20.19.35)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.1)(yaml@2.8.2))(@sanity/client@7.16.0(debug@4.4.3))(vitest@4.0.18(@types/node@20.19.35)(jiti@2.6.1)(jsdom@28.1.0(@noble/hashes@2.0.1))(lightningcss@1.31.1)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2))
