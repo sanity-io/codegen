@@ -14,7 +14,7 @@ Thank you for your interest in contributing to `@sanity/codegen`! This package p
 1. Fork and clone the repository:
 
    ```bash
-   git clone https://github.com/<your-username>/codegen.git
+   git clone https://github.com/sanity-io/codegen.git
    cd codegen
    ```
 
