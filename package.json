@@ -73,9 +73,9 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
-    "@sanity/cli-core": "^0.1.0-alpha.19",
-    "@sanity/cli-test": "^0.1.0-alpha.17",
-    "@sanity/eslint-config-cli": "0.0.0-alpha.4",
+    "@sanity/cli-core": "^1.0.0",
+    "@sanity/cli-test": "^0.2.0",
+    "@sanity/eslint-config-cli": "^1.0.0",
     "@sanity/pkg-utils": "^10.4.6",
     "@sanity/telemetry": "^0.8.1",
     "@swc/cli": "^0.7.9",
@@ -100,7 +100,7 @@
   },
   "peerDependencies": {
     "@oclif/core": "^4.8.0",
-    "@sanity/cli-core": "^0.1.0-alpha.19",
+    "@sanity/cli-core": "^1",
     "@sanity/telemetry": "^0.8.1"
   },
   "packageManager": "pnpm@10.28.0",
