@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.0.0](https://github.com/sanity-io/codegen/compare/codegen-v5.10.1...codegen-v6.0.0) (2026-03-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removes the standalone typegen cli command. use `sanity typegen` instead  ([#70](https://github.com/sanity-io/codegen/issues/70))
+
+### Features
+
+* Removes the standalone typegen cli command. use `sanity typegen` instead  ([#70](https://github.com/sanity-io/codegen/issues/70)) ([b789465](https://github.com/sanity-io/codegen/commit/b789465677c652e46e9738e6796a7b187af41266))
+
+
+### Bug Fixes
+
+* add release tags to public API symbols and fix incompatible release tags ([#67](https://github.com/sanity-io/codegen/issues/67)) ([93061d0](https://github.com/sanity-io/codegen/commit/93061d008b901ca95cc701f0bd11cd9e67646345))
+* **deps:** update [@sanity](https://github.com/sanity) dependencies to latest versions ([#69](https://github.com/sanity-io/codegen/issues/69)) ([d64978b](https://github.com/sanity-io/codegen/commit/d64978b8ca91e6d51d0c1ac15ed5555e04ff04d2))
+* **deps:** update oclif-tooling ([#73](https://github.com/sanity-io/codegen/issues/73)) ([e8f915d](https://github.com/sanity-io/codegen/commit/e8f915d0efc87498855aa33aa8e7dd722c1cb0fe))
+
+
+### Documentation
+
+* add CONTRIBUTING.md ([#71](https://github.com/sanity-io/codegen/issues/71)) ([6ad7538](https://github.com/sanity-io/codegen/commit/6ad7538dcbc0e162dd750d735801d7d973b0d3b6))
+
 ## [5.10.1](https://github.com/sanity-io/codegen/compare/codegen-v5.10.0...codegen-v5.10.1) (2026-02-24)
 
 
