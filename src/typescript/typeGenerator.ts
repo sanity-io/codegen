@@ -20,6 +20,7 @@ import {
   normalizePrintablePath,
 } from './helpers.js'
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
+import {topologicalSortDeclarations} from './topologicalSort.js'
 import {
   type EvaluatedModule,
   type EvaluatedQuery,
@@ -278,18 +279,19 @@ export class TypeGenerator {
     const internalReferenceSymbol = this.getInternalReferenceSymbolDeclaration()
     const schemaTypeGenerator = this.getSchemaTypeGenerator(options)
     const schemaTypeDeclarations = this.getSchemaTypeDeclarations(options)
+    const sortedSchemaTypeDeclarations = topologicalSortDeclarations(schemaTypeDeclarations)
     const allSanitySchemaTypesDeclaration = this.getAllSanitySchemaTypesDeclaration(options)
 
     report?.event.generatedSchemaTypes({
       allSanitySchemaTypesDeclaration,
       internalReferenceSymbol,
-      schemaTypeDeclarations,
+      schemaTypeDeclarations: sortedSchemaTypeDeclarations,
     })
 
     const program = t.program([])
     let code = ''
 
-    for (const declaration of schemaTypeDeclarations) {
+    for (const declaration of sortedSchemaTypeDeclarations) {
       program.body.push(declaration.ast)
       code += declaration.code
     }
@@ -302,7 +304,7 @@ export class TypeGenerator {
 
     const evaluatedModules = await TypeGenerator.getEvaluatedModules({
       ...options,
-      schemaTypeDeclarations,
+      schemaTypeDeclarations: sortedSchemaTypeDeclarations,
       schemaTypeGenerator,
     })
 

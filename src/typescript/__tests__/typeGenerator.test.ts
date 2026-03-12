@@ -684,7 +684,19 @@ describe(TypeGenerator.name, () => {
     const result = await typeGenerator.generateTypes({schema})
 
     expect(result.code).toMatchInlineSnapshot(`
-      "export type Post = {
+      "export type Tag = {
+        _key: string;
+        _type: "tag";
+        label?: string;
+      };
+
+      export type Rag = {
+        _key: string;
+        _type: "rag";
+        color?: string;
+      };
+
+      export type Post = {
         _id: string;
         _type: "post";
         mixed: Array<number | string | null> | ArrayOf<Tag>;
@@ -695,18 +707,6 @@ describe(TypeGenerator.name, () => {
         }>;
         strings: Array<string>;
         tags?: ArrayOf<Tag | Rag>;
-      };
-
-      export type Tag = {
-        _key: string;
-        _type: "tag";
-        label?: string;
-      };
-
-      export type Rag = {
-        _key: string;
-        _type: "rag";
-        color?: string;
       };
 
       export type AllSanitySchemaTypes = Post | Tag | Rag;
