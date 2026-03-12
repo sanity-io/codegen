@@ -690,6 +690,18 @@ describe(TypeGenerator.name, () => {
         _key: string;
       }>;
 
+      export type Tag = {
+        _key: string;
+        _type: "tag";
+        label?: string;
+      };
+
+      export type Rag = {
+        _key: string;
+        _type: "rag";
+        color?: string;
+      };
+
       export type Post = {
         _id: string;
         _type: "post";
@@ -701,18 +713,6 @@ describe(TypeGenerator.name, () => {
         }>;
         strings: Array<string>;
         tags?: ArrayOf<Tag | Rag>;
-      };
-
-      export type Tag = {
-        _key: string;
-        _type: "tag";
-        label?: string;
-      };
-
-      export type Rag = {
-        _key: string;
-        _type: "rag";
-        color?: string;
       };
 
       export type AllSanitySchemaTypes = Post | Tag | Rag;
