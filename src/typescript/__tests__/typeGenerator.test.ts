@@ -166,7 +166,9 @@ describe(TypeGenerator.name, () => {
 
     const {code} = await complete
     expect(code).toMatchInlineSnapshot(String.raw`
-      "// Source: changed-path/my-schema-path.json
+      "export declare const internalGroqTypeReferenceTo: unique symbol;
+
+      // Source: changed-path/my-schema-path.json
       export type Foo = {
         _id: string;
         _type: "foo";
@@ -180,8 +182,6 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Foo | Bar;
-
-      export declare const internalGroqTypeReferenceTo: unique symbol;
 
       // Source: foo.ts
       // Variable: queryFoo
@@ -272,7 +272,9 @@ describe(TypeGenerator.name, () => {
     })
 
     expect(code).toMatchInlineSnapshot(`
-      "export type Foo = {
+      "export declare const internalGroqTypeReferenceTo: unique symbol;
+
+      export type Foo = {
         _id: string;
         _type: "foo";
         foo?: string;
@@ -285,8 +287,6 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Foo | Bar;
-
-      export declare const internalGroqTypeReferenceTo: unique symbol;
 
       // Source: foo.ts
       // Variable: queryFoo
@@ -340,7 +340,9 @@ describe(TypeGenerator.name, () => {
     })
 
     expect(code).toMatchInlineSnapshot(`
-      "export type Foo = {
+      "export declare const internalGroqTypeReferenceTo: unique symbol;
+
+      export type Foo = {
         _id: string;
         _type: "foo";
         foo?: string;
@@ -353,8 +355,6 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Foo | Bar;
-
-      export declare const internalGroqTypeReferenceTo: unique symbol;
 
       "
     `)
@@ -684,7 +684,13 @@ describe(TypeGenerator.name, () => {
     const result = await typeGenerator.generateTypes({schema})
 
     expect(result.code).toMatchInlineSnapshot(`
-      "export type Post = {
+      "export declare const internalGroqTypeReferenceTo: unique symbol;
+
+      type ArrayOf<T> = Array<T & {
+        _key: string;
+      }>;
+
+      export type Post = {
         _id: string;
         _type: "post";
         mixed: Array<number | string | null> | ArrayOf<Tag>;
@@ -710,12 +716,6 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Post | Tag | Rag;
-
-      export declare const internalGroqTypeReferenceTo: unique symbol;
-
-      type ArrayOf<T> = Array<T & {
-        _key: string;
-      }>;
 
       "
     `)
@@ -914,7 +914,9 @@ describe(TypeGenerator.name, () => {
     const result = await typeGenerator.generateTypes({schema})
 
     expect(result.code).toMatchInlineSnapshot(`
-      "export type Author = {
+      "export declare const internalGroqTypeReferenceTo: unique symbol;
+
+      export type Author = {
         images: Array<{
           asset: {
             _ref: string;
@@ -925,8 +927,6 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Author;
-
-      export declare const internalGroqTypeReferenceTo: unique symbol;
 
       "
     `)

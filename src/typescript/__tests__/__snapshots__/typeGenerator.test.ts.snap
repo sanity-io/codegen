@@ -1,7 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`TypeGenerator > ArrayOf should be handled for a complex query too 1`] = `
-"export type Post = {
+"export declare const internalGroqTypeReferenceTo: unique symbol;
+
+type ArrayOf<T> = Array<T & {
+  _key: string;
+}>;
+
+export type Post = {
   _id: string;
   _type: "post";
   sections?: Array<{
@@ -26,12 +32,6 @@ export type Rag = {
 };
 
 export type AllSanitySchemaTypes = Post | Tag | Rag;
-
-export declare const internalGroqTypeReferenceTo: unique symbol;
-
-type ArrayOf<T> = Array<T & {
-  _key: string;
-}>;
 
 // Source: foo.ts
 // Variable: STRANGE_QUERY
