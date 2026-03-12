@@ -1,8 +1,9 @@
-import {writeFile} from 'node:fs/promises'
+import {readFile as readFileRaw, writeFile} from 'node:fs/promises'
+import {dirname, join} from 'node:path'
 
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
-import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
+import {format} from 'oxfmt'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
@@ -14,10 +15,29 @@ import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
 /**
+ * Resolves the oxfmt configuration by walking up from the given file path
+ * to find the nearest `.oxfmtrc.json` config file.
+ */
+async function resolveOxfmtConfig(filePath: string): Promise<Record<string, unknown> | undefined> {
+  let dir = dirname(filePath)
+  const root = '/'
+  while (dir !== root) {
+    try {
+      const configPath = join(dir, '.oxfmtrc.json')
+      const content = await readFileRaw(configPath, 'utf8')
+      return JSON.parse(content)
+    } catch {
+      dir = dirname(dir)
+    }
+  }
+  return undefined
+}
+
+/**
  * Processes the event stream from a typegen worker thread.
  *
  * Listens to worker channel events, displays progress via CLI spinners,
- * writes the generated types to disk, and optionally formats with prettier.
+ * writes the generated types to disk, and optionally formats with oxfmt.
  *
  * @param receiver - Worker channel receiver for typegen events
  * @param options - Typegen configuration options
@@ -84,18 +104,15 @@ export async function processTypegenWorkerStream(
 
     let formattingError = false
     if (formatGeneratedCode) {
-      spin.text = `Formatting generated types with prettier…`
+      spin.text = `Formatting generated types with oxfmt…`
 
       try {
-        const prettierConfig = await resolvePrettierConfig(generates)
-        const formattedCode = await format(code, {
-          ...prettierConfig,
-          parser: 'typescript' as const,
-        })
+        const oxfmtConfig = await resolveOxfmtConfig(generates)
+        const {code: formattedCode} = await format(generates, code, oxfmtConfig)
         await writeFile(generates, formattedCode)
       } catch (err) {
         formattingError = true
-        spin.warn(`Failed to format generated types with prettier: ${getMessage(err)}`)
+        spin.warn(`Failed to format generated types with oxfmt: ${getMessage(err)}`)
       }
     }
 
@@ -123,7 +140,7 @@ export async function processTypegenWorkerStream(
       `\n  └─ found queries in ${count(queryFilesCount, 'files', 'file')} after evaluating ${count(evaluatedFiles, 'files', 'file')}`
 
     if (formatGeneratedCode) {
-      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code with prettier'}`
+      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code with oxfmt'}`
     }
 
     spin.succeed(successText)
