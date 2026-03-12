@@ -166,9 +166,7 @@ describe(TypeGenerator.name, () => {
 
     const {code} = await complete
     expect(code).toMatchInlineSnapshot(String.raw`
-      "export declare const internalGroqTypeReferenceTo: unique symbol;
-
-      // Source: changed-path/my-schema-path.json
+      "// Source: changed-path/my-schema-path.json
       export type Foo = {
         _id: string;
         _type: "foo";
@@ -182,6 +180,8 @@ describe(TypeGenerator.name, () => {
       };
 
       export type AllSanitySchemaTypes = Foo | Bar;
+
+      export declare const internalGroqTypeReferenceTo: unique symbol;
 
       // Source: foo.ts
       // Variable: queryFoo
@@ -690,6 +690,18 @@ describe(TypeGenerator.name, () => {
         _key: string;
       }>;
 
+      export type Tag = {
+        _key: string;
+        _type: "tag";
+        label?: string;
+      };
+
+      export type Rag = {
+        _key: string;
+        _type: "rag";
+        color?: string;
+      };
+
       export type Post = {
         _id: string;
         _type: "post";
@@ -701,18 +713,6 @@ describe(TypeGenerator.name, () => {
         }>;
         strings: Array<string>;
         tags?: ArrayOf<Tag | Rag>;
-      };
-
-      export type Tag = {
-        _key: string;
-        _type: "tag";
-        label?: string;
-      };
-
-      export type Rag = {
-        _key: string;
-        _type: "rag";
-        color?: string;
       };
 
       export type AllSanitySchemaTypes = Post | Tag | Rag;
