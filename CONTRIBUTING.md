@@ -51,16 +51,16 @@ bin/                   # CLI entry point (sanity-typegen)
 
 ### Available Scripts
 
-| Script               | Description                                               |
-| -------------------- | --------------------------------------------------------- |
-| `pnpm build`         | Compile with SWC and generate type declarations           |
-| `pnpm build:types`   | Generate type declarations only (via `@sanity/pkg-utils`) |
-| `pnpm test`          | Run tests with Vitest                                     |
-| `pnpm lint`          | Run ESLint with auto-fix                                  |
-| `pnpm format`        | Format code with oxfmt                                    |
-| `pnpm check:format`  | Check formatting without writing changes                  |
-| `pnpm watch`         | Watch mode for development (SWC)                          |
-| `pnpm clean`         | Remove `dist/` and `coverage/` directories                |
+| Script              | Description                                               |
+| ------------------- | --------------------------------------------------------- |
+| `pnpm build`        | Compile with SWC and generate type declarations           |
+| `pnpm build:types`  | Generate type declarations only (via `@sanity/pkg-utils`) |
+| `pnpm test`         | Run tests with Vitest                                     |
+| `pnpm lint`         | Run ESLint with auto-fix                                  |
+| `pnpm format`       | Format code with oxfmt                                    |
+| `pnpm check:format` | Check formatting without writing changes                  |
+| `pnpm watch`        | Watch mode for development (SWC)                          |
+| `pnpm clean`        | Remove `dist/` and `coverage/` directories                |
 
 ### Development Workflow
 
