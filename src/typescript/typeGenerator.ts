@@ -289,6 +289,15 @@ export class TypeGenerator {
     const program = t.program([])
     let code = ''
 
+    program.body.push(internalReferenceSymbol.ast)
+    code += internalReferenceSymbol.code
+
+    if (schemaTypeGenerator.isArrayOfUsed()) {
+      const arrayOfDeclaration = this.getArrayOfDeclaration()
+      program.body.push(arrayOfDeclaration.ast)
+      code += arrayOfDeclaration.code
+    }
+
     for (const declaration of schemaTypeDeclarations) {
       program.body.push(declaration.ast)
       code += declaration.code
@@ -297,21 +306,11 @@ export class TypeGenerator {
     program.body.push(allSanitySchemaTypesDeclaration.ast)
     code += allSanitySchemaTypesDeclaration.code
 
-    program.body.push(internalReferenceSymbol.ast)
-    code += internalReferenceSymbol.code
-
     const evaluatedModules = await TypeGenerator.getEvaluatedModules({
       ...options,
       schemaTypeDeclarations,
       schemaTypeGenerator,
     })
-
-    // Only generate ArrayOf if it's actually used
-    if (schemaTypeGenerator.isArrayOfUsed()) {
-      const arrayOfDeclaration = this.getArrayOfDeclaration()
-      program.body.push(arrayOfDeclaration.ast)
-      code += arrayOfDeclaration.code
-    }
 
     for (const {queries} of evaluatedModules) {
       for (const query of queries) {
