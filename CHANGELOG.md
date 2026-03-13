@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.0.1](https://github.com/sanity-io/codegen/compare/codegen-v6.0.0...codegen-v6.0.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* fix ordering of generated output ([#78](https://github.com/sanity-io/codegen/issues/78)) ([f8d17ba](https://github.com/sanity-io/codegen/commit/f8d17ba56e9a0f4903b87e45b16bd5a785bd9b28))
+
 ## [6.0.0](https://github.com/sanity-io/codegen/compare/codegen-v5.10.1...codegen-v6.0.0) (2026-03-10)
 
 
