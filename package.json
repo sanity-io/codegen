@@ -59,7 +59,7 @@
     "@babel/traverse": "^7.28.6",
     "@babel/types": "^7.28.6",
     "@sanity/worker-channels": "^2.0.0",
-    "chokidar": "^3.6.0",
+    "chokidar": "^4.0.3",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
     "groq": "^5.11.0",
