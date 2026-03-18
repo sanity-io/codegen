@@ -1,0 +1,21 @@
+{
+  "bracketSpacing": false,
+  "printWidth": 100,
+  "semi": false,
+  "singleQuote": true,
+  "sortPackageJson": {},
+  "ignorePatterns": [
+    ".vscode",
+    ".turbo",
+    "pnpm-lock.yaml",
+    "CHANGELOG.md",
+    ".release-please-manifest.json",
+    "**/tsconfig.json",
+    "**/__snapshots__/**",
+    ".claude",
+    "**/dist/**",
+    "**/lib/**",
+    "dev/**/sanity.types.ts",
+    "dev/**/schema.json"
+  ]
+}

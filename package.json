@@ -3,25 +3,33 @@
   "version": "6.0.1",
   "description": "Codegen toolkit for Sanity.io",
   "keywords": [
-    "sanity",
     "cms",
+    "codegen",
+    "content",
     "headless",
     "realtime",
-    "content",
-    "codegen"
+    "sanity"
   ],
   "homepage": "https://www.sanity.io/",
   "bugs": {
     "url": "https://github.com/sanity-io/codegen/issues"
   },
+  "license": "MIT",
+  "author": "Sanity.io <hello@sanity.io>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sanity-io/codegen.git"
   },
-  "license": "MIT",
-  "author": "Sanity.io <hello@sanity.io>",
-  "sideEffects": false,
+  "files": [
+    "dist",
+    "oclif.manifest.json",
+    "oclif.config.js",
+    "babel.config.json"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/_exports/index.js",
+  "types": "./dist/_exports/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/_exports/index.ts",
@@ -29,14 +37,9 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/_exports/index.js",
-  "types": "./dist/_exports/index.d.ts",
-  "files": [
-    "dist",
-    "oclif.manifest.json",
-    "oclif.config.js",
-    "babel.config.json"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "swc --delete-dir-on-start src -d dist --strip-leading-paths --ignore '**/__tests__/**'  && pnpm run build:types",
     "postbuild": "oclif manifest",
@@ -47,7 +50,9 @@
     "prepublishOnly": "pnpm build",
     "pretest": "pnpm build",
     "test": "vitest",
-    "watch": "swc src -d dist --strip-leading-paths --watch"
+    "watch": "swc src -d dist --strip-leading-paths --watch",
+    "format": "oxfmt",
+    "check:format": "oxfmt --check"
   },
   "dependencies": {
     "@babel/core": "^7.28.6",
@@ -92,7 +97,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.1",
     "oclif": "^4.22.85",
-    "prettier-plugin-packagejson": "^2.5.22",
+    "oxfmt": "^0.41.0",
     "rimraf": "^5.0.10",
     "tinyglobby": "^0.2.15",
     "typescript": "^5.9.3",
@@ -103,11 +108,8 @@
     "@sanity/cli-core": "^1",
     "@sanity/telemetry": "^0.8.1"
   },
-  "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=20.19 <22 || >=22.12"
   },
-  "publishConfig": {
-    "access": "public"
-  }
+  "packageManager": "pnpm@10.28.0"
 }
