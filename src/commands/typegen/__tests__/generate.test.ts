@@ -52,7 +52,7 @@ describe('#typegen:generate', () => {
     expect(stderr).toContain(`Successfully generated types`)
     expect(stderr).toContain(`└─ 31 queries and 18 schema types`)
     expect(stderr).toContain(`└─ found queries in 3 files after evaluating 4 files`)
-    expect(stderr).toContain(`└─ formatted the generated code with prettier`)
+    expect(stderr).toContain(`└─ formatted the generated code`)
 
     const generatedTypes = await readFile(join(cwd, 'sanity.types.ts'))
     expect(generatedTypes.toString()).toMatchSnapshot()
@@ -103,7 +103,7 @@ describe('#typegen:generate', () => {
     const {error, stderr} = await testCommand(TypegenGenerateCommand, [])
 
     expect(error).toBeUndefined()
-    expect(stderr).not.toContain('Formatting generated types with prettier…')
+    expect(stderr).not.toContain('Formatting generated types…')
     expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
   })
 

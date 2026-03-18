@@ -1,8 +1,9 @@
 import {writeFile} from 'node:fs/promises'
 
+import {doImport} from '@sanity/cli-core'
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
-import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
+import {format as prettierFormat, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
@@ -13,11 +14,29 @@ import {percent} from '../utils/percent.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
+async function formatCode(code: string, filepath: string): Promise<string> {
+  // Try oxfmt first (faster)
+  try {
+    const {format: oxfmtFormat} = await doImport('oxfmt')
+    const result = await oxfmtFormat(filepath, code)
+    if (result.code) return result.code
+  } catch {
+    // oxfmt not available, fall through to prettier
+  }
+
+  // Fall back to prettier
+  const prettierConfig = await resolvePrettierConfig(filepath)
+  return prettierFormat(code, {
+    ...prettierConfig,
+    parser: 'typescript' as const,
+  })
+}
+
 /**
  * Processes the event stream from a typegen worker thread.
  *
  * Listens to worker channel events, displays progress via CLI spinners,
- * writes the generated types to disk, and optionally formats with prettier.
+ * writes the generated types to disk, and optionally formats with oxfmt or prettier.
  *
  * @param receiver - Worker channel receiver for typegen events
  * @param options - Typegen configuration options
@@ -84,18 +103,14 @@ export async function processTypegenWorkerStream(
 
     let formattingError = false
     if (formatGeneratedCode) {
-      spin.text = `Formatting generated types with prettier…`
+      spin.text = `Formatting generated types…`
 
       try {
-        const prettierConfig = await resolvePrettierConfig(generates)
-        const formattedCode = await format(code, {
-          ...prettierConfig,
-          parser: 'typescript' as const,
-        })
+        const formattedCode = await formatCode(code, generates)
         await writeFile(generates, formattedCode)
       } catch (err) {
         formattingError = true
-        spin.warn(`Failed to format generated types with prettier: ${getMessage(err)}`)
+        spin.warn(`Failed to format generated types: ${getMessage(err)}`)
       }
     }
 
@@ -123,7 +138,7 @@ export async function processTypegenWorkerStream(
       `\n  └─ found queries in ${count(queryFilesCount, 'files', 'file')} after evaluating ${count(evaluatedFiles, 'files', 'file')}`
 
     if (formatGeneratedCode) {
-      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code with prettier'}`
+      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code'}`
     }
 
     spin.succeed(successText)
