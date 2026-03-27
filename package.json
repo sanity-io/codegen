@@ -42,6 +42,7 @@
     "postbuild": "oclif manifest",
     "build:types": "pkg-utils build --emitDeclarationOnly",
     "clean": "rimraf dist coverage",
+    "docs:generate": "typedoc",
     "lint": "eslint . --fix",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
@@ -95,6 +96,7 @@
     "prettier-plugin-packagejson": "^3.0.2",
     "rimraf": "^5.0.10",
     "tinyglobby": "^0.2.15",
+    "typedoc": "^0.28.17",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
