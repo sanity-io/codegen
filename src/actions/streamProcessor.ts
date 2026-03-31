@@ -29,7 +29,6 @@ export async function processTypegenWorkerStream(
 ) {
   const start = Date.now()
   const {formatGeneratedCode, generates, schema} = options
-  let code = ''
 
   const spin = spinner().start(`Loading schema…`)
 
@@ -79,7 +78,7 @@ export async function processTypegenWorkerStream(
     }
 
     const result = await receiver.event.typegenComplete()
-    code = `${generatedFileWarning}${result.code}`
+    const code = `${generatedFileWarning}${result.code}`
     await writeFile(generates, code)
 
     let formattingError = false
