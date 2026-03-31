@@ -39,8 +39,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       chokidar:
-        specifier: ^3.6.0
-        version: 3.6.0
+        specifier: ^4.0.3
+        version: 4.0.3
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
@@ -92,7 +92,7 @@ importers:
         version: 0.9.0(react@19.2.4)
       '@swc/cli':
         specifier: ^0.7.9
-        version: 0.7.10(@swc/core@1.15.21)(chokidar@3.6.0)
+        version: 0.7.10(@swc/core@1.15.21)(chokidar@4.0.3)
       '@swc/core':
         specifier: ^1.15.8
         version: 1.15.21
@@ -3913,6 +3913,10 @@ packages:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
 
+  chokidar@4.0.3:
+    resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
+    engines: {node: '>= 14.16.0'}
+
   chokidar@5.0.0:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
@@ -6154,6 +6158,10 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  readdirp@4.1.2:
+    resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
+    engines: {node: '>= 14.18.0'}
 
   readdirp@5.0.0:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
@@ -11322,7 +11330,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@swc/cli@0.7.10(@swc/core@1.15.21)(chokidar@3.6.0)':
+  '@swc/cli@0.7.10(@swc/core@1.15.21)(chokidar@4.0.3)':
     dependencies:
       '@swc/core': 1.15.21
       '@swc/counter': 0.1.3
@@ -11335,7 +11343,7 @@ snapshots:
       source-map: 0.7.6
       tinyglobby: 0.2.15
     optionalDependencies:
-      chokidar: 3.6.0
+      chokidar: 4.0.3
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -12351,6 +12359,10 @@ snapshots:
       readdirp: 3.6.0
     optionalDependencies:
       fsevents: 2.3.3
+
+  chokidar@4.0.3:
+    dependencies:
+      readdirp: 4.1.2
 
   chokidar@5.0.0:
     dependencies:
@@ -14638,6 +14650,8 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.2
+
+  readdirp@4.1.2: {}
 
   readdirp@5.0.0: {}
 
