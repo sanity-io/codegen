@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.0.2](https://github.com/sanity-io/codegen/compare/codegen-v6.0.1...codegen-v6.0.2) (2026-03-31)
+
+
+### Bug Fixes
+
+* **deps:** Update babel monorepo ([#72](https://github.com/sanity-io/codegen/issues/72)) ([21dedc5](https://github.com/sanity-io/codegen/commit/21dedc5f0b664b85b80229c2b38df2206f9804c8))
+* **deps:** update sanity-tooling ([#89](https://github.com/sanity-io/codegen/issues/89)) ([0d7f0bf](https://github.com/sanity-io/codegen/commit/0d7f0bf0b852ae63cadb16b410cf346a5eff0260))
+* **deps:** update sanity-tooling ([#97](https://github.com/sanity-io/codegen/issues/97)) ([e66e6fb](https://github.com/sanity-io/codegen/commit/e66e6fb3ef37d6918f00e20ff6767ef5b73aeebb))
+
 ## [6.0.1](https://github.com/sanity-io/codegen/compare/codegen-v6.0.0...codegen-v6.0.1) (2026-03-13)
 
 
