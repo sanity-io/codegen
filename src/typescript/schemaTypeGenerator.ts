@@ -62,6 +62,34 @@ export class SchemaTypeGenerator {
     for (const type of schema) {
       this.tsTypes.set(type.name, this.generateTsType(type))
     }
+
+    let hasEffectivelyUnknownTypes = false
+    for (const type of schema) {
+      const tsType = this.tsTypes.get(type.name)
+      if (tsType && SchemaTypeGenerator.isEffectivelyUnknown(tsType)) {
+        this.identifiers.delete(type.name)
+        hasEffectivelyUnknownTypes = true
+      }
+    }
+
+    if (hasEffectivelyUnknownTypes) {
+      for (const type of schema) {
+        this.tsTypes.set(type.name, this.generateTsType(type))
+      }
+    }
+  }
+
+  private static isEffectivelyUnknown(tsType: t.TSType): boolean {
+    if (t.isTSUnknownKeyword(tsType)) return true
+    if (
+      t.isTSTypeReference(tsType) &&
+      t.isIdentifier(tsType.typeName) &&
+      tsType.typeParameters?.params.length === 1 &&
+      t.isTSUnknownKeyword(tsType.typeParameters.params[0])
+    ) {
+      return true
+    }
+    return false
   }
 
   getType(typeName: string): {id: t.Identifier; tsType: t.TSType} | undefined {
@@ -81,7 +109,8 @@ export class SchemaTypeGenerator {
 
   *[Symbol.iterator]() {
     for (const {name} of this.schema) {
-      yield {name, ...this.getType(name)!}
+      const type = this.getType(name)
+      if (type) yield {name, ...type}
     }
   }
 
@@ -144,17 +173,17 @@ export class SchemaTypeGenerator {
 
   private generateInlineTsType(typeNode: InlineTypeNode): t.TSType {
     const id = this.identifiers.get(typeNode.name)
-    if (!id) {
-      // Not found in schema, return unknown type
-      return t.addComment(
-        t.tsUnknownKeyword(),
-        'trailing',
-        ` Unable to locate the referenced type "${typeNode.name}" in schema`,
-        true,
-      )
-    }
+    if (id) return t.tsTypeReference(id)
 
-    return t.tsTypeReference(id)
+    const resolvedType = this.tsTypes.get(typeNode.name)
+    if (resolvedType) return t.cloneNode(resolvedType, true)
+
+    return t.addComment(
+      t.tsUnknownKeyword(),
+      'trailing',
+      ` Unable to locate the referenced type "${typeNode.name}" in schema`,
+      true,
+    )
   }
 
   // Helper function used to generate TS types for object type nodes.
@@ -274,8 +303,13 @@ export class SchemaTypeGenerator {
   // Helper function used to generate TS types for union type nodes.
   private generateUnionTsType(typeNode: UnionTypeNode): t.TSType {
     if (typeNode.of.length === 0) return t.tsNeverKeyword()
-    if (typeNode.of.length === 1) return this.generateTsType(typeNode.of[0]!)
-    return t.tsUnionType(typeNode.of.map((node) => this.generateTsType(node)))
+
+    const generated = typeNode.of.map((node) => this.generateTsType(node))
+    const nonUnknown = generated.filter((tsType) => !t.isTSUnknownKeyword(tsType))
+
+    if (nonUnknown.length === 0) return t.tsUnknownKeyword()
+    if (nonUnknown.length === 1) return nonUnknown[0]!
+    return t.tsUnionType(nonUnknown)
   }
 }
 
