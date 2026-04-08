@@ -218,7 +218,7 @@ describe(SchemaTypeGenerator.name, () => {
       expect(generateCode(booleanLiteralAlias)).toMatchInlineSnapshot(`"true"`)
     })
 
-    test('generates TS Types for unknown', () => {
+    test('does not emit type alias for a type that resolves to unknown', () => {
       const schema = new SchemaTypeGenerator([
         {
           name: 'unknownAlias',
@@ -229,9 +229,8 @@ describe(SchemaTypeGenerator.name, () => {
         },
       ])
 
-      const unknownAlias = schema.getType('unknownAlias')?.tsType
-
-      expect(generateCode(unknownAlias)).toMatchInlineSnapshot(`"unknown"`)
+      expect(schema.getType('unknownAlias')).toBeUndefined()
+      expect([...schema]).toHaveLength(0)
     })
 
     test('generates TS Types for null', () => {
@@ -328,6 +327,308 @@ describe(SchemaTypeGenerator.name, () => {
       expect(t.isTSStringKeyword(unionOfOneAlias)).toBe(true)
     })
 
+    test('filters unknown members from unions that also have concrete types', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'unionWithUnknowns',
+          type: 'type',
+          value: {
+            of: [{type: 'string'}, {type: 'unknown'}, {type: 'number'}, {type: 'unknown'}],
+            type: 'union',
+          },
+        },
+        {
+          name: 'allUnknownUnion',
+          type: 'type',
+          value: {of: [{type: 'unknown'}, {type: 'unknown'}], type: 'union'},
+        },
+        {
+          name: 'singleConcreteWithUnknown',
+          type: 'type',
+          value: {of: [{type: 'string'}, {type: 'unknown'}], type: 'union'},
+        },
+      ])
+
+      expect(generateCode(schema.getType('unionWithUnknowns')?.tsType)).toMatchInlineSnapshot(
+        `"string | number"`,
+      )
+      expect(schema.getType('allUnknownUnion')).toBeUndefined()
+      expect(
+        generateCode(schema.getType('singleConcreteWithUnknown')?.tsType),
+      ).toMatchInlineSnapshot(`"string"`)
+    })
+
+    test('filters unknown from unions where object members collapse to unknown via unresolvable inline rest', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'resolvedType',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {type: 'objectAttribute', value: {type: 'string', value: 'resolved'}},
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'arrayWithCollapsedUnknown',
+          type: 'type',
+          value: {
+            of: {
+              of: [
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'resolvedType', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'nonExistentType', type: 'inline'},
+                  type: 'object',
+                },
+              ],
+              type: 'union',
+            },
+            type: 'array',
+          },
+        },
+      ])
+
+      const code = generateCode(schema.getType('arrayWithCollapsedUnknown')?.tsType)
+      expect(code).not.toContain('unknown')
+      expect(code).toContain('ResolvedType')
+    })
+
+    test('BlockContent-style union: objects with unresolvable inline rest do not collapse the entire array type to unknown', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'ctaCollection',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'ctaCollection'},
+              },
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'gist',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {type: 'objectAttribute', value: {type: 'string', value: 'gist'}},
+              url: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'blockContent',
+          type: 'type',
+          value: {
+            of: {
+              of: [
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'ctaCollection', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'gist', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'infoBox', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'gotcha', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _key: {type: 'objectAttribute', value: {type: 'string'}},
+                  },
+                  rest: {name: 'protip', type: 'inline'},
+                  type: 'object',
+                },
+                {
+                  attributes: {
+                    _type: {
+                      type: 'objectAttribute',
+                      value: {type: 'string', value: 'block'},
+                    },
+                    children: {
+                      optional: true,
+                      type: 'objectAttribute',
+                      value: {
+                        of: {
+                          attributes: {
+                            _type: {
+                              type: 'objectAttribute',
+                              value: {type: 'string', value: 'span'},
+                            },
+                            marks: {
+                              optional: true,
+                              type: 'objectAttribute',
+                              value: {of: {type: 'string'}, type: 'array'},
+                            },
+                            text: {
+                              optional: true,
+                              type: 'objectAttribute',
+                              value: {type: 'string'},
+                            },
+                          },
+                          rest: {
+                            attributes: {
+                              _key: {type: 'objectAttribute', value: {type: 'string'}},
+                            },
+                            type: 'object',
+                          },
+                          type: 'object',
+                        },
+                        type: 'array',
+                      },
+                    },
+                    style: {
+                      optional: true,
+                      type: 'objectAttribute',
+                      value: {
+                        of: [
+                          {type: 'string', value: 'normal'},
+                          {type: 'string', value: 'h2'},
+                        ],
+                        type: 'union',
+                      },
+                    },
+                  },
+                  rest: {
+                    attributes: {
+                      _key: {type: 'objectAttribute', value: {type: 'string'}},
+                    },
+                    type: 'object',
+                  },
+                  type: 'object',
+                },
+              ],
+              type: 'union',
+            },
+            type: 'array',
+          },
+        },
+      ])
+
+      const blockContentType = schema.getType('blockContent')
+      expect(blockContentType).toBeDefined()
+
+      const code = generateCode(blockContentType!.tsType)
+
+      expect(code).not.toMatch(/\bunknown\b/)
+      expect(code).toContain('CtaCollection')
+      expect(code).toContain('Gist')
+      expect(code).toContain('"block"')
+    })
+
+    test('does not emit type aliases for types that resolve to unknown', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'concreteType',
+          type: 'type',
+          value: {
+            attributes: {
+              name: {type: 'objectAttribute', value: {type: 'string'}},
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'unknownType',
+          type: 'type',
+          value: {type: 'unknown'},
+        },
+      ])
+
+      const emitted = [...schema]
+      expect(emitted).toHaveLength(1)
+      expect(emitted[0]!.name).toBe('concreteType')
+      expect(schema.getType('unknownType')).toBeUndefined()
+    })
+
+    test('does not emit type aliases for types that resolve to Array<unknown>', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'concreteType',
+          type: 'type',
+          value: {type: 'string'},
+        },
+        {
+          name: 'unknownArrayType',
+          type: 'type',
+          value: {
+            of: {of: [{type: 'unknown'}, {type: 'unknown'}], type: 'union'},
+            type: 'array',
+          },
+        },
+      ])
+
+      const emitted = [...schema]
+      expect(emitted).toHaveLength(1)
+      expect(emitted[0]!.name).toBe('concreteType')
+    })
+
+    test('inlines resolved type when referencing an effectively-unknown type', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'unknownArrayType',
+          type: 'type',
+          value: {
+            of: {of: [{type: 'unknown'}], type: 'union'},
+            type: 'array',
+          },
+        },
+        {
+          name: 'consumer',
+          type: 'type',
+          value: {
+            attributes: {
+              field: {
+                optional: true,
+                type: 'objectAttribute',
+                value: {name: 'unknownArrayType', type: 'inline'},
+              },
+            },
+            type: 'object',
+          },
+        },
+      ])
+
+      const emitted = [...schema]
+      expect(emitted).toHaveLength(1)
+      expect(emitted[0]!.name).toBe('consumer')
+
+      const code = generateCode(emitted[0]!.tsType)
+      expect(code).not.toContain('UnknownArrayType')
+      expect(code).toContain('unknown')
+    })
+
     test('generates TS Types for inline types', () => {
       const schema = new SchemaTypeGenerator([
         {
@@ -354,12 +655,9 @@ describe(SchemaTypeGenerator.name, () => {
       ])
 
       const inlineAlias = schema.getType('inlineAlias')?.tsType
-      const inlineAliasWithNoMatchingType = schema.getType('inlineAliasWithNoMatchingType')?.tsType
 
       expect(generateCode(inlineAlias)).toMatchInlineSnapshot(`"Person"`)
-      expect(generateCode(inlineAliasWithNoMatchingType)).toMatchInlineSnapshot(
-        `"unknown // Unable to locate the referenced type "noMatchingType" in schema"`,
-      )
+      expect(schema.getType('inlineAliasWithNoMatchingType')).toBeUndefined()
     })
 
     test('quotes non-identifier keys, preserves valid identifier keys', () => {
@@ -497,11 +795,7 @@ describe(SchemaTypeGenerator.name, () => {
       ])
 
       const objectAlias = schema.getType('objectAlias')?.tsType
-      const objectWithUnknownRest = schema.getType('objectWithUnknownRest')?.tsType
       const objectWithInlineRest = schema.getType('objectWithInlineRest')?.tsType
-      const objectWithUnresolvableInlineRest = schema.getType(
-        'objectWithUnresolvableInlineRest',
-      )?.tsType
       const objectWithObjectRest = schema.getType('objectWithObjectRest')?.tsType
       const dereferenceableObject = schema.getType('dereferenceableObject')?.tsType
 
@@ -510,7 +804,7 @@ describe(SchemaTypeGenerator.name, () => {
           name: string;
         }"
       `)
-      expect(generateCode(objectWithUnknownRest)).toMatchInlineSnapshot(`"unknown"`)
+      expect(schema.getType('objectWithUnknownRest')).toBeUndefined()
       expect(generateCode(objectWithInlineRest)).toMatchInlineSnapshot(
         `
         "{
@@ -518,9 +812,7 @@ describe(SchemaTypeGenerator.name, () => {
         } & Person"
       `,
       )
-      expect(generateCode(objectWithUnresolvableInlineRest)).toMatchInlineSnapshot(
-        `"unknown // Unable to locate the referenced type "unresolvableInlineRest" in schema"`,
-      )
+      expect(schema.getType('objectWithUnresolvableInlineRest')).toBeUndefined()
       expect(generateCode(objectWithObjectRest)).toMatchInlineSnapshot(`
         "{
           name: string;
