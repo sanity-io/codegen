@@ -32,7 +32,8 @@ describe('#typegen:generate', () => {
 
     expect(error).toBeDefined()
     expect(error?.message).toContain('Schema file not found')
-    expect(error?.message).toContain('schema.json - did you run "sanity schema extract"?')
+    expect(error?.message).toContain('Did you run "sanity schema extract"?')
+    expect(error?.message).toContain('environment variables are configured correctly')
     expect(error?.oclif?.exit).toBe(1)
   })
 

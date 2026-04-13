@@ -35,7 +35,10 @@ async function main({
   } catch (err) {
     if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
       // If the user has not provided a specific schema path (eg we're using the default), give some help
-      const hint = schemaPath === './schema.json' ? ` - did you run "sanity schema extract"?` : ''
+      const hint =
+        schemaPath === './schema.json'
+          ? `. Did you run "sanity schema extract"? If schema extraction failed, check that your environment variables are configured correctly (e.g. the .env file exists).`
+          : ''
       throw new Error(`Schema file not found: ${fullPath}${hint}`, {cause: err})
     }
     throw err
