@@ -49,7 +49,7 @@ export async function resolveFormatter(
   }
 
   if (mode === 'prettier') {
-    // Try oxfmt first (fully compatible with prettier and faster)
+    // Try oxfmt first (aims for prettier compatibility and is faster)
     const oxfmt = await resolveOxfmt({required: false})
     if (oxfmt.format) {
       return oxfmt
