@@ -2,7 +2,6 @@ import {writeFile} from 'node:fs/promises'
 
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
-import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
@@ -10,6 +9,7 @@ import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
+import {type FormatRequestSource, resolveFormatter} from '../utils/resolveFormatter.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
@@ -25,10 +25,10 @@ import {TypegenWorkerChannel} from './types.js'
  */
 export async function processTypegenWorkerStream(
   receiver: WorkerChannelReceiver<TypegenWorkerChannel>,
-  options: TypeGenConfig,
+  options: TypeGenConfig & {formatRequestSource?: FormatRequestSource},
 ) {
   const start = Date.now()
-  const {formatGeneratedCode, generates, schema} = options
+  const {formatGeneratedCode, formatRequestSource = 'default', generates, schema} = options
 
   const spin = spinner().start(`Loading schema…`)
 
@@ -82,19 +82,22 @@ export async function processTypegenWorkerStream(
     await writeFile(generates, code)
 
     let formattingError = false
-    if (formatGeneratedCode) {
-      spin.text = `Formatting generated types with prettier…`
-
+    let formatterName: string | undefined
+    if (formatGeneratedCode !== false) {
       try {
-        const prettierConfig = await resolvePrettierConfig(generates)
-        const formattedCode = await format(code, {
-          ...prettierConfig,
-          parser: 'typescript' as const,
-        })
-        await writeFile(generates, formattedCode)
+        const {format: formatter, name} = await resolveFormatter(
+          formatGeneratedCode,
+          formatRequestSource,
+        )
+        formatterName = name
+        if (formatter) {
+          spin.text = `Formatting generated types with ${formatterName}…`
+          const formattedCode = await formatter(generates, code)
+          await writeFile(generates, formattedCode)
+        }
       } catch (err) {
         formattingError = true
-        spin.warn(`Failed to format generated types with prettier: ${getMessage(err)}`)
+        spin.warn(`Failed to format generated types: ${getMessage(err)}`)
       }
     }
 
@@ -121,8 +124,10 @@ export async function processTypegenWorkerStream(
       `\n  └─ ${count(queriesCount, 'queries', 'query')} and ${count(schemaTypesCount, 'schema types', 'schema type')}` +
       `\n  └─ found queries in ${count(queryFilesCount, 'files', 'file')} after evaluating ${count(evaluatedFiles, 'files', 'file')}`
 
-    if (formatGeneratedCode) {
-      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code with prettier'}`
+    if (formatterName) {
+      successText += `\n  └─ ${formattingError ? 'an error occurred during formatting' : `formatted the generated code with ${formatterName}`}`
+    } else if (formatGeneratedCode !== false && formatRequestSource === 'explicit') {
+      successText += `\n  └─ no formatter found (install oxfmt or prettier to format generated code)`
     }
 
     spin.succeed(successText)

@@ -4,10 +4,20 @@ import json5 from 'json5'
 import * as z from 'zod'
 
 /**
+ * The formatter to use for generated code.
+ * - `false` - Do not format generated code.
+ * - `true` | `'auto'` - Automatically detect and use an available formatter (oxfmt → prettier).
+ * - `'oxfmt'` - Use oxfmt. Throws if oxfmt is not installed.
+ * - `'prettier'` - Prefer oxfmt if available, otherwise use prettier. Throws if neither is installed.
+ * @public
+ */
+export type FormatGeneratedCode = 'auto' | 'oxfmt' | 'prettier' | boolean
+
+/**
  * @public
  */
 export const configDefinition = z.object({
-  formatGeneratedCode: z.boolean().default(true),
+  formatGeneratedCode: z.union([z.boolean(), z.enum(['auto', 'oxfmt', 'prettier'])]).default(true),
   generates: z.string().default('./sanity.types.ts'),
   overloadClientMethods: z.boolean().default(true),
   path: z

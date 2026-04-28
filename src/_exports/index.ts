@@ -5,6 +5,7 @@ export {TypegenGenerateCommand} from '../commands/typegen/generate.js'
 export {
   type CodegenConfig,
   configDefinition,
+  type FormatGeneratedCode,
   readConfig,
   type TypeGenConfig,
 } from '../readConfig.js'

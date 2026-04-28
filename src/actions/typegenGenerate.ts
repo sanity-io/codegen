@@ -26,7 +26,7 @@ import {
  * @public
  */
 export async function runTypegenGenerate(options: RunTypegenOptions): Promise<GenerationResult> {
-  const {config, workDir} = options
+  const {config, formatRequestSource = 'default', workDir} = options
 
   const {formatGeneratedCode, generates, overloadClientMethods, path, schema} =
     prepareConfig(config)
@@ -52,6 +52,7 @@ export async function runTypegenGenerate(options: RunTypegenOptions): Promise<Ge
       WorkerChannelReceiver.from<TypegenWorkerChannel>(worker),
       {
         formatGeneratedCode,
+        formatRequestSource,
         generates: outputPath,
         overloadClientMethods,
         path,

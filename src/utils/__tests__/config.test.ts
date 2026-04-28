@@ -69,4 +69,28 @@ describe('prepareConfig', () => {
     expect(config.formatGeneratedCode).toBe(false)
     expect(config.overloadClientMethods).toBe(false)
   })
+
+  it('accepts "auto" for formatGeneratedCode', () => {
+    const config = prepareConfig({
+      formatGeneratedCode: 'auto',
+    })
+
+    expect(config.formatGeneratedCode).toBe('auto')
+  })
+
+  it('accepts "oxfmt" for formatGeneratedCode', () => {
+    const config = prepareConfig({
+      formatGeneratedCode: 'oxfmt',
+    })
+
+    expect(config.formatGeneratedCode).toBe('oxfmt')
+  })
+
+  it('accepts "prettier" for formatGeneratedCode', () => {
+    const config = prepareConfig({
+      formatGeneratedCode: 'prettier',
+    })
+
+    expect(config.formatGeneratedCode).toBe('prettier')
+  })
 })
