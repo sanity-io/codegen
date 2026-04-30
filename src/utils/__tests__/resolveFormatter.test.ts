@@ -55,11 +55,10 @@ describe('resolveFormatter', () => {
   })
 
   describe('formatGeneratedCode: "prettier"', () => {
-    it('resolves a formatter (oxfmt preferred if available)', async () => {
+    it('resolves prettier directly without trying oxfmt', async () => {
       const result = await resolveFormatter('prettier', 'default')
-      // When set to "prettier", it first tries oxfmt (compatible and faster)
-      // then falls back to prettier
-      expect(result.name).toMatch(/^(oxfmt|prettier)$/)
+      // When set to "prettier", it uses prettier directly
+      expect(result.name).toBe('prettier')
       expect(result.format).toBeTypeOf('function')
     })
 

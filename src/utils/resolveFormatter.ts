@@ -32,7 +32,7 @@ const tryImport = (specifier: string) => import(specifier)
  * - `false` → no formatter
  * - `true` | `'auto'` → try oxfmt → prettier, warn if explicit and none found
  * - `'oxfmt'` → oxfmt only, error if not available
- * - `'prettier'` → try oxfmt first (compatible and faster), then prettier, error if neither available
+ * - `'prettier'` → prettier only, error if not available
  */
 export async function resolveFormatter(
   formatGeneratedCode: FormatGeneratedCode,
@@ -49,12 +49,8 @@ export async function resolveFormatter(
   }
 
   if (mode === 'prettier') {
-    // Try oxfmt first (aims for prettier compatibility and is faster)
-    const oxfmt = await resolveOxfmt({required: false})
-    if (oxfmt.format) {
-      return oxfmt
-    }
-    // Fall back to prettier
+    // Use prettier directly — don't try oxfmt as it may not produce
+    // identical output to the user's installed prettier version/config
     return resolvePrettier({required: true})
   }
 
@@ -128,7 +124,7 @@ async function resolvePrettier(options: {required: boolean}): Promise<ResolvedFo
   } catch (err) {
     if (options.required) {
       throw new Error(
-        'formatGeneratedCode is set to "prettier" but neither oxfmt nor prettier could be loaded. ' +
+        'formatGeneratedCode is set to "prettier" but prettier could not be loaded. ' +
           'Make sure prettier is installed as a dependency.',
         {cause: err},
       )
