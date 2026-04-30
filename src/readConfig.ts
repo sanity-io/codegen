@@ -17,7 +17,9 @@ export type FormatGeneratedCode = 'auto' | 'oxfmt' | 'prettier' | boolean
  * @public
  */
 export const configDefinition = z.object({
-  formatGeneratedCode: z.union([z.boolean(), z.enum(['auto', 'oxfmt', 'prettier'])]).default(true),
+  formatGeneratedCode: z
+    .union([z.boolean(), z.enum(['auto', 'oxfmt', 'prettier'])])
+    .default('oxfmt'),
   generates: z.string().default('./sanity.types.ts'),
   overloadClientMethods: z.boolean().default(true),
   path: z
