@@ -3,7 +3,6 @@ import {WorkerChannel} from '@sanity/worker-channels'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../typescript/typeGenerator.js'
-import {type FormatRequestSource} from '../utils/resolveFormatter.js'
 
 /**
  * Data passed to the typegen worker thread.
@@ -46,11 +45,12 @@ export interface RunTypegenOptions {
   /** Typegen configuration */
   config?: Partial<TypeGenConfig>
 
-  /** Whether formatGeneratedCode was explicitly set by the user, or is a default value */
-  formatRequestSource?: FormatRequestSource
-
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
+
+  /** Whether to throw errors when formatter resolution or execution fails.
+   * Set to true when the user has explicitly configured `formatGeneratedCode`. */
+  throwOnFormatterFailure?: boolean
 }
 
 /**

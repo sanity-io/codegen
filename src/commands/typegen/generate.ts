@@ -70,8 +70,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
   private async getConfig(): Promise<{
     config: TypeGenConfig
-    formatRequestSource: 'default' | 'explicit'
     path?: string
+    throwOnFormatterFailure: boolean
     type: 'cli' | 'legacy'
     workDir: string
   }> {
@@ -121,8 +121,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         const rawTypegen = config.typegen || {}
         return {
           config: configDefinition.parse(rawTypegen),
-          formatRequestSource: 'formatGeneratedCode' in rawTypegen ? 'explicit' : 'default',
           path: rootDir.path,
+          throwOnFormatterFailure: 'formatGeneratedCode' in rawTypegen,
           type: 'cli',
           workDir,
         }
@@ -141,8 +141,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         const legacyConfig = await readConfig(legacyConfigPath)
         return {
           config: legacyConfig,
-          formatRequestSource: 'explicit',
           path: legacyConfigPath,
+          throwOnFormatterFailure: true,
           type: 'legacy',
           workDir,
         }
@@ -154,8 +154,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       const rawTypegen = config?.typegen || {}
       return {
         config: configDefinition.parse(rawTypegen),
-        formatRequestSource: 'formatGeneratedCode' in rawTypegen ? 'explicit' : 'default',
         path: rootDir.path,
+        throwOnFormatterFailure: 'formatGeneratedCode' in rawTypegen,
         type: 'cli',
         workDir,
       }
@@ -171,7 +171,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     try {
       const {
         config: typegenConfig,
-        formatRequestSource,
+        throwOnFormatterFailure,
         type: typegenConfigMethod,
         workDir,
       } = await this.getConfig()
@@ -179,7 +179,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
       const result = await runTypegenGenerate({
         config: typegenConfig,
-        formatRequestSource,
+        throwOnFormatterFailure,
         workDir,
       })
 
@@ -204,14 +204,14 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     const trace = this.telemetry.trace(TypegenWatchModeTrace)
 
     try {
-      const {config: typegenConfig, formatRequestSource, workDir} = await this.getConfig()
+      const {config: typegenConfig, throwOnFormatterFailure, workDir} = await this.getConfig()
       trace.start()
 
       const {promise, resolve} = promiseWithResolvers()
 
       const typegenWatcher = runTypegenWatcher({
         config: typegenConfig,
-        formatRequestSource,
+        throwOnFormatterFailure,
         workDir,
       })
 

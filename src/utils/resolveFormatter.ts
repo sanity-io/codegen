@@ -16,11 +16,6 @@ export interface ResolvedFormatter {
   name: string | undefined
 }
 
-/**
- * Whether the user explicitly requested formatting (as opposed to the default value).
- */
-export type FormatRequestSource = 'default' | 'explicit'
-
 // Wrapper to avoid lint rule against dynamic imports
 // eslint-disable-next-line no-restricted-syntax
 const tryImport = (specifier: string) => import(specifier)
@@ -33,10 +28,15 @@ const tryImport = (specifier: string) => import(specifier)
  * - `true` | `'auto'` → try oxfmt → prettier, warn if explicit and none found
  * - `'oxfmt'` → oxfmt only, error if not available
  * - `'prettier'` → prettier only, error if not available
+ *
+ * @param formatGeneratedCode - The formatter mode to resolve
+ * @param throwOnFormatterFailure - If true, throw when the requested formatter cannot be loaded.
+ *   Set to true when the user has explicitly configured `formatGeneratedCode`.
+ *   When false and no formatter is found, returns undefined silently.
  */
 export async function resolveFormatter(
   formatGeneratedCode: FormatGeneratedCode,
-  source: FormatRequestSource,
+  throwOnFormatterFailure: boolean,
 ): Promise<ResolvedFormatter> {
   if (formatGeneratedCode === false) {
     return {format: undefined, name: undefined}
@@ -45,13 +45,13 @@ export async function resolveFormatter(
   const mode = formatGeneratedCode === true ? 'auto' : formatGeneratedCode
 
   if (mode === 'oxfmt') {
-    return resolveOxfmt({required: true})
+    return resolveOxfmt({required: throwOnFormatterFailure})
   }
 
   if (mode === 'prettier') {
     // Use prettier directly — don't try oxfmt as it may not produce
     // identical output to the user's installed prettier version/config
-    return resolvePrettier({required: true})
+    return resolvePrettier({required: throwOnFormatterFailure})
   }
 
   // mode === 'auto'
@@ -64,7 +64,7 @@ export async function resolveFormatter(
     return prettier
   }
 
-  if (source === 'explicit') {
+  if (throwOnFormatterFailure) {
     debug('formatGeneratedCode is set to %s but no formatter (oxfmt, prettier) was found', mode)
   }
 

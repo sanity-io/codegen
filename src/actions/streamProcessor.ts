@@ -9,7 +9,7 @@ import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
-import {type FormatRequestSource, resolveFormatter} from '../utils/resolveFormatter.js'
+import {resolveFormatter} from '../utils/resolveFormatter.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
@@ -25,10 +25,10 @@ import {TypegenWorkerChannel} from './types.js'
  */
 export async function processTypegenWorkerStream(
   receiver: WorkerChannelReceiver<TypegenWorkerChannel>,
-  options: TypeGenConfig & {formatRequestSource?: FormatRequestSource},
+  options: TypeGenConfig & {throwOnFormatterFailure?: boolean},
 ) {
   const start = Date.now()
-  const {formatGeneratedCode, formatRequestSource = 'default', generates, schema} = options
+  const {formatGeneratedCode, generates, schema, throwOnFormatterFailure = false} = options
 
   const spin = spinner().start(`Loading schema…`)
 
@@ -87,7 +87,7 @@ export async function processTypegenWorkerStream(
       try {
         const {format: formatter, name} = await resolveFormatter(
           formatGeneratedCode,
-          formatRequestSource,
+          throwOnFormatterFailure,
         )
         formatterName = name
         if (formatter) {
@@ -126,7 +126,7 @@ export async function processTypegenWorkerStream(
 
     if (formatterName) {
       successText += `\n  └─ ${formattingError ? 'an error occurred during formatting' : `formatted the generated code with ${formatterName}`}`
-    } else if (formatGeneratedCode !== false && formatRequestSource === 'explicit') {
+    } else if (formatGeneratedCode !== false && throwOnFormatterFailure) {
       successText += `\n  └─ no formatter found (install oxfmt or prettier to format generated code)`
     }
 

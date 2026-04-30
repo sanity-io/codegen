@@ -5,13 +5,13 @@ import {resolveFormatter} from '../resolveFormatter.js'
 describe('resolveFormatter', () => {
   describe('formatGeneratedCode: false', () => {
     it('returns no formatter', async () => {
-      const result = await resolveFormatter(false, 'default')
+      const result = await resolveFormatter(false, false)
       expect(result.format).toBeUndefined()
       expect(result.name).toBeUndefined()
     })
 
-    it('returns no formatter even when explicit', async () => {
-      const result = await resolveFormatter(false, 'explicit')
+    it('returns no formatter even when throwOnFormatterFailure is true', async () => {
+      const result = await resolveFormatter(false, true)
       expect(result.format).toBeUndefined()
       expect(result.name).toBeUndefined()
     })
@@ -19,7 +19,7 @@ describe('resolveFormatter', () => {
 
   describe('formatGeneratedCode: true (auto)', () => {
     it('resolves a formatter when available', async () => {
-      const result = await resolveFormatter(true, 'default')
+      const result = await resolveFormatter(true, false)
       // In the test environment, at least one of oxfmt or prettier should be available
       expect(result.name).toMatch(/^(oxfmt|prettier)$/)
       expect(result.format).toBeTypeOf('function')
@@ -27,7 +27,7 @@ describe('resolveFormatter', () => {
 
     it('prefers oxfmt over prettier when both are available', async () => {
       // oxfmt takes priority in auto mode
-      const result = await resolveFormatter(true, 'default')
+      const result = await resolveFormatter(true, false)
       // If oxfmt is installed, it should be preferred
       if (result.name === 'oxfmt') {
         expect(result.format).toBeTypeOf('function')
@@ -38,7 +38,7 @@ describe('resolveFormatter', () => {
     })
 
     it('formats code with the resolved formatter', async () => {
-      const result = await resolveFormatter(true, 'default')
+      const result = await resolveFormatter(true, false)
       expect(result.format).toBeDefined()
       const formatted = await result.format!('test.ts', 'const x:string = "hello"')
       expect(formatted).toContain('const x')
@@ -48,7 +48,7 @@ describe('resolveFormatter', () => {
 
   describe('formatGeneratedCode: "auto"', () => {
     it('resolves a formatter', async () => {
-      const result = await resolveFormatter('auto', 'default')
+      const result = await resolveFormatter('auto', false)
       expect(result.name).toMatch(/^(oxfmt|prettier)$/)
       expect(result.format).toBeTypeOf('function')
     })
@@ -56,14 +56,14 @@ describe('resolveFormatter', () => {
 
   describe('formatGeneratedCode: "prettier"', () => {
     it('resolves prettier directly without trying oxfmt', async () => {
-      const result = await resolveFormatter('prettier', 'default')
+      const result = await resolveFormatter('prettier', false)
       // When set to "prettier", it uses prettier directly
       expect(result.name).toBe('prettier')
       expect(result.format).toBeTypeOf('function')
     })
 
     it('formats TypeScript code', async () => {
-      const result = await resolveFormatter('prettier', 'default')
+      const result = await resolveFormatter('prettier', false)
       expect(result.format).toBeDefined()
       const formatted = await result.format!('test.ts', 'type Foo={bar:string}')
       expect(formatted).toContain('Foo')
@@ -75,7 +75,7 @@ describe('resolveFormatter', () => {
   describe('formatGeneratedCode: "oxfmt"', () => {
     it('resolves oxfmt or throws if not installed', async () => {
       try {
-        const result = await resolveFormatter('oxfmt', 'default')
+        const result = await resolveFormatter('oxfmt', true)
         // If it resolves, it must be oxfmt
         expect(result.name).toBe('oxfmt')
         expect(result.format).toBeTypeOf('function')
@@ -90,14 +90,14 @@ describe('resolveFormatter', () => {
     })
   })
 
-  describe('FormatRequestSource behavior', () => {
-    it('does not throw for default source when no formatter found with false', async () => {
-      const result = await resolveFormatter(false, 'default')
+  describe('throwOnFormatterFailure behavior', () => {
+    it('does not throw when throwOnFormatterFailure is false and formatGeneratedCode is false', async () => {
+      const result = await resolveFormatter(false, false)
       expect(result.format).toBeUndefined()
     })
 
-    it('returns formatter for explicit source when formatter available', async () => {
-      const result = await resolveFormatter(true, 'explicit')
+    it('returns formatter when throwOnFormatterFailure is true and formatter available', async () => {
+      const result = await resolveFormatter(true, true)
       expect(result.name).toMatch(/^(oxfmt|prettier)$/)
       expect(result.format).toBeTypeOf('function')
     })
@@ -105,28 +105,28 @@ describe('resolveFormatter', () => {
 
   describe('type validation', () => {
     it('accepts boolean true', async () => {
-      const result = await resolveFormatter(true, 'default')
+      const result = await resolveFormatter(true, false)
       expect(result).toBeDefined()
     })
 
     it('accepts boolean false', async () => {
-      const result = await resolveFormatter(false, 'default')
+      const result = await resolveFormatter(false, false)
       expect(result).toBeDefined()
     })
 
     it('accepts "auto"', async () => {
-      const result = await resolveFormatter('auto', 'default')
+      const result = await resolveFormatter('auto', false)
       expect(result).toBeDefined()
     })
 
     it('accepts "prettier"', async () => {
-      const result = await resolveFormatter('prettier', 'default')
+      const result = await resolveFormatter('prettier', false)
       expect(result).toBeDefined()
     })
 
     it('accepts "oxfmt" (may resolve or throw)', async () => {
       try {
-        const result = await resolveFormatter('oxfmt', 'default')
+        const result = await resolveFormatter('oxfmt', true)
         expect(result.name).toBe('oxfmt')
       } catch {
         // acceptable if oxfmt is not installed
