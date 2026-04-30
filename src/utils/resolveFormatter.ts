@@ -93,7 +93,7 @@ async function resolveOxfmt(options: {required: boolean}): Promise<ResolvedForma
       throw new Error(
         'formatGeneratedCode is set to "oxfmt" but oxfmt could not be loaded. ' +
           'Make sure oxfmt is installed as a dependency. ' +
-          'See: https://github.com/nicolo-ribaudo/oxfmt',
+          'See: https://oxc.rs/docs/guide/usage/formatter/quickstart.html',
         {cause: err},
       )
     }
