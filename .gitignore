@@ -18,3 +18,4 @@ src/actions/*.worker.js
 oclif.manifest.json
 
 tmp/**
+package-lock.json
