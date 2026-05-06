@@ -122,7 +122,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         return {
           config: configDefinition.parse(rawTypegen),
           path: rootDir.path,
-          throwOnFormatterFailure: 'formatGeneratedCode' in rawTypegen,
+          throwOnFormatterFailure:
+            'formatGeneratedCode' in rawTypegen && rawTypegen.formatGeneratedCode !== false,
           type: 'cli',
           workDir,
         }
@@ -155,7 +156,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       return {
         config: configDefinition.parse(rawTypegen),
         path: rootDir.path,
-        throwOnFormatterFailure: 'formatGeneratedCode' in rawTypegen,
+        throwOnFormatterFailure:
+          'formatGeneratedCode' in rawTypegen && rawTypegen.formatGeneratedCode !== false,
         type: 'cli',
         workDir,
       }
