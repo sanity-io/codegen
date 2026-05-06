@@ -117,9 +117,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
           ),
         )
 
-        const rawTypegen = config.typegen || {}
         return {
-          config: configDefinition.parse(rawTypegen),
+          config: configDefinition.parse(config.typegen || {}),
           path: rootDir.path,
           type: 'cli',
           workDir,
@@ -136,9 +135,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     See: https://www.sanity.io/docs/help/configuring-typegen-in-sanity-cli-config`,
           ),
         )
-        const legacyConfig = await readConfig(legacyConfigPath)
         return {
-          config: legacyConfig,
+          config: await readConfig(legacyConfigPath),
           path: legacyConfigPath,
           type: 'legacy',
           workDir,
@@ -148,9 +146,8 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       spin.succeed(`Config loaded from sanity.cli.ts`)
 
       // we only have cli config
-      const rawTypegen = config?.typegen || {}
       return {
-        config: configDefinition.parse(rawTypegen),
+        config: configDefinition.parse(config.typegen || {}),
         path: rootDir.path,
         type: 'cli',
         workDir,

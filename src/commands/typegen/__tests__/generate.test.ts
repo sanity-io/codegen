@@ -107,6 +107,29 @@ describe('#typegen:generate', () => {
     expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
   })
 
+  test('formats generated types with oxfmt when formatGeneratedCode is "oxfmt"', async () => {
+    const cwd = await testFixture('dev')
+    process.chdir(cwd)
+
+    await writeFile(
+      join(cwd, 'sanity.cli.ts'),
+      `import {defineCliConfig} from 'sanity/cli'
+
+      export default defineCliConfig({
+        typegen: {
+          formatGeneratedCode: 'oxfmt',
+        }
+      })
+    `.trim(),
+    )
+
+    const {error, stderr} = await testCommand(TypegenGenerateCommand, [])
+
+    expect(error).toBeUndefined()
+    expect(stderr).toContain(`└─ formatted the generated code with oxfmt`)
+    expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
+  })
+
   test('emits TypesGeneratedTrace telemetry on successful generation', async () => {
     const cwd = await testFixture('dev')
     process.chdir(cwd)
