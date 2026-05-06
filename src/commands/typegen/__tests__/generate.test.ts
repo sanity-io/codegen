@@ -103,7 +103,7 @@ describe('#typegen:generate', () => {
     const {error, stderr} = await testCommand(TypegenGenerateCommand, [])
 
     expect(error).toBeUndefined()
-    expect(stderr).not.toContain('Formatting generated types with')
+    expect(stderr).not.toContain('Formatting generated types with prettier…')
     expect(existsSync(join(cwd, 'sanity.types.ts'))).toBe(true)
   })
 
