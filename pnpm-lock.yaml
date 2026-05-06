@@ -133,7 +133,7 @@ importers:
         specifier: ^4.22.85
         version: 4.22.96(@types/node@20.19.39)
       oxfmt:
-        specifier: '*'
+        specifier: ^0.47.0
         version: 0.47.0
       prettier-plugin-packagejson:
         specifier: ^3.0.2

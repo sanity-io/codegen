@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {defineFormatter, resolveFormatter} from '../resolveFormatter.js'
 
@@ -69,20 +69,28 @@ describe('resolveFormatter', () => {
   })
 
   describe('formatGeneratedCode: "oxfmt"', () => {
-    it('resolves oxfmt or throws if not installed', async () => {
-      try {
-        const result = await resolveFormatter('oxfmt')
-        // If it resolves, it must be oxfmt
-        expect(result.name).toBe('oxfmt')
-        expect(result.format).toBeTypeOf('function')
-      } catch (err) {
-        // If oxfmt is not installed, it should throw with a helpful message
-        expect(err).toBeInstanceOf(Error)
-        expect((err as Error).message).toContain(
-          'formatGeneratedCode is set to "oxfmt" but oxfmt could not be loaded',
-        )
-        expect((err as Error).message).toContain('Make sure oxfmt is installed as a dependency')
-      }
+    it('resolves oxfmt when installed', async () => {
+      const result = await resolveFormatter('oxfmt')
+      expect(result.name).toBe('oxfmt')
+      expect(result.format).toBeTypeOf('function')
+    })
+
+    it('throws a helpful error when oxfmt cannot be loaded', async () => {
+      vi.doMock('oxfmt', () => {
+        throw new Error('Cannot find module oxfmt')
+      })
+
+      // Re-import to pick up the mock
+      const {resolveFormatter: resolveFormatterMocked} = await import('../resolveFormatter.js')
+
+      await expect(resolveFormatterMocked('oxfmt')).rejects.toThrow(
+        'formatGeneratedCode is set to "oxfmt" but oxfmt could not be loaded',
+      )
+      await expect(resolveFormatterMocked('oxfmt')).rejects.toThrow(
+        'Make sure oxfmt is installed as a dependency',
+      )
+
+      vi.doUnmock('oxfmt')
     })
   })
 })
