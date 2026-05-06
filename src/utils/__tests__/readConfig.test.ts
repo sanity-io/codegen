@@ -4,9 +4,9 @@ import {configDefinition} from '../../readConfig.js'
 
 describe('configDefinition', () => {
   describe('formatGeneratedCode', () => {
-    it('defaults to oxfmt when not provided', () => {
+    it('defaults to true when not provided', () => {
       const config = configDefinition.parse({})
-      expect(config.formatGeneratedCode).toBe('oxfmt')
+      expect(config.formatGeneratedCode).toBe(true)
     })
 
     it('accepts boolean true', () => {
@@ -17,11 +17,6 @@ describe('configDefinition', () => {
     it('accepts boolean false', () => {
       const config = configDefinition.parse({formatGeneratedCode: false})
       expect(config.formatGeneratedCode).toBe(false)
-    })
-
-    it('accepts "auto"', () => {
-      const config = configDefinition.parse({formatGeneratedCode: 'auto'})
-      expect(config.formatGeneratedCode).toBe('auto')
     })
 
     it('accepts "oxfmt"', () => {

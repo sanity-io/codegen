@@ -70,14 +70,6 @@ describe('prepareConfig', () => {
     expect(config.overloadClientMethods).toBe(false)
   })
 
-  it('accepts "auto" for formatGeneratedCode', () => {
-    const config = prepareConfig({
-      formatGeneratedCode: 'auto',
-    })
-
-    expect(config.formatGeneratedCode).toBe('auto')
-  })
-
   it('accepts "oxfmt" for formatGeneratedCode', () => {
     const config = prepareConfig({
       formatGeneratedCode: 'oxfmt',

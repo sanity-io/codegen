@@ -52,7 +52,7 @@ describe('#typegen:generate', () => {
     expect(stderr).toContain(`Successfully generated types`)
     expect(stderr).toContain(`└─ 31 queries and 18 schema types`)
     expect(stderr).toContain(`└─ found queries in 3 files after evaluating 4 files`)
-    expect(stderr).toContain(`└─ formatted the generated code with oxfmt`)
+    expect(stderr).toContain(`└─ formatted the generated code with prettier`)
 
     const generatedTypes = await readFile(join(cwd, 'sanity.types.ts'))
     expect(generatedTypes.toString()).toMatchSnapshot()

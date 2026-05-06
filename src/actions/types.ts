@@ -47,10 +47,6 @@ export interface RunTypegenOptions {
 
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
-
-  /** Whether to throw errors when formatter resolution or execution fails.
-   * Set to true when the user has explicitly configured `formatGeneratedCode`. */
-  throwOnFormatterFailure?: boolean
 }
 
 /**

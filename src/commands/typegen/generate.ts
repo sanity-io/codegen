@@ -71,7 +71,6 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   private async getConfig(): Promise<{
     config: TypeGenConfig
     path?: string
-    throwOnFormatterFailure: boolean
     type: 'cli' | 'legacy'
     workDir: string
   }> {
@@ -122,8 +121,6 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         return {
           config: configDefinition.parse(rawTypegen),
           path: rootDir.path,
-          throwOnFormatterFailure:
-            'formatGeneratedCode' in rawTypegen && rawTypegen.formatGeneratedCode !== false,
           type: 'cli',
           workDir,
         }
@@ -143,7 +140,6 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         return {
           config: legacyConfig,
           path: legacyConfigPath,
-          throwOnFormatterFailure: true,
           type: 'legacy',
           workDir,
         }
@@ -156,8 +152,6 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
       return {
         config: configDefinition.parse(rawTypegen),
         path: rootDir.path,
-        throwOnFormatterFailure:
-          'formatGeneratedCode' in rawTypegen && rawTypegen.formatGeneratedCode !== false,
         type: 'cli',
         workDir,
       }
@@ -171,17 +165,11 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     const trace = this.telemetry.trace(TypesGeneratedTrace)
 
     try {
-      const {
-        config: typegenConfig,
-        throwOnFormatterFailure,
-        type: typegenConfigMethod,
-        workDir,
-      } = await this.getConfig()
+      const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
       trace.start()
 
       const result = await runTypegenGenerate({
         config: typegenConfig,
-        throwOnFormatterFailure,
         workDir,
       })
 
@@ -206,14 +194,13 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     const trace = this.telemetry.trace(TypegenWatchModeTrace)
 
     try {
-      const {config: typegenConfig, throwOnFormatterFailure, workDir} = await this.getConfig()
+      const {config: typegenConfig, workDir} = await this.getConfig()
       trace.start()
 
       const {promise, resolve} = promiseWithResolvers()
 
       const typegenWatcher = runTypegenWatcher({
         config: typegenConfig,
-        throwOnFormatterFailure,
         workDir,
       })
 

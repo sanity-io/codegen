@@ -25,10 +25,10 @@ import {TypegenWorkerChannel} from './types.js'
  */
 export async function processTypegenWorkerStream(
   receiver: WorkerChannelReceiver<TypegenWorkerChannel>,
-  options: TypeGenConfig & {throwOnFormatterFailure?: boolean},
+  options: TypeGenConfig,
 ) {
   const start = Date.now()
-  const {formatGeneratedCode, generates, schema, throwOnFormatterFailure = false} = options
+  const {formatGeneratedCode, generates, schema} = options
 
   const spin = spinner().start(`Loading schema…`)
 
@@ -85,10 +85,7 @@ export async function processTypegenWorkerStream(
     let formatterName: string | undefined
     if (formatGeneratedCode !== false) {
       try {
-        const {format: formatter, name} = await resolveFormatter(
-          formatGeneratedCode,
-          throwOnFormatterFailure,
-        )
+        const {format: formatter, name} = await resolveFormatter(formatGeneratedCode)
         formatterName = name
         if (formatter) {
           spin.text = `Formatting generated types with ${formatterName}…`
@@ -126,8 +123,6 @@ export async function processTypegenWorkerStream(
 
     if (formatterName) {
       successText += `\n  └─ ${formattingError ? 'an error occurred during formatting' : `formatted the generated code with ${formatterName}`}`
-    } else if (formatGeneratedCode !== false && throwOnFormatterFailure) {
-      successText += `\n  └─ no formatter found (install oxfmt or prettier to format generated code)`
     }
 
     spin.succeed(successText)

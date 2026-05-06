@@ -23,55 +23,29 @@ const tryImport = (specifier: string) => import(specifier)
 /**
  * Resolves a code formatter based on the `formatGeneratedCode` configuration.
  *
- * Resolution order:
+ * Resolution:
  * - `false` → no formatter
- * - `true` | `'auto'` → try oxfmt → prettier, warn if explicit and none found
- * - `'oxfmt'` → oxfmt only, error if not available
- * - `'prettier'` → prettier only, error if not available
+ * - `true` | `'prettier'` → prettier (always available as a dependency)
+ * - `'oxfmt'` → oxfmt, throws if not installed
  *
  * @param formatGeneratedCode - The formatter mode to resolve
- * @param throwOnFormatterFailure - If true, throw when the requested formatter cannot be loaded.
- *   Set to true when the user has explicitly configured `formatGeneratedCode`.
- *   When false and no formatter is found, returns undefined silently.
  */
 export async function resolveFormatter(
   formatGeneratedCode: FormatGeneratedCode,
-  throwOnFormatterFailure: boolean,
 ): Promise<ResolvedFormatter> {
   if (formatGeneratedCode === false) {
     return {format: undefined, name: undefined}
   }
 
-  const mode = formatGeneratedCode === true ? 'auto' : formatGeneratedCode
-
-  if (mode === 'oxfmt') {
-    return resolveOxfmt({required: throwOnFormatterFailure})
+  if (formatGeneratedCode === 'oxfmt') {
+    return resolveOxfmt()
   }
 
-  if (mode === 'prettier') {
-    // Use prettier directly — don't try oxfmt as it may not produce
-    // identical output to the user's installed prettier version/config
-    return resolvePrettier({required: throwOnFormatterFailure})
-  }
-
-  // mode === 'auto'
-  const oxfmt = await resolveOxfmt({required: false})
-  if (oxfmt.format) {
-    return oxfmt
-  }
-  const prettier = await resolvePrettier({required: false})
-  if (prettier.format) {
-    return prettier
-  }
-
-  if (throwOnFormatterFailure) {
-    debug('formatGeneratedCode is set to %s but no formatter (oxfmt, prettier) was found', mode)
-  }
-
-  return {format: undefined, name: undefined}
+  // true or 'prettier' → use prettier
+  return resolvePrettier()
 }
 
-async function resolveOxfmt(options: {required: boolean}): Promise<ResolvedFormatter> {
+async function resolveOxfmt(): Promise<ResolvedFormatter> {
   try {
     const oxfmt = await tryImport('oxfmt')
     const format = oxfmt.format ?? oxfmt.default?.format
@@ -89,20 +63,16 @@ async function resolveOxfmt(options: {required: boolean}): Promise<ResolvedForma
       name: 'oxfmt',
     }
   } catch (err) {
-    if (options.required) {
-      throw new Error(
-        'formatGeneratedCode is set to "oxfmt" but oxfmt could not be loaded. ' +
-          'Make sure oxfmt is installed as a dependency. ' +
-          'See: https://oxc.rs/docs/guide/usage/formatter/quickstart.html',
-        {cause: err},
-      )
-    }
-    debug('oxfmt not available: %s', err instanceof Error ? err.message : err)
-    return {format: undefined, name: undefined}
+    throw new Error(
+      'formatGeneratedCode is set to "oxfmt" but oxfmt could not be loaded. ' +
+        'Make sure oxfmt is installed as a dependency in your project. ' +
+        'See: https://oxc.rs/docs/guide/usage/formatter/quickstart.html',
+      {cause: err},
+    )
   }
 }
 
-async function resolvePrettier(options: {required: boolean}): Promise<ResolvedFormatter> {
+async function resolvePrettier(): Promise<ResolvedFormatter> {
   try {
     const prettier = await tryImport('prettier')
     const format = prettier.format ?? prettier.default?.format
@@ -122,13 +92,6 @@ async function resolvePrettier(options: {required: boolean}): Promise<ResolvedFo
       name: 'prettier',
     }
   } catch (err) {
-    if (options.required) {
-      throw new Error(
-        'formatGeneratedCode is set to "prettier" but prettier could not be loaded. ' +
-          'Make sure prettier is installed as a dependency.',
-        {cause: err},
-      )
-    }
     debug('prettier not available: %s', err instanceof Error ? err.message : err)
     return {format: undefined, name: undefined}
   }
