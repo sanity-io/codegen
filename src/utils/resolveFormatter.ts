@@ -16,9 +16,42 @@ export interface ResolvedFormatter {
   name: string | undefined
 }
 
+/**
+ * A defined formatter with a known name and an async resolve step.
+ */
+export interface DefinedFormatter {
+  /** The name of the formatter, available synchronously */
+  name: string
+  /** Resolves the formatter — may throw if the formatter cannot be loaded */
+  resolve: () => Promise<ResolvedFormatter>
+}
+
 // Wrapper to avoid lint rule against dynamic imports
 // eslint-disable-next-line no-restricted-syntax
 const tryImport = (specifier: string) => import(specifier)
+
+/**
+ * Synchronously defines a formatter based on the `formatGeneratedCode` configuration.
+ * The `name` is available immediately; call `resolve()` to load the formatter (which may throw).
+ *
+ * Returns `undefined` if `formatGeneratedCode` is `false`.
+ *
+ * @param formatGeneratedCode - The formatter mode to resolve
+ */
+export function defineFormatter(
+  formatGeneratedCode: FormatGeneratedCode,
+): DefinedFormatter | undefined {
+  if (formatGeneratedCode === false) {
+    return undefined
+  }
+
+  if (formatGeneratedCode === 'oxfmt') {
+    return {name: 'oxfmt', resolve: resolveOxfmt}
+  }
+
+  // true or 'prettier' → use prettier
+  return {name: 'prettier', resolve: resolvePrettier}
+}
 
 /**
  * Resolves a code formatter based on the `formatGeneratedCode` configuration.
@@ -33,16 +66,11 @@ const tryImport = (specifier: string) => import(specifier)
 export async function resolveFormatter(
   formatGeneratedCode: FormatGeneratedCode,
 ): Promise<ResolvedFormatter> {
-  if (formatGeneratedCode === false) {
+  const defined = defineFormatter(formatGeneratedCode)
+  if (!defined) {
     return {format: undefined, name: undefined}
   }
-
-  if (formatGeneratedCode === 'oxfmt') {
-    return resolveOxfmt()
-  }
-
-  // true or 'prettier' → use prettier
-  return resolvePrettier()
+  return defined.resolve()
 }
 
 async function resolveOxfmt(): Promise<ResolvedFormatter> {

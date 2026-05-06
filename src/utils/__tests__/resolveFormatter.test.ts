@@ -1,6 +1,30 @@
 import {describe, expect, it} from 'vitest'
 
-import {resolveFormatter} from '../resolveFormatter.js'
+import {defineFormatter, resolveFormatter} from '../resolveFormatter.js'
+
+describe('defineFormatter', () => {
+  it('returns undefined for false', () => {
+    expect(defineFormatter(false)).toBeUndefined()
+  })
+
+  it('returns name "prettier" for true', () => {
+    const formatter = defineFormatter(true)
+    expect(formatter).toBeDefined()
+    expect(formatter!.name).toBe('prettier')
+  })
+
+  it('returns name "prettier" for "prettier"', () => {
+    const formatter = defineFormatter('prettier')
+    expect(formatter).toBeDefined()
+    expect(formatter!.name).toBe('prettier')
+  })
+
+  it('returns name "oxfmt" for "oxfmt"', () => {
+    const formatter = defineFormatter('oxfmt')
+    expect(formatter).toBeDefined()
+    expect(formatter!.name).toBe('oxfmt')
+  })
+})
 
 describe('resolveFormatter', () => {
   describe('formatGeneratedCode: false', () => {

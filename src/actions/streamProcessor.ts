@@ -9,7 +9,7 @@ import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
-import {resolveFormatter} from '../utils/resolveFormatter.js'
+import {defineFormatter} from '../utils/resolveFormatter.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
@@ -84,17 +84,20 @@ export async function processTypegenWorkerStream(
     let formattingError = false
     let formatterName: string | undefined
     if (formatGeneratedCode !== false) {
-      try {
-        const {format: formatter, name} = await resolveFormatter(formatGeneratedCode)
-        formatterName = name
-        if (formatter) {
-          spin.text = `Formatting generated types with ${formatterName}…`
-          const formattedCode = await formatter(generates, code)
-          await writeFile(generates, formattedCode)
+      const formatter = defineFormatter(formatGeneratedCode)
+      if (formatter) {
+        formatterName = formatter.name
+        try {
+          const {format} = await formatter.resolve()
+          if (format) {
+            spin.text = `Formatting generated types with ${formatter.name}…`
+            const formattedCode = await format(generates, code)
+            await writeFile(generates, formattedCode)
+          }
+        } catch (err) {
+          formattingError = true
+          spin.warn(`Failed to format generated types with ${formatter.name}: ${getMessage(err)}`)
         }
-      } catch (err) {
-        formattingError = true
-        spin.warn(`Failed to format generated types: ${getMessage(err)}`)
       }
     }
 
