@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.1.0](https://github.com/sanity-io/codegen/compare/codegen-v6.0.3...codegen-v6.1.0) (2026-05-08)
+
+
+### Features
+
+* add opt-in `oxfmt` formatter support for `formatGeneratedCode` ([#103](https://github.com/sanity-io/codegen/issues/103)) ([4e9da1c](https://github.com/sanity-io/codegen/commit/4e9da1c7bd5fb641b5899c37c18d498ba0ed0122))
+
 ## [6.0.3](https://github.com/sanity-io/codegen/compare/codegen-v6.0.2...codegen-v6.0.3) (2026-04-30)
 
 
