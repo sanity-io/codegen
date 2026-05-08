@@ -2,3 +2,7 @@ packages:
   - .
   - dev
   - 'tmp/*'
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  unrs-resolver: true

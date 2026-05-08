@@ -2,7 +2,6 @@ import {writeFile} from 'node:fs/promises'
 
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
-import {format, resolveConfig as resolvePrettierConfig} from 'prettier'
 
 import {TypeGenConfig} from '../readConfig.js'
 import {count} from '../utils/count.js'
@@ -10,6 +9,7 @@ import {debug} from '../utils/debug.js'
 import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
 import {percent} from '../utils/percent.js'
+import {defineFormatter} from '../utils/resolveFormatter.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
 import {TypegenWorkerChannel} from './types.js'
 
@@ -82,19 +82,22 @@ export async function processTypegenWorkerStream(
     await writeFile(generates, code)
 
     let formattingError = false
-    if (formatGeneratedCode) {
-      spin.text = `Formatting generated types with prettier…`
-
-      try {
-        const prettierConfig = await resolvePrettierConfig(generates)
-        const formattedCode = await format(code, {
-          ...prettierConfig,
-          parser: 'typescript' as const,
-        })
-        await writeFile(generates, formattedCode)
-      } catch (err) {
-        formattingError = true
-        spin.warn(`Failed to format generated types with prettier: ${getMessage(err)}`)
+    let formatterName: string | undefined
+    if (formatGeneratedCode !== false) {
+      const formatter = defineFormatter(formatGeneratedCode)
+      if (formatter) {
+        formatterName = formatter.name
+        try {
+          const {format} = await formatter.resolve()
+          if (format) {
+            spin.text = `Formatting generated types with ${formatter.name}…`
+            const formattedCode = await format(generates, code)
+            await writeFile(generates, formattedCode)
+          }
+        } catch (err) {
+          formattingError = true
+          spin.warn(`Failed to format generated types with ${formatter.name}: ${getMessage(err)}`)
+        }
       }
     }
 
@@ -121,8 +124,8 @@ export async function processTypegenWorkerStream(
       `\n  └─ ${count(queriesCount, 'queries', 'query')} and ${count(schemaTypesCount, 'schema types', 'schema type')}` +
       `\n  └─ found queries in ${count(queryFilesCount, 'files', 'file')} after evaluating ${count(evaluatedFiles, 'files', 'file')}`
 
-    if (formatGeneratedCode) {
-      successText += `\n  └─ ${formattingError ? 'an error occured during formatting' : 'formatted the generated code with prettier'}`
+    if (formatterName) {
+      successText += `\n  └─ ${formattingError ? 'an error occurred during formatting' : `formatted the generated code with ${formatterName}`}`
     }
 
     spin.succeed(successText)
