@@ -1,4 +1,4 @@
-import {mkdir, stat, writeFile} from 'node:fs/promises'
+import {mkdir, writeFile} from 'node:fs/promises'
 import {dirname, isAbsolute, join} from 'node:path'
 
 import {
@@ -112,25 +112,10 @@ async function prepareLanguages(rawTypegen: unknown, workDir: string): Promise<P
     }
   }
 
-  // Step 5: schema-file existence and readability (FR-020).
-  const uniqueSchemas = [...new Set(prepared.map((p) => p.schemaPath))]
-  await Promise.all(
-    uniqueSchemas.map(async (schemaPath) => {
-      try {
-        const stats = await stat(schemaPath)
-        if (!stats.isFile()) {
-          const id = prepared.find((p) => p.schemaPath === schemaPath)!.id
-          throw new Error(`${id} config: schema path is not a file: ${schemaPath}`)
-        }
-      } catch (err) {
-        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
-          const id = prepared.find((p) => p.schemaPath === schemaPath)!.id
-          throw new Error(`${id} config: schema file not found: ${schemaPath}`, {cause: err})
-        }
-        throw err
-      }
-    }),
-  )
+  // Step 5 — schema-file existence — is enforced per-language inside the generation
+  // loop (see runTypegenGenerate). Per FR-017 a missing schema for one language must
+  // not abort the others; the contract's spinner example explicitly shows
+  // `schema file not found` as a single `✗` row alongside successful languages.
 
   return {prepared, warnings: parsed.warnings}
 }
@@ -177,7 +162,15 @@ export async function runTypegenGenerate(
   for (const {config: parsedConfig, generator, id, outputPath, schemaPath} of prepared) {
     const langStart = Date.now()
     try {
-      const schema = await getSchema(schemaPath)
+      let schema: Awaited<ReturnType<typeof readSchema>>
+      try {
+        schema = await getSchema(schemaPath)
+      } catch (err) {
+        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+          throw new Error(`${id} config: schema file not found: ${schemaPath}`, {cause: err})
+        }
+        throw err
+      }
       const output = await generator.generate({
         config: parsedConfig,
         schema,
