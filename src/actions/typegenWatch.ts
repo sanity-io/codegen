@@ -8,6 +8,7 @@ import mean from 'lodash-es/mean.js'
 
 import {TypegenWatchModeTraceAttributes} from '../typegen.telemetry.js'
 import {prepareConfig} from '../utils/config.js'
+import {formatPath} from '../utils/formatPath.js'
 import {runTypegenGenerate} from './typegenGenerate.js'
 import {type RunTypegenOptions} from './types.js'
 
@@ -91,7 +92,23 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
 
   const {runGeneration} = createTypegenRunner(async () => {
     try {
-      const {duration} = await runTypegenGenerate({...options})
+      const {duration} = await runTypegenGenerate({
+        ...options,
+        onLanguageProgress: (event) => {
+          if (event.status === 'success') {
+            const docs = typeof event.stats?.documents === 'number' ? event.stats.documents : 0
+            const objs = typeof event.stats?.objects === 'number' ? event.stats.objects : 0
+            error(
+              ` ${styleText('green', '✔')} ${event.id} → ${formatPath(event.outputPath)}  (${docs} documents, ${objs} objects)`,
+            )
+          } else {
+            error(
+              ` ${styleText('red', '✗')} ${event.id} ${event.error?.message ?? 'unknown error'}`,
+            )
+          }
+        },
+        onWarning: (warning) => error(` ${styleText('yellow', '⚠')} ${warning}`),
+      })
       stats.successfulDurations.push(duration)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : err
