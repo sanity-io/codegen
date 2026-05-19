@@ -6,6 +6,7 @@ export {
   type RunTypegenOptions,
 } from '../actions/types.js'
 export {TypegenGenerateCommand} from '../commands/typegen/generate.js'
+export {goGenerator, type GoLanguageConfig} from '../polyglot/go/index.js'
 export {
   type BaseLanguageConfig,
   type GenerationOutput,
@@ -15,6 +16,8 @@ export {
   polyglotRegistry,
   polyglotSupport,
 } from '../polyglot/index.js'
+export {phpGenerator, type PhpLanguageConfig} from '../polyglot/php/index.js'
+export {swiftGenerator, type SwiftLanguageConfig} from '../polyglot/swift/index.js'
 export {findQueriesInPath} from '../polyglot/typescript/findQueriesInPath.js'
 export {findQueriesInSource} from '../polyglot/typescript/findQueriesInSource.js'
 export {typescriptGenerator, type TypeScriptLanguageConfig} from '../polyglot/typescript/index.js'

@@ -1,5 +1,8 @@
 import {type SchemaType} from 'groq-js'
 
+import {goGenerator} from './go/index.js'
+import {phpGenerator} from './php/index.js'
+import {swiftGenerator} from './swift/index.js'
 import {typescriptGenerator} from './typescript/index.js'
 
 /** @public */
@@ -63,5 +66,8 @@ export const polyglotSupport: Record<LanguageId, LanguageSupport> = {
  * @public
  */
 export const polyglotRegistry: Partial<Record<LanguageId, LanguageGenerator>> = {
+  go: goGenerator,
+  php: phpGenerator,
+  swift: swiftGenerator,
   typescript: typescriptGenerator,
 }
