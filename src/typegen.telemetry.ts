@@ -1,7 +1,14 @@
 import {defineTrace} from '@sanity/telemetry'
 
-interface TypesGeneratedTraceAttributes {
-  configMethod: 'cli' | 'legacy'
+interface PerLanguageStats {
+  documents: number
+  durationMs: number
+  objects: number
+  skipped: number
+  status: 'error' | 'success'
+}
+
+interface TypeScriptLanguageStats extends PerLanguageStats {
   configOverloadClientMethods: boolean
   emptyUnionTypeNodesGenerated: number
   filesWithErrors: number
@@ -14,11 +21,21 @@ interface TypesGeneratedTraceAttributes {
   unknownTypeNodesRatio: number
 }
 
+interface TypesGeneratedTraceAttributes {
+  configMethod: 'cli' | 'legacy'
+  languages: {
+    go?: PerLanguageStats
+    php?: PerLanguageStats
+    swift?: PerLanguageStats
+    typescript?: TypeScriptLanguageStats
+  }
+}
+
 /** @public */
 export const TypesGeneratedTrace = defineTrace<TypesGeneratedTraceAttributes>({
-  description: 'Trace emitted when generating TypeScript types for queries',
+  description: 'Trace emitted when generating types from a Sanity schema',
   name: 'Types Generated',
-  version: 0,
+  version: 1,
 })
 
 /**

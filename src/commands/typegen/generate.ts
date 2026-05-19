@@ -4,34 +4,40 @@ import {styleText} from 'node:util'
 import {Flags} from '@oclif/core'
 import {SanityCommand} from '@sanity/cli-core'
 import {spinner} from '@sanity/cli-core/ux'
-import omit from 'lodash-es/omit.js'
 import once from 'lodash-es/once.js'
 
-import {runTypegenGenerate} from '../../actions/typegenGenerate.js'
+import {type LanguageProgressEvent, runTypegenGenerate} from '../../actions/typegenGenerate.js'
 import {runTypegenWatcher} from '../../actions/typegenWatch.js'
-import {configDefinition, readConfig, type TypeGenConfig} from '../../readConfig.js'
+import {type LanguageId} from '../../polyglot/index.js'
+import {readConfig, type TypegenConfigInput} from '../../readConfig.js'
 import {TypegenWatchModeTrace, TypesGeneratedTrace} from '../../typegen.telemetry.js'
 import {debug} from '../../utils/debug.js'
+import {formatPath} from '../../utils/formatPath.js'
 import {promiseWithResolvers} from '../../utils/promiseWithResolvers.js'
 
 const description = `Sanity TypeGen
 
 ${styleText('bold', 'Configuration:')}
-This command can utilize configuration settings defined in a \`sanity-typegen.json\` file. These settings include:
+Configure typegen under the \`typegen\` field of \`sanity.cli.ts\`. Each target language has its
+own sub-block:
 
-- "path": Specifies a glob pattern to locate your TypeScript or JavaScript files.
-  Default: "./src/**/*.{ts,tsx,js,jsx}"
+- typegen.typescript: { schema, generates, path?, overloadClientMethods?, formatGeneratedCode? }
+- typegen.go:         { schema, generates, packageName?, formatGeneratedCode? }
+- typegen.php:        { schema, generates, namespace?, formatGeneratedCode? }
+- typegen.swift:      { schema, generates, formatGeneratedCode? }
 
-- "schema": Defines the path to your Sanity schema file. This file should be generated using the \`sanity schema extract\` command.
-  Default: "schema.json"
-
-- "generates": Indicates the path where the generated TypeScript type definitions will be saved.
-  Default: "./sanity.types.ts"
-
-The default configuration values listed above are used if not overridden in your \`sanity-typegen.json\` configuration file. To customize the behavior of the type generation, adjust these properties in the configuration file according to your project's needs.
+Every sub-block is optional. The legacy flat \`typegen: {schema, generates, ...}\` shape is
+still accepted and prints a one-line deprecation warning.
 
 ${styleText('bold', 'Note:')}
-- The \`sanity schema extract\` command is a prerequisite for extracting your Sanity Studio schema into a \`schema.json\` file, which is then used by the \`sanity typegen generate\` command to generate type definitions.`.trim()
+- The \`sanity schema extract\` command is a prerequisite — it writes the \`schema.json\` file
+  that this command reads.`.trim()
+
+interface ConfigLoad {
+  configMethod: 'cli' | 'legacy'
+  raw: TypegenConfigInput | undefined
+  workDir: string
+}
 
 /**
  * @internal
@@ -42,7 +48,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
   static override examples = [
     {
       command: '<%= config.bin %> <%= command.id %>',
-      description: `Generate TypeScript type definitions from a Sanity Studio schema extracted using the \`sanity schema extract\` command.`,
+      description: `Generate type definitions from a Sanity Studio schema extracted using the \`sanity schema extract\` command.`,
     },
   ]
 
@@ -59,35 +65,25 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
   public async run() {
     const {flags} = await this.parse(TypegenGenerateCommand)
-
     if (flags.watch) {
       await this.runWatcher()
       return
     }
-
     await this.runSingle()
   }
 
-  private async getConfig(): Promise<{
-    config: TypeGenConfig
-    path?: string
-    type: 'cli' | 'legacy'
-    workDir: string
-  }> {
+  private async getConfig(): Promise<ConfigLoad> {
     const spin = spinner({}).start('Loading config…')
-
     try {
       const {flags} = await this.parse(TypegenGenerateCommand)
       const rootDir = await this.getProjectRoot()
-      const config = await this.getCliConfig()
+      const cliConfig = await this.getCliConfig()
 
       const configPath = flags['config-path']
       const workDir = rootDir.directory
 
-      // check if the legacy config exist
       const legacyConfigPath = configPath || 'sanity-typegen.json'
       let hasLegacyConfig = false
-
       try {
         const file = await stat(legacyConfigPath)
         hasLegacyConfig = file.isFile()
@@ -96,7 +92,6 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
           spin.fail()
           this.error(`Typegen config file not found: ${configPath}`, {exit: 1})
         }
-
         if (err instanceof Error && 'code' in err && err.code !== 'ENOENT') {
           spin.fail()
           this.error(`Error when checking if typegen config file exists: ${legacyConfigPath}`, {
@@ -105,51 +100,38 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         }
       }
 
-      // we have both legacy and cli config with typegen
-      if (config?.typegen && hasLegacyConfig) {
+      if (cliConfig?.typegen && hasLegacyConfig) {
         spin.warn(
           styleText(
             'yellow',
-            `You've specified typegen in your Sanity CLI config, but also have a typegen config.
-
-    The config from the Sanity CLI config is used.
-    `,
+            `You've specified typegen in your Sanity CLI config, but also have a typegen config.\n    The config from the Sanity CLI config is used.\n`,
           ),
         )
-
         return {
-          config: configDefinition.parse(config.typegen || {}),
-          path: rootDir.path,
-          type: 'cli',
+          configMethod: 'cli',
+          raw: cliConfig.typegen as TypegenConfigInput,
           workDir,
         }
       }
 
-      // we only have legacy typegen config
       if (hasLegacyConfig) {
         spin.warn(
           styleText(
             'yellow',
-            `The separate typegen config has been deprecated. Use \`typegen\` in the sanity CLI config instead.
-
-    See: https://www.sanity.io/docs/help/configuring-typegen-in-sanity-cli-config`,
+            `The separate typegen config has been deprecated. Use \`typegen\` in the sanity CLI config instead.\n    See: https://www.sanity.io/docs/help/configuring-typegen-in-sanity-cli-config`,
           ),
         )
         return {
-          config: await readConfig(legacyConfigPath),
-          path: legacyConfigPath,
-          type: 'legacy',
+          configMethod: 'legacy',
+          raw: (await readConfig(legacyConfigPath)) as TypegenConfigInput,
           workDir,
         }
       }
 
       spin.succeed(`Config loaded from sanity.cli.ts`)
-
-      // we only have cli config
       return {
-        config: configDefinition.parse(config.typegen || {}),
-        path: rootDir.path,
-        type: 'cli',
+        configMethod: 'cli',
+        raw: (cliConfig.typegen as TypegenConfigInput) ?? undefined,
         workDir,
       }
     } catch (err) {
@@ -160,57 +142,149 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
   private async runSingle() {
     const trace = this.telemetry.trace(TypesGeneratedTrace)
-
     try {
-      const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
+      const {configMethod, raw, workDir} = await this.getConfig()
       trace.start()
 
+      const spinners = new Map<LanguageId, ReturnType<typeof spinner>>()
+      const ensureSpinner = (id: LanguageId): ReturnType<typeof spinner> => {
+        const existing = spinners.get(id)
+        if (existing) return existing
+        const sp = spinner({}).start(`${id}…`)
+        spinners.set(id, sp)
+        return sp
+      }
+
+      const renderProgress = (event: LanguageProgressEvent) => {
+        const sp = ensureSpinner(event.id)
+        if (event.status === 'success') {
+          const stats = event.stats
+          const docs = typeof stats?.documents === 'number' ? stats.documents : 0
+          const objs = typeof stats?.objects === 'number' ? stats.objects : 0
+          sp.succeed(
+            `${event.id} → ${formatPath(event.outputPath)}  (${docs} documents, ${objs} objects)`,
+          )
+        } else {
+          sp.fail(`${event.id} ${event.error?.message ?? 'unknown error'}`)
+        }
+      }
+
       const result = await runTypegenGenerate({
-        config: typegenConfig,
+        config: raw,
+        onLanguageProgress: renderProgress,
+        onWarning: (warning) => this.log(styleText('yellow', `warn  ${warning}`)),
         workDir,
       })
 
-      const traceStats = omit(result, 'code', 'duration')
+      const total = Object.values(result.languages)
+      const failed = total.filter((r) => r?.status === 'error')
+
+      if (result.languages.swift?.status === 'success') {
+        this.log(
+          styleText(
+            'dim',
+            `  note  Swift output uses 'import Sanity'. Add sanity-io/swift-sanity to your SwiftPM dependencies.`,
+          ),
+        )
+      }
+
+      if (failed.length > 0) {
+        const failedIds = (
+          Object.entries(result.languages) as Array<[LanguageId, (typeof total)[number]]>
+        )
+          .filter(([, r]) => r?.status === 'error')
+          .map(([id]) => id)
+          .join(', ')
+        this.log(
+          styleText(
+            'red',
+            `\n${failed.length} of ${total.length} language(s) failed: ${failedIds}`,
+          ),
+        )
+      }
+
+      // Telemetry: per-language sub-object, no schema or field names.
+      const langTrace: Record<string, unknown> = {}
+      const tsResult = result.languages.typescript
+      if (tsResult) {
+        const tsStats = (tsResult.stats ?? {}) as Record<string, unknown>
+        langTrace.typescript = {
+          configOverloadClientMethods: Boolean(
+            (raw as Record<string, unknown> | undefined)?.overloadClientMethods ??
+            (raw as {typescript?: {overloadClientMethods?: boolean}} | undefined)?.typescript
+              ?.overloadClientMethods ??
+            true,
+          ),
+          documents: typeof tsStats.documents === 'number' ? tsStats.documents : 0,
+          durationMs: tsResult.duration,
+          emptyUnionTypeNodesGenerated: Number(tsStats.emptyUnionTypeNodesGenerated ?? 0),
+          filesWithErrors: Number(tsStats.filesWithErrors ?? 0),
+          objects: typeof tsStats.objects === 'number' ? tsStats.objects : 0,
+          outputSize: Number(tsStats.outputSize ?? 0),
+          queriesCount: Number(tsStats.queriesCount ?? 0),
+          queryFilesCount: Number(tsStats.queryFilesCount ?? 0),
+          schemaTypesCount: Number(tsStats.schemaTypesCount ?? 0),
+          skipped: Array.isArray(tsStats.skipped) ? tsStats.skipped.length : 0,
+          status: tsResult.status,
+          typeNodesGenerated: Number(tsStats.typeNodesGenerated ?? 0),
+          unknownTypeNodesGenerated: Number(tsStats.unknownTypeNodesGenerated ?? 0),
+          unknownTypeNodesRatio:
+            Number(tsStats.typeNodesGenerated ?? 0) > 0
+              ? Number(tsStats.unknownTypeNodesGenerated ?? 0) /
+                Number(tsStats.typeNodesGenerated ?? 0)
+              : 0,
+        }
+      }
+      for (const id of ['go', 'php', 'swift'] as const) {
+        const r = result.languages[id]
+        if (!r) continue
+        const stats = (r.stats ?? {}) as Record<string, unknown>
+        langTrace[id] = {
+          documents: typeof stats.documents === 'number' ? stats.documents : 0,
+          durationMs: r.duration,
+          objects: typeof stats.objects === 'number' ? stats.objects : 0,
+          skipped: Array.isArray(stats.skipped) ? stats.skipped.length : 0,
+          status: r.status,
+        }
+      }
 
       trace.log({
-        configMethod: typegenConfigMethod,
-        configOverloadClientMethods: typegenConfig.overloadClientMethods,
-        ...traceStats,
+        configMethod,
+        languages: langTrace as Parameters<typeof trace.log>[0]['languages'],
       })
       trace.complete()
+
+      if (failed.length > 0) {
+        this.exit(1)
+      }
     } catch (error) {
       debug(error)
       trace.error(error as Error)
-      this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {
-        exit: 1,
-      })
+      this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {exit: 1})
     }
   }
 
   private async runWatcher() {
     const trace = this.telemetry.trace(TypegenWatchModeTrace)
-
     try {
-      const {config: typegenConfig, workDir} = await this.getConfig()
+      const {raw, workDir} = await this.getConfig()
       trace.start()
 
       const {promise, resolve} = promiseWithResolvers()
 
       const typegenWatcher = runTypegenWatcher({
-        config: typegenConfig,
+        config: raw,
         workDir,
       })
 
       const stop = once(async () => {
         process.off('SIGINT', stop)
         process.off('SIGTERM', stop)
-
         trace.log({
           step: 'stopped',
           ...typegenWatcher.getStats(),
         })
         trace.complete()
-
         await typegenWatcher.stop()
         resolve()
       })
@@ -222,9 +296,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     } catch (error) {
       debug(error)
       trace.error(error as Error)
-      this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {
-        exit: 1,
-      })
+      this.error(`${error instanceof Error ? error.message : 'Unknown error'}`, {exit: 1})
     }
   }
 }

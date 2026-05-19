@@ -4,7 +4,7 @@ import {type NodePath, type TransformOptions, traverse} from '@babel/core'
 import {type Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 
-import {getBabelConfig} from '../getBabelConfig.js'
+import {getBabelConfig} from '../../getBabelConfig.js'
 import {resolveExpression} from './expressionResolvers.js'
 import {parseSourceFile} from './parseSource.js'
 import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types.js'

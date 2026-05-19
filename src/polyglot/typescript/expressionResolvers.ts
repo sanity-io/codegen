@@ -6,7 +6,7 @@ import {Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 import createDebug from 'debug'
 
-import {formatPath} from '../utils/formatPath.js'
+import {formatPath} from '../../utils/formatPath.js'
 import {parseSourceFile} from './parseSource.js'
 
 const debug = createDebug('sanity:codegen:findQueries:debug')

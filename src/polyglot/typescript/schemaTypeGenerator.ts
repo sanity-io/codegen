@@ -12,7 +12,7 @@ import {
   type UnionTypeNode,
 } from 'groq-js'
 
-import {safeParseQuery} from '../safeParseQuery.js'
+import {safeParseQuery} from '../../safeParseQuery.js'
 import {ARRAY_OF, INTERNAL_REFERENCE_SYMBOL} from './constants.js'
 import {
   getFilterArrayUnionType,

@@ -4,7 +4,7 @@ import {type TransformOptions} from '@babel/core'
 import createDebug from 'debug'
 import glob from 'globby'
 
-import {getBabelConfig} from '../getBabelConfig.js'
+import {getBabelConfig} from '../../getBabelConfig.js'
 import {findQueriesInSource} from './findQueriesInSource.js'
 import {normalizeGlobPattern} from './helpers.js'
 import {getResolver} from './moduleResolver.js'

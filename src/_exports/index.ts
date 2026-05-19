@@ -1,30 +1,48 @@
 export {runTypegenGenerate} from '../actions/typegenGenerate.js'
 export {runTypegenWatcher} from '../actions/typegenWatch.js'
-export {type GenerationResult, type RunTypegenOptions} from '../actions/types.js'
+export {
+  type GenerationResult,
+  type LanguageRunResult,
+  type RunTypegenOptions,
+} from '../actions/types.js'
 export {TypegenGenerateCommand} from '../commands/typegen/generate.js'
 export {
-  type CodegenConfig,
-  configDefinition,
-  readConfig,
-  type TypeGenConfig,
-} from '../readConfig.js'
-export {readSchema} from '../readSchema.js'
-export {safeParseQuery} from '../safeParseQuery.js'
-export {TypegenWatchModeTrace, TypesGeneratedTrace} from '../typegen.telemetry.js'
-export {findQueriesInPath} from '../typescript/findQueriesInPath.js'
-export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
-export {getResolver} from '../typescript/moduleResolver.js'
-export {registerBabel} from '../typescript/registerBabel.js'
+  type BaseLanguageConfig,
+  type GenerationOutput,
+  type LanguageGenerator,
+  type LanguageId,
+  POLYGLOT_API_VERSION,
+  polyglotRegistry,
+  polyglotSupport,
+} from '../polyglot/index.js'
+export {findQueriesInPath} from '../polyglot/typescript/findQueriesInPath.js'
+export {findQueriesInSource} from '../polyglot/typescript/findQueriesInSource.js'
+export {typescriptGenerator, type TypeScriptLanguageConfig} from '../polyglot/typescript/index.js'
+export {getResolver} from '../polyglot/typescript/moduleResolver.js'
+export {registerBabel} from '../polyglot/typescript/registerBabel.js'
 export {
   type GenerateTypesOptions,
   TypeGenerator,
   type TypegenWorkerChannel,
-} from '../typescript/typeGenerator.js'
+} from '../polyglot/typescript/typeGenerator.js'
 export {
   type EvaluatedModule,
   type EvaluatedQuery,
   type ExtractedModule,
   type ExtractedQuery,
   QueryExtractionError,
-} from '../typescript/types.js'
+} from '../polyglot/typescript/types.js'
+export {
+  type CodegenConfig,
+  configDefinition,
+  detectTypegenConflict,
+  type ParsedTypegenConfig,
+  parseTypegenConfig,
+  readConfig,
+  type TypeGenConfig,
+  type TypegenConfigInput,
+} from '../readConfig.js'
+export {readSchema} from '../readSchema.js'
+export {safeParseQuery} from '../safeParseQuery.js'
+export {TypegenWatchModeTrace, TypesGeneratedTrace} from '../typegen.telemetry.js'
 export {type FilterByType, type Get} from '../typeUtils.js'

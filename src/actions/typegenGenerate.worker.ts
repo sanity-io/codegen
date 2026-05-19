@@ -4,11 +4,11 @@ import {isMainThread, parentPort, workerData} from 'node:worker_threads'
 
 import {WorkerChannelReporter} from '@sanity/worker-channels'
 
+import {findQueriesInPath} from '../polyglot/typescript/findQueriesInPath.js'
+import {getResolver} from '../polyglot/typescript/moduleResolver.js'
+import {registerBabel} from '../polyglot/typescript/registerBabel.js'
+import {TypeGenerator} from '../polyglot/typescript/typeGenerator.js'
 import {readSchema} from '../readSchema.js'
-import {findQueriesInPath} from '../typescript/findQueriesInPath.js'
-import {getResolver} from '../typescript/moduleResolver.js'
-import {registerBabel} from '../typescript/registerBabel.js'
-import {TypeGenerator} from '../typescript/typeGenerator.js'
 import {TypegenGenerateTypesWorkerData, TypegenWorkerChannel} from './types.js'
 
 if (isMainThread || !parentPort) {

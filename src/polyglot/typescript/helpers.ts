@@ -4,7 +4,7 @@ import {CodeGenerator} from '@babel/generator'
 import * as t from '@babel/types'
 import {type ArrayTypeNode, type UnionTypeNode} from 'groq-js'
 
-import {formatPath} from '../utils/formatPath.js'
+import {formatPath} from '../../utils/formatPath.js'
 import {RESERVED_IDENTIFIERS} from './constants.js'
 
 export function normalizePrintablePath(root: string, filename: string) {

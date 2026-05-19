@@ -6,7 +6,7 @@ import {type WorkerChannel, type WorkerChannelReporter} from '@sanity/worker-cha
 import {type SchemaType} from 'groq-js'
 import {createSelector} from 'reselect'
 
-import {resultSuffix} from '../casing.js'
+import {resultSuffix} from '../../casing.js'
 import {
   ALL_SANITY_SCHEMA_TYPES,
   ARRAY_OF,

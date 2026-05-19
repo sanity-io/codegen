@@ -1,8 +1,9 @@
 import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannel} from '@sanity/worker-channels'
 
-import {TypeGenConfig} from '../readConfig.js'
-import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../typescript/typeGenerator.js'
+import {type GenerationOutput, type LanguageId} from '../polyglot/index.js'
+import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../polyglot/typescript/typeGenerator.js'
+import {type TypeGenConfig, type TypegenConfigInput} from '../readConfig.js'
 
 /**
  * Data passed to the typegen worker thread.
@@ -42,27 +43,39 @@ export interface RunTypegenOptions {
   /** Working directory (usually project root) */
   workDir: string
 
-  /** Typegen configuration */
-  config?: Partial<TypeGenConfig>
+  /**
+   * Typegen configuration. Accepts the legacy flat shape, the new per-language nested
+   * shape, or a fully-parsed legacy `TypeGenConfig` (treated as the TypeScript block).
+   */
+  config?: Partial<TypeGenConfig> | TypegenConfigInput
 
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
 }
 
 /**
- * Result from a single generation run.
+ * Result of one language generator's run within a single `runTypegenGenerate` call.
+ * @public
+ */
+export interface LanguageRunResult {
+  /** Time spent in this language's generator, in ms. */
+  duration: number
+  outputPath: string
+  schemaPath: string
+  status: 'error' | 'success'
+
+  error?: {cause?: unknown; message: string}
+  stats?: GenerationOutput['stats'] & Record<string, unknown>
+}
+
+/**
+ * Result from a single generation run across all configured languages.
  * @public
  */
 export interface GenerationResult {
-  code: string
+  /** Total wall-clock time across all languages, in ms. */
   duration: number
-  emptyUnionTypeNodesGenerated: number
-  filesWithErrors: number
-  outputSize: number
-  queriesCount: number
-  queryFilesCount: number
-  schemaTypesCount: number
-  typeNodesGenerated: number
-  unknownTypeNodesGenerated: number
-  unknownTypeNodesRatio: number
+
+  /** Per-language results, keyed by `LanguageGenerator.id`. */
+  languages: Partial<Record<LanguageId, LanguageRunResult>>
 }
