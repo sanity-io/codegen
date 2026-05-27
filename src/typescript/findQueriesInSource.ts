@@ -7,15 +7,22 @@ import * as babelTypes from '@babel/types'
 import {getBabelConfig} from '../getBabelConfig.js'
 import {resolveExpression} from './expressionResolvers.js'
 import {parseSourceFile} from './parseSource.js'
-import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types.js'
+import {
+  type ExtractedModule,
+  type ExtractedProjection,
+  type ExtractedQuery,
+  QueryExtractionError,
+} from './types.js'
 
 const require = createRequire(import.meta.url)
 
 const groqTagName = 'groq'
 const defineQueryFunctionName = 'defineQuery'
+const useDocumentProjectionName = 'useDocumentProjection'
 const groqModuleName = 'groq'
 const nextSanityModuleName = 'next-sanity'
 const sveltekitModuleName = '@sanity/sveltekit'
+const sdkReactModuleName = '@sanity/sdk-react'
 
 const ignoreValue = '@sanity-typegen-ignore'
 
@@ -36,6 +43,7 @@ export function findQueriesInSource(
   resolver: NodeJS.RequireResolve = require.resolve,
 ): ExtractedModule {
   const queries: ExtractedQuery[] = []
+  const projections: ExtractedProjection[] = []
   const errors: QueryExtractionError[] = []
   const file = parseSourceFile(source, filename, babelConfig)
 
@@ -85,9 +93,45 @@ export function findQueriesInSource(
         }
       }
     },
+
+    // Look for useDocumentProjection({ projection: '...', documentType: '...' }) calls
+    CallExpression(path) {
+      const {node, scope} = path
+
+      if (!isImportFrom(sdkReactModuleName, useDocumentProjectionName, scope, node.callee)) {
+        return
+      }
+
+      const optionsArg = node.arguments[0]
+      if (!optionsArg || !babelTypes.isObjectExpression(optionsArg)) return
+
+      const projectionProp = getStringProperty(optionsArg, 'projection', scope, {
+        babelConfig,
+        file,
+        filename,
+        resolver,
+      })
+      if (!projectionProp) return
+
+      const documentTypeProp = getStringProperty(optionsArg, 'documentType', scope, {
+        babelConfig,
+        file,
+        filename,
+        resolver,
+      })
+
+      const variableName = documentTypeProp ?? deriveProjectionName(path)
+
+      projections.push({
+        documentTypes: documentTypeProp ? [documentTypeProp] : [],
+        filename,
+        projection: projectionProp,
+        variableName,
+      })
+    },
   })
 
-  return {errors, filename, queries}
+  return {errors, filename, projections, queries}
 }
 
 function declarationLeadingCommentContains(path: NodePath, comment: string): boolean {
@@ -159,6 +203,74 @@ function declarationLeadingCommentContains(path: NodePath, comment: string): boo
   }
 
   return false
+}
+
+/**
+ * Extracts a string value from a named property on an object expression.
+ * Handles inline string literals and variable references via the expression resolver.
+ */
+function getStringProperty(
+  objectExpr: babelTypes.ObjectExpression,
+  propertyName: string,
+  scope: Scope,
+  resolverOpts: {
+    babelConfig: TransformOptions
+    file: babelTypes.File
+    filename: string
+    resolver: NodeJS.RequireResolve
+  },
+): string | null {
+  for (const prop of objectExpr.properties) {
+    if (
+      babelTypes.isObjectProperty(prop) &&
+      ((babelTypes.isIdentifier(prop.key) && prop.key.name === propertyName) ||
+        (babelTypes.isStringLiteral(prop.key) && prop.key.value === propertyName)) &&
+      babelTypes.isExpression(prop.value)
+    ) {
+      // Try inline string literal first
+      if (babelTypes.isStringLiteral(prop.value)) {
+        return prop.value.value
+      }
+      // Try template literal with no expressions
+      if (
+        babelTypes.isTemplateLiteral(prop.value) &&
+        prop.value.expressions.length === 0 &&
+        prop.value.quasis.length === 1 &&
+        prop.value.quasis[0]
+      ) {
+        return prop.value.quasis[0].value.cooked ?? prop.value.quasis[0].value.raw
+      }
+      // Fall back to expression resolver for variable references
+      try {
+        return resolveExpression({
+          node: prop.value,
+          scope,
+          ...resolverOpts,
+        })
+      } catch {
+        return null
+      }
+    }
+  }
+  return null
+}
+
+function deriveProjectionName(path: NodePath<babelTypes.CallExpression>): string {
+  const parent = path.parentPath
+  // const { data } = useDocumentProjection(...)
+  if (parent?.isVariableDeclarator()) {
+    const id = parent.node.id
+    if (babelTypes.isIdentifier(id)) return id.name
+    if (babelTypes.isObjectPattern(id)) {
+      // Use the first destructured property name as a hint
+      for (const prop of id.properties) {
+        if (babelTypes.isObjectProperty(prop) && babelTypes.isIdentifier(prop.key)) {
+          return prop.key.name
+        }
+      }
+    }
+  }
+  return 'projection'
 }
 
 function isImportFrom(

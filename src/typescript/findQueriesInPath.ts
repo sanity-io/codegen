@@ -75,6 +75,7 @@ export function findQueriesInPath({
         yield {
           errors: [new QueryExtractionError({cause, filename})],
           filename,
+          projections: [],
           queries: [],
         }
       }

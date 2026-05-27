@@ -34,6 +34,7 @@ export class SchemaTypeGenerator {
       return {stats, tsType}
     },
   )
+
   private arrayOfUsed = false
 
   private identifiers = new Map<string, t.Identifier>()
@@ -61,6 +62,57 @@ export class SchemaTypeGenerator {
 
     for (const type of schema) {
       this.tsTypes.set(type.name, this.generateTsType(type))
+    }
+  }
+
+  evaluateProjection(
+    projection: string,
+    documentTypes: string[],
+  ): {stats: TypeEvaluationStats; tsType: t.TSType} | null {
+    const targetTypes =
+      documentTypes.length > 0
+        ? documentTypes
+        : this.schema.filter((t) => t.type === 'document').map((t) => t.name)
+
+    const results: {stats: TypeEvaluationStats; tsType: t.TSType}[] = []
+
+    for (const typeName of targetTypes) {
+      if (!this.hasType(typeName)) continue
+
+      const projectionAst = safeParseQuery(projection)
+      if (projectionAst.type !== 'Object') {
+        throw new Error(
+          `Invalid projection syntax: Projections must be enclosed in curly braces, (e.g., "{_id, title}"). Received: "${projection}"`,
+        )
+      }
+
+      const ast = safeParseQuery(`*[_type==${JSON.stringify(typeName)}] ${projection} [0]`)
+      const result = typeEvaluate(ast, this.schema)
+
+      if (result.type !== 'union' || result.of.length !== 2) continue
+
+      const projectionResult = result.of.find((node) => node.type !== 'null')
+      if (projectionResult?.type !== 'object') continue
+
+      const stats = walkAndCountQueryTypeNodeStats(projectionResult)
+      const tsType = this.generateTsType(projectionResult)
+
+      results.push({stats, tsType})
+    }
+
+    if (results.length === 0) return null
+    if (results.length === 1) return results[0]!
+
+    const combinedStats = {allTypes: 0, emptyUnions: 0, unknownTypes: 0}
+    for (const {stats} of results) {
+      combinedStats.allTypes += stats.allTypes + 1
+      combinedStats.emptyUnions += stats.emptyUnions
+      combinedStats.unknownTypes += stats.unknownTypes
+    }
+
+    return {
+      stats: combinedStats,
+      tsType: t.tsUnionType(results.map((r) => r.tsType)),
     }
   }
 

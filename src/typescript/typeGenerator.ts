@@ -11,7 +11,9 @@ import {
   ALL_SANITY_SCHEMA_TYPES,
   ARRAY_OF,
   INTERNAL_REFERENCE_SYMBOL,
+  SANITY_PROJECTIONS,
   SANITY_QUERIES,
+  SANITY_SCHEMAS,
 } from './constants.js'
 import {
   computeOnce,
@@ -22,6 +24,7 @@ import {
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
   type EvaluatedModule,
+  type EvaluatedProjection,
   type EvaluatedQuery,
   type ExtractedModule,
   QueryEvaluationError,
@@ -56,9 +59,16 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<{
 }>
 
 /** @public */
+export interface ModuleAugmentationTarget {
+  module: string
+  schemaId: string
+}
+
+/** @public */
 export interface GenerateTypesOptions {
   schema: SchemaType
 
+  moduleTarget?: ModuleAugmentationTarget
   overloadClientMethods?: boolean
   queries?: AsyncIterable<ExtractedModule>
   reporter?: WorkerChannelReporter<TypegenWorkerChannel>
@@ -69,9 +79,6 @@ export interface GenerateTypesOptions {
 type GetEvaluatedModulesOptions = GenerateTypesOptions & {
   schemaTypeDeclarations: ReturnType<TypeGenerator['getSchemaTypeDeclarations']>
   schemaTypeGenerator: SchemaTypeGenerator
-}
-type GetQueryMapDeclarationOptions = GenerateTypesOptions & {
-  evaluatedModules: EvaluatedModule[]
 }
 
 /**
@@ -163,73 +170,7 @@ export class TypeGenerator {
     return {ast, code, id}
   })
 
-  private static async getEvaluatedModules({
-    queries: extractedModules,
-    reporter: report,
-    root = process.cwd(),
-    schemaTypeDeclarations,
-    schemaTypeGenerator,
-  }: GetEvaluatedModulesOptions) {
-    if (!extractedModules) {
-      report?.stream.evaluatedModules.end()
-      return []
-    }
-
-    const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
-    const evaluatedModuleResults: EvaluatedModule[] = []
-
-    for await (const {filename, ...extractedModule} of extractedModules) {
-      const queries: EvaluatedQuery[] = []
-      const errors: (QueryEvaluationError | QueryExtractionError)[] = [...extractedModule.errors]
-
-      for (const extractedQuery of extractedModule.queries) {
-        const {variable} = extractedQuery
-        try {
-          const {stats, tsType} = schemaTypeGenerator.evaluateQuery(extractedQuery)
-          const id = getUniqueIdentifierForName(resultSuffix(variable.id.name), currentIdentifiers)
-          const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
-          const trimmedQuery = extractedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
-          const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
-            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
-            {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
-            {type: 'CommentLine', value: ` Query: ${trimmedQuery}`},
-          ])
-
-          const evaluatedQueryResult: EvaluatedQuery = {
-            ast,
-            code: generateCode(ast),
-            id,
-            stats,
-            tsType,
-            ...extractedQuery,
-          }
-
-          currentIdentifiers.add(id.name)
-          queries.push(evaluatedQueryResult)
-        } catch (cause) {
-          errors.push(new QueryEvaluationError({cause, filename, variable}))
-        }
-      }
-
-      const evaluatedModule: EvaluatedModule = {
-        errors,
-        filename,
-        queries,
-      }
-      report?.stream.evaluatedModules.emit(evaluatedModule)
-      evaluatedModuleResults.push(evaluatedModule)
-    }
-    report?.stream.evaluatedModules.end()
-
-    return evaluatedModuleResults
-  }
-
-  private static async getQueryMapDeclaration({
-    evaluatedModules,
-    overloadClientMethods = true,
-  }: GetQueryMapDeclarationOptions) {
-    if (!overloadClientMethods) return {ast: t.program([]), code: ''}
-
+  private static getClientModuleDeclaration(evaluatedModules: EvaluatedModule[]) {
     const queries = evaluatedModules.flatMap((module) => module.queries)
     if (queries.length === 0) return {ast: t.program([]), code: ''}
 
@@ -273,6 +214,218 @@ export class TypeGenerator {
     return {ast, code}
   }
 
+  private static async getEvaluatedModules({
+    queries: extractedModules,
+    reporter: report,
+    root = process.cwd(),
+    schemaTypeDeclarations,
+    schemaTypeGenerator,
+  }: GetEvaluatedModulesOptions) {
+    if (!extractedModules) {
+      report?.stream.evaluatedModules.end()
+      return []
+    }
+
+    const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
+    const evaluatedModuleResults: EvaluatedModule[] = []
+
+    for await (const {filename, ...extractedModule} of extractedModules) {
+      const queries: EvaluatedQuery[] = []
+      const projections: EvaluatedProjection[] = []
+      const errors: (QueryEvaluationError | QueryExtractionError)[] = [...extractedModule.errors]
+
+      for (const extractedQuery of extractedModule.queries) {
+        const {variable} = extractedQuery
+        try {
+          const {stats, tsType} = schemaTypeGenerator.evaluateQuery(extractedQuery)
+          const id = getUniqueIdentifierForName(resultSuffix(variable.id.name), currentIdentifiers)
+          const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
+          const trimmedQuery = extractedQuery.query.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
+          const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
+            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
+            {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
+            {type: 'CommentLine', value: ` Query: ${trimmedQuery}`},
+          ])
+
+          const evaluatedQueryResult: EvaluatedQuery = {
+            ast,
+            code: generateCode(ast),
+            id,
+            stats,
+            tsType,
+            ...extractedQuery,
+          }
+
+          currentIdentifiers.add(id.name)
+          queries.push(evaluatedQueryResult)
+        } catch (cause) {
+          errors.push(new QueryEvaluationError({cause, filename, variable}))
+        }
+      }
+
+      for (const extractedProjection of extractedModule.projections ?? []) {
+        try {
+          const result = schemaTypeGenerator.evaluateProjection(
+            extractedProjection.projection,
+            extractedProjection.documentTypes,
+          )
+          if (!result) continue
+
+          const {stats, tsType} = result
+          const id = getUniqueIdentifierForName(
+            `${extractedProjection.variableName}ProjectionResult`,
+            currentIdentifiers,
+          )
+          const typeAlias = t.tsTypeAliasDeclaration(id, null, tsType)
+          const trimmedProjection = extractedProjection.projection
+            .replaceAll(/(\r\n|\n|\r)/gm, '')
+            .trim()
+          const ast = t.addComments(t.exportNamedDeclaration(typeAlias), 'leading', [
+            {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
+            {type: 'CommentLine', value: ` Variable: ${extractedProjection.variableName}`},
+            {type: 'CommentLine', value: ` Projection: ${trimmedProjection}`},
+          ])
+
+          const evaluatedProjection: EvaluatedProjection = {
+            ast,
+            code: generateCode(ast),
+            id,
+            stats,
+            tsType,
+            ...extractedProjection,
+          }
+
+          currentIdentifiers.add(id.name)
+          projections.push(evaluatedProjection)
+        } catch (cause) {
+          errors.push(
+            new QueryEvaluationError({
+              cause,
+              filename,
+            }),
+          )
+        }
+      }
+
+      const evaluatedModule: EvaluatedModule = {
+        errors,
+        filename,
+        projections,
+        queries,
+      }
+      report?.stream.evaluatedModules.emit(evaluatedModule)
+      evaluatedModuleResults.push(evaluatedModule)
+    }
+    report?.stream.evaluatedModules.end()
+
+    return evaluatedModuleResults
+  }
+
+  private static getTargetModuleDeclaration(
+    target: ModuleAugmentationTarget,
+    evaluatedModules: EvaluatedModule[],
+    allSchemaTypesId: t.Identifier,
+  ) {
+    const {module: moduleName, schemaId} = target
+
+    const schemasInterface = t.tsInterfaceDeclaration(
+      SANITY_SCHEMAS,
+      null,
+      [],
+      t.tsInterfaceBody([
+        t.tsPropertySignature(
+          t.stringLiteral(schemaId),
+          t.tsTypeAnnotation(t.tsTypeReference(allSchemaTypesId)),
+        ),
+      ]),
+    )
+
+    const statements: t.Statement[] = [schemasInterface]
+
+    const queries = evaluatedModules.flatMap((m) => m.queries)
+    if (queries.length > 0) {
+      const typesByQuerystring: {[query: string]: string[]} = {}
+      for (const {id, query} of queries) {
+        typesByQuerystring[query] ??= []
+        typesByQuerystring[query].push(id.name)
+      }
+
+      statements.push(
+        t.tsInterfaceDeclaration(
+          SANITY_QUERIES,
+          null,
+          [],
+          t.tsInterfaceBody([
+            t.tsPropertySignature(
+              t.stringLiteral(schemaId),
+              t.tsTypeAnnotation(
+                t.tsTypeLiteral(
+                  Object.entries(typesByQuerystring).map(([query, types]) =>
+                    t.tsPropertySignature(
+                      t.stringLiteral(query),
+                      t.tsTypeAnnotation(
+                        types.length > 0
+                          ? t.tsUnionType(
+                              types.map((type) => t.tsTypeReference(t.identifier(type))),
+                            )
+                          : t.tsNeverKeyword(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      )
+    }
+
+    const projections = evaluatedModules.flatMap((m) => m.projections ?? [])
+    if (projections.length > 0) {
+      const typesByProjection: {[projection: string]: string[]} = {}
+      for (const {id, projection} of projections) {
+        typesByProjection[projection] ??= []
+        typesByProjection[projection].push(id.name)
+      }
+
+      statements.push(
+        t.tsInterfaceDeclaration(
+          SANITY_PROJECTIONS,
+          null,
+          [],
+          t.tsInterfaceBody([
+            t.tsPropertySignature(
+              t.stringLiteral(schemaId),
+              t.tsTypeAnnotation(
+                t.tsTypeLiteral(
+                  Object.entries(typesByProjection).map(([projection, types]) =>
+                    t.tsPropertySignature(
+                      t.stringLiteral(projection),
+                      t.tsTypeAnnotation(
+                        types.length > 0
+                          ? t.tsUnionType(
+                              types.map((type) => t.tsTypeReference(t.identifier(type))),
+                            )
+                          : t.tsNeverKeyword(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      )
+    }
+
+    const moduleImport = t.importDeclaration([], t.stringLiteral(moduleName))
+    const declareModule = t.declareModule(t.stringLiteral(moduleName), t.blockStatement(statements))
+
+    const ast = t.program([moduleImport, declareModule])
+    const code = generateCode(ast)
+    return {ast, code}
+  }
+
   async generateTypes(options: GenerateTypesOptions) {
     const {reporter: report} = options
     const internalReferenceSymbol = this.getInternalReferenceSymbolDeclaration()
@@ -312,21 +465,37 @@ export class TypeGenerator {
       schemaTypeGenerator,
     })
 
-    for (const {queries} of evaluatedModules) {
-      for (const query of queries) {
+    for (const module of evaluatedModules) {
+      for (const query of module.queries) {
         program.body.push(query.ast)
         code += query.code
       }
+      for (const projection of module.projections ?? []) {
+        program.body.push(projection.ast)
+        code += projection.code
+      }
     }
 
-    const queryMapDeclaration = await TypeGenerator.getQueryMapDeclaration({
-      ...options,
-      evaluatedModules,
-    })
-    program.body.push(...queryMapDeclaration.ast.body)
-    code += queryMapDeclaration.code
+    // Emit module augmentation: either resource-keyed target or flat @sanity/client
+    if (options.moduleTarget) {
+      const targetDeclaration = TypeGenerator.getTargetModuleDeclaration(
+        options.moduleTarget,
+        evaluatedModules,
+        allSanitySchemaTypesDeclaration.id,
+      )
+      program.body.push(...targetDeclaration.ast.body)
+      code += targetDeclaration.code
+    }
 
-    report?.event.generatedQueryTypes({queryMapDeclaration})
+    if (!options.moduleTarget && options.overloadClientMethods !== false) {
+      const queryMapDeclaration = TypeGenerator.getClientModuleDeclaration(evaluatedModules)
+      program.body.push(...queryMapDeclaration.ast.body)
+      code += queryMapDeclaration.code
+
+      report?.event.generatedQueryTypes({queryMapDeclaration})
+    } else {
+      report?.event.generatedQueryTypes({queryMapDeclaration: {ast: t.program([]), code: ''}})
+    }
 
     return {ast: program, code}
   }

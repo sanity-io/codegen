@@ -17,13 +17,16 @@ export {getResolver} from '../typescript/moduleResolver.js'
 export {registerBabel} from '../typescript/registerBabel.js'
 export {
   type GenerateTypesOptions,
+  type ModuleAugmentationTarget,
   TypeGenerator,
   type TypegenWorkerChannel,
 } from '../typescript/typeGenerator.js'
 export {
   type EvaluatedModule,
+  type EvaluatedProjection,
   type EvaluatedQuery,
   type ExtractedModule,
+  type ExtractedProjection,
   type ExtractedQuery,
   QueryExtractionError,
 } from '../typescript/types.js'

@@ -31,6 +31,17 @@ export interface ExtractedQuery {
 }
 
 /**
+ * A GROQ projection extracted from a source file (e.g. from useDocumentProjection).
+ * @public
+ */
+export interface ExtractedProjection {
+  documentTypes: string[]
+  filename: string
+  projection: string
+  variableName: string
+}
+
+/**
  * A module (file) containing extracted GROQ queries.
  * @public
  */
@@ -38,6 +49,8 @@ export interface ExtractedModule {
   errors: QueryExtractionError[]
   filename: string
   queries: ExtractedQuery[]
+
+  projections?: ExtractedProjection[]
 }
 
 /**
@@ -53,13 +66,27 @@ export interface EvaluatedQuery extends ExtractedQuery {
 }
 
 /**
- * A module containing queries that have been evaluated.
+ * An `ExtractedProjection` that has been evaluated against a schema, yielding a TypeScript type.
+ * @public
+ */
+export interface EvaluatedProjection extends ExtractedProjection {
+  ast: t.ExportNamedDeclaration
+  code: string
+  id: t.Identifier
+  stats: TypeEvaluationStats
+  tsType: t.TSType
+}
+
+/**
+ * A module containing queries and projections that have been evaluated.
  * @public
  */
 export interface EvaluatedModule {
   errors: (QueryEvaluationError | QueryExtractionError)[]
   filename: string
   queries: EvaluatedQuery[]
+
+  projections?: EvaluatedProjection[]
 }
 
 interface QueryExtractionErrorOptions {
