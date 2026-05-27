@@ -286,6 +286,16 @@ export class TypeGenerator {
       schemaTypeDeclarations,
     })
 
+    // Queries can produce `inline` type nodes that the schema-side generator
+    // never sees (e.g. filtering a tagged-union array down to its inline
+    // members). Evaluate modules before deciding whether the ArrayOf helper is
+    // needed, so query-only usage still triggers the declaration.
+    const evaluatedModules = await TypeGenerator.getEvaluatedModules({
+      ...options,
+      schemaTypeDeclarations,
+      schemaTypeGenerator,
+    })
+
     const program = t.program([])
     let code = ''
 
@@ -305,12 +315,6 @@ export class TypeGenerator {
 
     program.body.push(allSanitySchemaTypesDeclaration.ast)
     code += allSanitySchemaTypesDeclaration.code
-
-    const evaluatedModules = await TypeGenerator.getEvaluatedModules({
-      ...options,
-      schemaTypeDeclarations,
-      schemaTypeGenerator,
-    })
 
     for (const {queries} of evaluatedModules) {
       for (const query of queries) {

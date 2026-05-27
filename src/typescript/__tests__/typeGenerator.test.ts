@@ -932,6 +932,111 @@ describe(TypeGenerator.name, () => {
     `)
   })
 
+  test('ArrayOf declaration is emitted when only queries (not schema) reference it', async () => {
+    // Regression: a schema that mixes a nested union-of-inline with other
+    // (non-inline) union members renders as `Array<...>` (no ArrayOf), but a
+    // query that filters/projects the array down to the inline branch produces
+    // `ArrayOf<...>` in the emitted query type. If the gate only inspects
+    // schema-side usage, the helper declaration is skipped while usages remain
+    // → TS2304 "Cannot find name 'ArrayOf'".
+    const schema: SchemaType = [
+      {
+        name: 'blockA',
+        type: 'type',
+        value: {
+          attributes: {
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'blockA'}},
+            a: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          type: 'object',
+        },
+      },
+      {
+        name: 'blockB',
+        type: 'type',
+        value: {
+          attributes: {
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'blockB'}},
+            b: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          type: 'object',
+        },
+      },
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          // `items` is an array whose member is a union of:
+          //   (a) a nested union of inline named types
+          //   (b) an anonymous object
+          // Outer union has no top-level `inline` members, so schema-side renders
+          // as `Array<...>` (no ArrayOf). Real-world Sanity schemas hit this
+          // shape whenever an array attribute mixes references / typed refs with
+          // anonymous inline objects (common for tables of contents, link
+          // lists, portable-text-like block arrays, etc.).
+          items: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {
+              of: {
+                of: [
+                  {
+                    of: [
+                      {name: 'blockA', type: 'inline'},
+                      {name: 'blockB', type: 'inline'},
+                    ],
+                    type: 'union',
+                  },
+                  {
+                    attributes: {
+                      _type: {type: 'objectAttribute', value: {type: 'string', value: 'note'}},
+                      note: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+                    },
+                    type: 'object',
+                  },
+                ],
+                type: 'union',
+              },
+              type: 'array',
+            },
+          },
+        },
+        name: 'post',
+        type: 'document',
+      },
+    ]
+
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    async function* getQueries(): AsyncGenerator<ExtractedModule> {
+      yield {
+        errors: [],
+        filename: '/src/foo.ts',
+        queries: [
+          {
+            filename: '/src/foo.ts',
+            // Filtering down to only inline-typed members produces `Array<inline>`
+            // in the query result → ArrayOf<BlockA | BlockB> in the emitted type.
+            query: '*[_type == "post"]{ "blocks": items[_type == "blockA" || _type == "blockB"] }',
+            variable: {id: {name: 'queryPosts', type: 'Identifier'}},
+          },
+        ],
+      }
+    }
+
+    const typeGenerator = new TypeGenerator()
+    const {code} = await typeGenerator.generateTypes({
+      overloadClientMethods: false,
+      queries: getQueries(),
+      root: '/src',
+      schema,
+    })
+
+    // Sanity check that the repro actually exercises ArrayOf in a query type.
+    expect(code).toContain('ArrayOf<')
+    // The bug: code references ArrayOf<...> but never declares it.
+    expect(code).toContain('type ArrayOf<T> = Array<T & {')
+  })
+
   test('ArrayOf should NOT be generated when not used (no inline type references)', async () => {
     const schema: SchemaType = [
       {
