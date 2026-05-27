@@ -70,6 +70,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
   private async getConfig(): Promise<{
     config: TypeGenConfig
+    isApp: boolean
     path?: string
     type: 'cli' | 'legacy'
     workDir: string
@@ -117,8 +118,11 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
           ),
         )
 
+        const isApp = !!config?.app
+
         return {
           config: configDefinition.parse(config.typegen || {}),
+          isApp,
           path: rootDir.path,
           type: 'cli',
           workDir,
@@ -137,6 +141,7 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
         )
         return {
           config: await readConfig(legacyConfigPath),
+          isApp: false,
           path: legacyConfigPath,
           type: 'legacy',
           workDir,
@@ -145,9 +150,12 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
 
       spin.succeed(`Config loaded from sanity.cli.ts`)
 
+      const isApp = !!config?.app
+
       // we only have cli config
       return {
         config: configDefinition.parse(config.typegen || {}),
+        isApp,
         path: rootDir.path,
         type: 'cli',
         workDir,
@@ -162,11 +170,17 @@ export class TypegenGenerateCommand extends SanityCommand<typeof TypegenGenerate
     const trace = this.telemetry.trace(TypesGeneratedTrace)
 
     try {
-      const {config: typegenConfig, type: typegenConfigMethod, workDir} = await this.getConfig()
+      const {
+        config: typegenConfig,
+        isApp,
+        type: typegenConfigMethod,
+        workDir,
+      } = await this.getConfig()
       trace.start()
 
       const result = await runTypegenGenerate({
         config: typegenConfig,
+        moduleTarget: isApp ? {module: '@sanity/sdk', schemaId: 'default'} : undefined,
         workDir,
       })
 

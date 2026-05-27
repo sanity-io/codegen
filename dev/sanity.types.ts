@@ -12,6 +12,8 @@
  * ---------------------------------------------------------------------------------
  */
 
+export declare const internalGroqTypeReferenceTo: unique symbol
+
 // Source: schema.json
 export type SanityImageAssetReference = {
   _ref: string
@@ -271,13 +273,40 @@ export type AllSanitySchemaTypes =
   | SanityImageAsset
   | Geopoint
 
-export declare const internalGroqTypeReferenceTo: unique symbol
-
-type ArrayOf<T> = Array<
-  T & {
+// Source: src/components/AuthorPreview.tsx
+// Variable: author
+// Projection: {name, slug, bio}
+export type AuthorProjectionResult = {
+  name: string | null
+  slug: Slug | null
+  bio: Array<{
+    children?: Array<{
+      marks?: Array<string>
+      text?: string
+      _type: 'span'
+      _key: string
+    }>
+    style?: 'normal'
+    listItem?: never
+    markDefs?: Array<{
+      href?: string
+      _type: 'link'
+      _key: string
+    }>
+    level?: number
+    _type: 'block'
     _key: string
-  }
->
+  }> | null
+}
+
+// Source: src/components/AuthorPreview.tsx
+// Variable: post
+// Projection: {title, slug, publishedAt}
+export type PostProjectionResult = {
+  title: string | null
+  slug: Slug | null
+  publishedAt: string | null
+}
 
 // Source: src/queries/authorQueries.ts
 // Variable: allAuthorsQuery
@@ -862,40 +891,50 @@ export type PostWithRelatedQueryResult = {
 // Query: *[    _type == "post" &&    defined(mainImage.asset) &&    defined(publishedAt) &&    publishedAt > (now() - 60*60*24*30)  ] | order(publishedAt desc)[0..5]{    _id,    title,    slug,    publishedAt,    mainImage{      asset->{        url,        metadata{          dimensions,          lqip        }      }    },    author->{      name,      slug    },    "categoryTitles": categories[]->title  }
 export type FeaturedPostsQueryResult = Array<never>
 
-// Query TypeMap
-import '@sanity/client'
-declare module '@sanity/client' {
+import '@sanity/sdk'
+declare module '@sanity/sdk' {
+  interface SanitySchemas {
+    default: AllSanitySchemaTypes
+  }
   interface SanityQueries {
-    '*[_type == "author"]{\n  _id,\n  name,\n  slug\n}': AllAuthorsQueryResult
-    '*[_type == "author" && _id == $id][0]{\n  _id,\n  _type,\n  name,\n  slug,\n  image,\n  bio\n}': AuthorByIdQueryResult
-    '\n  *[_type == "author" && slug.current == $slug][0]{\n    _id,\n    _type,\n    name,\n    slug,\n    image,\n    bio\n  }\n': AuthorBySlugQueryResult
-    '\n  *[_type == "author"][0]{\n    _id,\n    name,\n    slug,\n    image{\n      asset->{\n        _id,\n        url,\n        originalFilename,\n        metadata{\n          dimensions{\n            width,\n            height,\n            aspectRatio\n          },\n          palette{\n            dominant{\n              background,\n              foreground\n            }\n          },\n          lqip\n        }\n      },\n      crop,\n      hotspot\n    }\n  }\n': AuthorWithImageQueryResult
-    '\n  *[_type == "author" && slug.current == $slug][0]{\n    _id,\n    _type,\n    name,\n    slug,\n    bio[]{\n      ...,\n      _type == "block" => {\n        ...,\n        children[]{\n          ...\n        }\n      }\n    }\n  }\n': AuthorWithBioQueryResult
-    '\n  *[_type == "author"]{\n    _id,\n    name,\n    slug,\n    "postCount": count(*[_type == "post" && author._ref == ^._id])\n  } | order(postCount desc)\n': AuthorsWithPostCountQueryResult
-    '\n  *[_type == "author" && _id == $authorId][0]{\n    _id,\n    name,\n    slug,\n    image,\n    "recentPosts": *[_type == "post" && author._ref == ^._id] | order(publishedAt desc)[0..4]{\n      _id,\n      title,\n      slug,\n      publishedAt,\n      "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n    }\n  }\n': AuthorWithRecentPostsQueryResult
-    '\n  *[_type == "author" && slug.current == $slug][0]{\n    \n  _id,\n  _type,\n  name,\n  slug,\n  bio,\n  image{\n    asset->{\n      _id,\n      url,\n      metadata{\n        dimensions,\n        lqip,\n        palette\n      }\n    }\n  }\n,\n    "postCount": count(*[_type == "post" && author._ref == ^._id]),\n    "posts": *[_type == "post" && author._ref == ^._id] | order(publishedAt desc){\n      _id,\n      title,\n      slug,\n      publishedAt\n    }\n  }\n': AuthorDetailQueryResult
-    '*[_type == "category"]{\n  _id,\n  title,\n  description\n}': AllCategoriesQueryResult
-    '*[_type == "category" && _id == $id][0]{\n  _id,\n  _type,\n  title,\n  description\n}': CategoryByIdQueryResult
-    '\n  *[_type == "category" && _id == $categoryId][0]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "postCount": count(*[_type == "post" && $categoryId in categories[]._ref])\n  }\n': CategoryWithPostCountQueryResult
-    '\n  *[_type == "category" && _id == $categoryId][0]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "posts": *[_type == "post" && $categoryId in categories[]._ref] | order(publishedAt desc){\n      _id,\n      title,\n      slug,\n      publishedAt,\n      author->{\n        name,\n        slug\n      }\n    }\n  }\n': CategoryWithPostsQueryResult
-    '\n  *[_type == "category" && _id == $categoryId][0]{\n    _id,\n    title,\n    description,\n    "recentPosts": *[_type == "post" && ^._id in categories[]._ref] | order(publishedAt desc)[0...$limit]{\n      \n  _id,\n  _type,\n  title,\n  slug,\n  publishedAt,\n  "excerpt": array::join(string::split(pt::text(body), "")[0..255], "") + "..."\n,\n      author->{\n        name,\n        slug\n      }\n    }\n  }\n': CategoryWithRecentPostsQueryResult
-    '\n  *[_type == "category"]{\n    _id,\n    title,\n    description,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref])\n  } | order(postCount desc)\n': PopularCategoriesQueryResult
-    '\n  *[_type == "category" && defined(description)]{\n    _id,\n    title,\n    description,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref])\n  }\n': CategoriesWithDescriptionQueryResult
-    '\n  *[_type == "category"]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref]),\n    "latestPost": *[_type == "post" && ^._id in categories[]._ref] | order(publishedAt desc)[0]{\n      title,\n      slug,\n      publishedAt\n    }\n  } | order(postCount desc)\n': CategoriesWithStatsQueryResult
-    '*[_type == "post"]{\n  _id,\n  title,\n  slug,\n  publishedAt\n}': AllPostsQueryResult
-    '*[_type == "post" && _id == $id][0]{\n  _id,\n  _type,\n  title,\n  slug,\n  body,\n  publishedAt,\n  mainImage\n}': PostByIdQueryResult
-    '\n  *[_type == "post" && slug.current == $slug][0]{\n    _id,\n    _type,\n    title,\n    slug,\n    body,\n    publishedAt,\n    mainImage\n  }\n': PostBySlugQueryResult
-    '\n  *[_type == "post" && defined(publishedAt)] | order(publishedAt desc)[0...$limit]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..200], "") + "..."\n  }\n': RecentPostsQueryResult
-    '\n  *[_type == "post" && slug.current == $slug][0]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    author->{\n      \n  _id,\n  _type,\n  name,\n  slug\n,\n      image{\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': PostWithAuthorQueryResult
-    '\n  *[_type == "post" && _id == $postId][0]{\n    _id,\n    title,\n    slug,\n    categories[]->{\n      \n  _id,\n  _type,\n  title,\n  description\n\n    }\n  }\n': PostWithCategoriesQueryResult
-    '\n  *[_type == "post" && author._ref == $authorId] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n  }\n': PostsByAuthorQueryResult
-    '\n  *[_type == "post" && $categoryId in categories[]._ref] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt\n  }\n': PostsByCategoryQueryResult
-    '\n  *[_type == "post" && slug.current == $slug][0]{\n    \n  _id,\n  _type,\n  _createdAt,\n  _updatedAt,\n  title,\n  slug,\n  body,\n  publishedAt,\n  mainImage{\n    asset->{\n      _id,\n      url,\n      metadata{\n        dimensions,\n        palette,\n        lqip\n      }\n    },\n    crop,\n    hotspot\n  }\n,\n    author->{\n      _id,\n      name,\n      slug,\n      image{\n        asset->{\n          url\n        }\n      }\n    },\n    categories[]->{\n      \n  _id,\n  _type,\n  title,\n  description\n\n    },\n    mainImage{\n      \n  asset->{\n    _id,\n    url,\n    originalFilename,\n    extension,\n    size,\n    metadata{\n      dimensions{\n        width,\n        height,\n        aspectRatio\n      },\n      palette{\n        dominant{\n          background,\n          foreground\n        },\n        darkMuted{\n          background,\n          foreground\n        },\n        vibrant{\n          background,\n          foreground\n        }\n      },\n      lqip,\n      hasAlpha,\n      isOpaque\n    }\n  },\n  crop,\n  hotspot\n\n    }\n  }\n': PostDetailQueryResult
-    '\n  *[_type == "post" && defined(publishedAt)] | order(publishedAt desc)[$from...$to]{\n    \n  _id,\n  _type,\n  title,\n  slug,\n  publishedAt,\n  "excerpt": array::join(string::split(pt::text(body), "")[0..255], "") + "..."\n,\n    author->{\n      name,\n      slug\n    }\n  }\n': PaginatedPostsQueryResult
-    '\n  *[_type == "post" && defined(body)] | order(publishedAt desc)[0..9]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..200], "") + "...",\n    "fullText": pt::text(body),\n    "wordCount": length(string::split(pt::text(body), " "))\n  }\n': PostsWithExcerptQueryResult
-    '\n  *[_type == "post" && title match $searchTerm]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n  }\n': SearchPostsQueryResult
-    '\n  *[_type == "post" && publishedAt >= $startDate && publishedAt <= $endDate] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt\n  }\n': PostsByDateRangeQueryResult
-    '\n  *[_type == "post" && _id == $postId][0]{\n    _id,\n    title,\n    slug,\n    categories[]->{\n      _id,\n      title\n    },\n    "relatedPosts": *[\n      _type == "post" &&\n      _id != $postId &&\n      count((categories[]._ref)[@ in ^.^.categories[]._ref]) > 0\n    ][0..5]{\n      _id,\n      title,\n      slug,\n      publishedAt,\n      "sharedCategories": categories[_ref in ^.^.categories[]._ref]->{\n        title\n      }\n    }\n  }\n': PostWithRelatedQueryResult
-    '\n  *[\n    _type == "post" &&\n    defined(mainImage.asset) &&\n    defined(publishedAt) &&\n    publishedAt > (now() - 60*60*24*30)\n  ] | order(publishedAt desc)[0..5]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    mainImage{\n      asset->{\n        url,\n        metadata{\n          dimensions,\n          lqip\n        }\n      }\n    },\n    author->{\n      name,\n      slug\n    },\n    "categoryTitles": categories[]->title\n  }\n': FeaturedPostsQueryResult
+    default: {
+      '*[_type == "author"]{\n  _id,\n  name,\n  slug\n}': AllAuthorsQueryResult
+      '*[_type == "author" && _id == $id][0]{\n  _id,\n  _type,\n  name,\n  slug,\n  image,\n  bio\n}': AuthorByIdQueryResult
+      '\n  *[_type == "author" && slug.current == $slug][0]{\n    _id,\n    _type,\n    name,\n    slug,\n    image,\n    bio\n  }\n': AuthorBySlugQueryResult
+      '\n  *[_type == "author"][0]{\n    _id,\n    name,\n    slug,\n    image{\n      asset->{\n        _id,\n        url,\n        originalFilename,\n        metadata{\n          dimensions{\n            width,\n            height,\n            aspectRatio\n          },\n          palette{\n            dominant{\n              background,\n              foreground\n            }\n          },\n          lqip\n        }\n      },\n      crop,\n      hotspot\n    }\n  }\n': AuthorWithImageQueryResult
+      '\n  *[_type == "author" && slug.current == $slug][0]{\n    _id,\n    _type,\n    name,\n    slug,\n    bio[]{\n      ...,\n      _type == "block" => {\n        ...,\n        children[]{\n          ...\n        }\n      }\n    }\n  }\n': AuthorWithBioQueryResult
+      '\n  *[_type == "author"]{\n    _id,\n    name,\n    slug,\n    "postCount": count(*[_type == "post" && author._ref == ^._id])\n  } | order(postCount desc)\n': AuthorsWithPostCountQueryResult
+      '\n  *[_type == "author" && _id == $authorId][0]{\n    _id,\n    name,\n    slug,\n    image,\n    "recentPosts": *[_type == "post" && author._ref == ^._id] | order(publishedAt desc)[0..4]{\n      _id,\n      title,\n      slug,\n      publishedAt,\n      "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n    }\n  }\n': AuthorWithRecentPostsQueryResult
+      '\n  *[_type == "author" && slug.current == $slug][0]{\n    \n  _id,\n  _type,\n  name,\n  slug,\n  bio,\n  image{\n    asset->{\n      _id,\n      url,\n      metadata{\n        dimensions,\n        lqip,\n        palette\n      }\n    }\n  }\n,\n    "postCount": count(*[_type == "post" && author._ref == ^._id]),\n    "posts": *[_type == "post" && author._ref == ^._id] | order(publishedAt desc){\n      _id,\n      title,\n      slug,\n      publishedAt\n    }\n  }\n': AuthorDetailQueryResult
+      '*[_type == "category"]{\n  _id,\n  title,\n  description\n}': AllCategoriesQueryResult
+      '*[_type == "category" && _id == $id][0]{\n  _id,\n  _type,\n  title,\n  description\n}': CategoryByIdQueryResult
+      '\n  *[_type == "category" && _id == $categoryId][0]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "postCount": count(*[_type == "post" && $categoryId in categories[]._ref])\n  }\n': CategoryWithPostCountQueryResult
+      '\n  *[_type == "category" && _id == $categoryId][0]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "posts": *[_type == "post" && $categoryId in categories[]._ref] | order(publishedAt desc){\n      _id,\n      title,\n      slug,\n      publishedAt,\n      author->{\n        name,\n        slug\n      }\n    }\n  }\n': CategoryWithPostsQueryResult
+      '\n  *[_type == "category" && _id == $categoryId][0]{\n    _id,\n    title,\n    description,\n    "recentPosts": *[_type == "post" && ^._id in categories[]._ref] | order(publishedAt desc)[0...$limit]{\n      \n  _id,\n  _type,\n  title,\n  slug,\n  publishedAt,\n  "excerpt": array::join(string::split(pt::text(body), "")[0..255], "") + "..."\n,\n      author->{\n        name,\n        slug\n      }\n    }\n  }\n': CategoryWithRecentPostsQueryResult
+      '\n  *[_type == "category"]{\n    _id,\n    title,\n    description,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref])\n  } | order(postCount desc)\n': PopularCategoriesQueryResult
+      '\n  *[_type == "category" && defined(description)]{\n    _id,\n    title,\n    description,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref])\n  }\n': CategoriesWithDescriptionQueryResult
+      '\n  *[_type == "category"]{\n    \n  _id,\n  _type,\n  title,\n  description\n,\n    "postCount": count(*[_type == "post" && ^._id in categories[]._ref]),\n    "latestPost": *[_type == "post" && ^._id in categories[]._ref] | order(publishedAt desc)[0]{\n      title,\n      slug,\n      publishedAt\n    }\n  } | order(postCount desc)\n': CategoriesWithStatsQueryResult
+      '*[_type == "post"]{\n  _id,\n  title,\n  slug,\n  publishedAt\n}': AllPostsQueryResult
+      '*[_type == "post" && _id == $id][0]{\n  _id,\n  _type,\n  title,\n  slug,\n  body,\n  publishedAt,\n  mainImage\n}': PostByIdQueryResult
+      '\n  *[_type == "post" && slug.current == $slug][0]{\n    _id,\n    _type,\n    title,\n    slug,\n    body,\n    publishedAt,\n    mainImage\n  }\n': PostBySlugQueryResult
+      '\n  *[_type == "post" && defined(publishedAt)] | order(publishedAt desc)[0...$limit]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..200], "") + "..."\n  }\n': RecentPostsQueryResult
+      '\n  *[_type == "post" && slug.current == $slug][0]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    author->{\n      \n  _id,\n  _type,\n  name,\n  slug\n,\n      image{\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': PostWithAuthorQueryResult
+      '\n  *[_type == "post" && _id == $postId][0]{\n    _id,\n    title,\n    slug,\n    categories[]->{\n      \n  _id,\n  _type,\n  title,\n  description\n\n    }\n  }\n': PostWithCategoriesQueryResult
+      '\n  *[_type == "post" && author._ref == $authorId] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n  }\n': PostsByAuthorQueryResult
+      '\n  *[_type == "post" && $categoryId in categories[]._ref] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt\n  }\n': PostsByCategoryQueryResult
+      '\n  *[_type == "post" && slug.current == $slug][0]{\n    \n  _id,\n  _type,\n  _createdAt,\n  _updatedAt,\n  title,\n  slug,\n  body,\n  publishedAt,\n  mainImage{\n    asset->{\n      _id,\n      url,\n      metadata{\n        dimensions,\n        palette,\n        lqip\n      }\n    },\n    crop,\n    hotspot\n  }\n,\n    author->{\n      _id,\n      name,\n      slug,\n      image{\n        asset->{\n          url\n        }\n      }\n    },\n    categories[]->{\n      \n  _id,\n  _type,\n  title,\n  description\n\n    },\n    mainImage{\n      \n  asset->{\n    _id,\n    url,\n    originalFilename,\n    extension,\n    size,\n    metadata{\n      dimensions{\n        width,\n        height,\n        aspectRatio\n      },\n      palette{\n        dominant{\n          background,\n          foreground\n        },\n        darkMuted{\n          background,\n          foreground\n        },\n        vibrant{\n          background,\n          foreground\n        }\n      },\n      lqip,\n      hasAlpha,\n      isOpaque\n    }\n  },\n  crop,\n  hotspot\n\n    }\n  }\n': PostDetailQueryResult
+      '\n  *[_type == "post" && defined(publishedAt)] | order(publishedAt desc)[$from...$to]{\n    \n  _id,\n  _type,\n  title,\n  slug,\n  publishedAt,\n  "excerpt": array::join(string::split(pt::text(body), "")[0..255], "") + "..."\n,\n    author->{\n      name,\n      slug\n    }\n  }\n': PaginatedPostsQueryResult
+      '\n  *[_type == "post" && defined(body)] | order(publishedAt desc)[0..9]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..200], "") + "...",\n    "fullText": pt::text(body),\n    "wordCount": length(string::split(pt::text(body), " "))\n  }\n': PostsWithExcerptQueryResult
+      '\n  *[_type == "post" && title match $searchTerm]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    "excerpt": array::join(string::split(pt::text(body), "")[0..150], "") + "..."\n  }\n': SearchPostsQueryResult
+      '\n  *[_type == "post" && publishedAt >= $startDate && publishedAt <= $endDate] | order(publishedAt desc){\n    _id,\n    title,\n    slug,\n    publishedAt\n  }\n': PostsByDateRangeQueryResult
+      '\n  *[_type == "post" && _id == $postId][0]{\n    _id,\n    title,\n    slug,\n    categories[]->{\n      _id,\n      title\n    },\n    "relatedPosts": *[\n      _type == "post" &&\n      _id != $postId &&\n      count((categories[]._ref)[@ in ^.^.categories[]._ref]) > 0\n    ][0..5]{\n      _id,\n      title,\n      slug,\n      publishedAt,\n      "sharedCategories": categories[_ref in ^.^.categories[]._ref]->{\n        title\n      }\n    }\n  }\n': PostWithRelatedQueryResult
+      '\n  *[\n    _type == "post" &&\n    defined(mainImage.asset) &&\n    defined(publishedAt) &&\n    publishedAt > (now() - 60*60*24*30)\n  ] | order(publishedAt desc)[0..5]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    mainImage{\n      asset->{\n        url,\n        metadata{\n          dimensions,\n          lqip\n        }\n      }\n    },\n    author->{\n      name,\n      slug\n    },\n    "categoryTitles": categories[]->title\n  }\n': FeaturedPostsQueryResult
+    }
+  }
+  interface SanityProjections {
+    default: {
+      '{name, slug, bio}': AuthorProjectionResult
+      '{title, slug, publishedAt}': PostProjectionResult
+    }
   }
 }

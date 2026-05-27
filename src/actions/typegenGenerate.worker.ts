@@ -18,6 +18,7 @@ if (isMainThread || !parentPort) {
 registerBabel()
 
 async function main({
+  moduleTarget,
   overloadClientMethods,
   schemaPath,
   searchPath,
@@ -54,6 +55,7 @@ async function main({
   report.event.typegenStarted({expectedFileCount: files.length})
 
   const result = await typeGenerator.generateTypes({
+    moduleTarget,
     overloadClientMethods,
     queries,
     reporter: report,

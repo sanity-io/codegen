@@ -1,3 +1,7 @@
 import {defineCliConfig} from 'sanity/cli'
 
-export default defineCliConfig({})
+export default defineCliConfig({
+  app: {
+    organizationId: 'test',
+  },
+})

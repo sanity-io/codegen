@@ -26,7 +26,7 @@ import {
  * @public
  */
 export async function runTypegenGenerate(options: RunTypegenOptions): Promise<GenerationResult> {
-  const {config, workDir} = options
+  const {config, moduleTarget, workDir} = options
 
   const {formatGeneratedCode, generates, overloadClientMethods, path, schema} =
     prepareConfig(config)
@@ -40,6 +40,7 @@ export async function runTypegenGenerate(options: RunTypegenOptions): Promise<Ge
   // set up worker
   const workerPath = new URL('../actions/typegenGenerate.worker.js', import.meta.url)
   const workerData: TypegenGenerateTypesWorkerData = {
+    moduleTarget,
     overloadClientMethods,
     schemaPath: schema,
     searchPath: path,

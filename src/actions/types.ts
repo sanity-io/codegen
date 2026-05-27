@@ -2,7 +2,10 @@ import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannel} from '@sanity/worker-channels'
 
 import {TypeGenConfig} from '../readConfig.js'
-import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../typescript/typeGenerator.js'
+import {
+  type TypegenWorkerChannel as CodegenTypegenWorkerChannel,
+  type ModuleAugmentationTarget,
+} from '../typescript/typeGenerator.js'
 
 /**
  * Data passed to the typegen worker thread.
@@ -16,6 +19,8 @@ export interface TypegenGenerateTypesWorkerData {
   /** Working directory (project root) */
   workDir: string
 
+  /** Target module for declare module augmentation (e.g. `@sanity/sdk` for apps) */
+  moduleTarget?: ModuleAugmentationTarget
   /** Whether to generate client method overloads */
   overloadClientMethods?: boolean
 }
@@ -44,6 +49,9 @@ export interface RunTypegenOptions {
 
   /** Typegen configuration */
   config?: Partial<TypeGenConfig>
+
+  /** Target module for declare module augmentation (e.g. `@sanity/sdk` for apps) */
+  moduleTarget?: ModuleAugmentationTarget
 
   /** Optional spinner instance for progress display */
   spin?: ReturnType<typeof spinner>
