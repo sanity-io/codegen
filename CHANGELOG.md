@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.1.1](https://github.com/sanity-io/codegen/compare/codegen-v6.1.0...codegen-v6.1.1) (2026-05-27)
+
+
+### Bug Fixes
+
+* **typegen:** emit ArrayOf helper when only queries reference it ([#114](https://github.com/sanity-io/codegen/issues/114)) ([ad09278](https://github.com/sanity-io/codegen/commit/ad092785aed793d28f0c8d694ada93bffa8f1633))
+
 ## [6.1.0](https://github.com/sanity-io/codegen/compare/codegen-v6.0.3...codegen-v6.1.0) (2026-05-08)
 
 
