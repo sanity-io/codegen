@@ -130,7 +130,7 @@ importers:
         specifier: ^16.4.0
         version: 16.4.0
       oclif:
-        specifier: ^4.22.85
+        specifier: ^4.23.10
         version: 4.23.10(@types/node@24.13.0)
       oxfmt:
         specifier: ^0.47.0

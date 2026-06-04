@@ -91,7 +91,7 @@
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
-    "oclif": "^4.22.85",
+    "oclif": "^4.23.10",
     "oxfmt": "^0.47.0",
     "prettier-plugin-packagejson": "^3.0.2",
     "rimraf": "^5.0.10",
