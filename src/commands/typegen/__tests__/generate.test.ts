@@ -55,7 +55,9 @@ describe('#typegen:generate', () => {
     expect(stderr).toContain(`└─ formatted the generated code with prettier`)
 
     const generatedTypes = await readFile(join(cwd, 'sanity.types.ts'))
-    expect(generatedTypes.toString()).toMatchSnapshot()
+    expect(generatedTypes.toString()).toMatchFileSnapshot(
+      join(import.meta.dirname, '__snapshots__', 'generate.test.ts.snap.txt'),
+    )
   })
 
   test('should generate types when schema is an absolute path', async () => {
