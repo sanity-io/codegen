@@ -2,7 +2,7 @@ import {error, log} from 'node:console'
 import {isAbsolute, join, relative} from 'node:path'
 import {styleText} from 'node:util'
 
-import chokidar, {FSWatcher} from 'chokidar'
+import {type FSWatcher, watch} from 'chokidar'
 import debounce from 'lodash-es/debounce.js'
 import mean from 'lodash-es/mean.js'
 
@@ -115,7 +115,7 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
   debouncedGenerate()
 
   // set up watcher
-  const watcher = chokidar.watch(watchTargets, {
+  const watcher = watch(watchTargets, {
     cwd: workDir,
     ignored: IGNORED_PATTERNS,
     ignoreInitial: true,

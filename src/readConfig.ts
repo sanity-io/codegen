@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises'
 
 import json5 from 'json5'
-import * as z from 'zod'
+import * as z from 'zod/mini'
 
 /**
  * The formatter to use for generated code.
@@ -16,18 +16,15 @@ export type FormatGeneratedCode = 'oxfmt' | 'prettier' | boolean
  * @public
  */
 export const configDefinition = z.object({
-  formatGeneratedCode: z.union([z.boolean(), z.enum(['oxfmt', 'prettier'])]).default(true),
-  generates: z.string().default('./sanity.types.ts'),
-  overloadClientMethods: z.boolean().default(true),
-  path: z
-    .string()
-    .or(z.array(z.string()))
-    .default([
-      './src/**/*.{ts,tsx,js,jsx,mjs,cjs,astro,vue,svelte}',
-      './app/**/*.{ts,tsx,js,jsx,mjs,cjs,astro,vue,svelte}',
-      './sanity/**/*.{ts,tsx,js,jsx,mjs,cjs}',
-    ]),
-  schema: z.string().default('./schema.json'),
+  formatGeneratedCode: z._default(z.union([z.boolean(), z.enum(['oxfmt', 'prettier'])]), true),
+  generates: z._default(z.string(), './sanity.types.ts'),
+  overloadClientMethods: z._default(z.boolean(), true),
+  path: z._default(z.union([z.string(), z.array(z.string())]), [
+    './src/**/*.{ts,tsx,js,jsx,mjs,cjs,astro,vue,svelte}',
+    './app/**/*.{ts,tsx,js,jsx,mjs,cjs,astro,vue,svelte}',
+    './sanity/**/*.{ts,tsx,js,jsx,mjs,cjs}',
+  ]),
+  schema: z._default(z.string(), './schema.json'),
 })
 
 /** @public */
@@ -46,11 +43,12 @@ export type CodegenConfig = TypeGenConfig
 export async function readConfig(path: string): Promise<TypeGenConfig> {
   try {
     const content = await readFile(path, 'utf8')
+    // eslint-disable-next-line import-x/no-named-as-default-member -- json5 is CJS and doesn't support named exports
     const json = json5.parse(content)
     return configDefinition.parseAsync(json)
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new Error(
+    if (error instanceof z.core.$ZodError) {
+      throw new TypeError(
         `Error in config file\n ${error.issues.map((err) => err.message).join('\n')}`,
         {cause: error},
       )
