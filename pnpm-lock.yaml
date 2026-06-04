@@ -118,7 +118,7 @@ importers:
         specifier: ^24.13.0
         version: 24.13.0
       '@vitest/coverage-istanbul':
-        specifier: ^4.1.5
+        specifier: ^4.1.8
         version: 4.1.8(vitest@4.1.8)
       eslint:
         specifier: ^9.39.4
@@ -151,7 +151,7 @@ importers:
         specifier: ^7.3.2
         version: 7.3.5(@types/node@24.13.0)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.5
+        specifier: ^4.1.8
         version: 4.1.8(@types/node@24.13.0)(@vitest/coverage-istanbul@4.1.8)(jsdom@29.1.1(@noble/hashes@2.2.0))(vite@7.3.5(@types/node@24.13.0)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
 
   dev:
