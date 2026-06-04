@@ -66,7 +66,7 @@ importers:
         specifier: ^3.8.3
         version: 3.8.3
       reselect:
-        specifier: ^5.1.1
+        specifier: ^5.2.0
         version: 5.2.0
       tsconfig-paths:
         specifier: ^4.2.0
