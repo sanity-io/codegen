@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "groq": "^5.23.0",
-    "sanity": "^5.23.0"
+    "groq": "^5.30.0",
+    "sanity": "^5.30.0"
   },
   "devDependencies": {
     "@sanity/codegen": "workspace:*",
