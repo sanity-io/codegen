@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [7.0.1](https://github.com/sanity-io/codegen/compare/codegen-v7.0.0...codegen-v7.0.1) (2026-06-04)
+
+
+### Bug Fixes
+
+* **deps:** update dependency reselect to ^5.2.0 ([#127](https://github.com/sanity-io/codegen/issues/127)) ([c1ef81e](https://github.com/sanity-io/codegen/commit/c1ef81e3cb81c29d0a8e180ee48f60939ac83d9d))
+* **deps:** update dependency zod to ^4.4.3 ([#128](https://github.com/sanity-io/codegen/issues/128)) ([1d86369](https://github.com/sanity-io/codegen/commit/1d86369dde1b54bdd183c11d551ebd6bac989237))
+* **deps:** update oclif-tooling to ^4.23.10 ([#129](https://github.com/sanity-io/codegen/issues/129)) ([c0f9935](https://github.com/sanity-io/codegen/commit/c0f99353342b180b585c9d7a899e3e4601208709))
+* **deps:** update sanity-tooling ([#111](https://github.com/sanity-io/codegen/issues/111)) ([58fc593](https://github.com/sanity-io/codegen/commit/58fc59395ec5b745fd421841e18e66fb250f985b))
+
 ## [7.0.0](https://github.com/sanity-io/codegen/compare/codegen-v6.1.2...codegen-v7.0.0) (2026-06-04)
 
 
