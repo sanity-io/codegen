@@ -92,12 +92,12 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "oclif": "^4.23.10",
-    "oxfmt": "^0.47.0",
+    "oxfmt": "^0.53.0",
     "prettier-plugin-packagejson": "^3.0.2",
     "rimraf": "^5.0.10",
-    "tinyglobby": "^0.2.16",
+    "tinyglobby": "^0.2.17",
     "typescript": "^5.9.3",
-    "vite": "^7.3.2",
+    "vite": "^7.3.5",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
