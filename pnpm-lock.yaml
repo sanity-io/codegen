@@ -161,7 +161,7 @@ importers:
         version: 5.23.0
       sanity:
         specifier: ^5.23.0
-        version: 5.23.0(@emotion/is-prop-valid@1.4.0)(@noble/hashes@2.0.1)(@oclif/core@4.10.6)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/node@24.13.0)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.32.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(styled-components@6.3.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(terser@5.46.1)(ts-toolbelt@9.6.0)(typescript@5.9.3)
+        version: 5.23.0(@emotion/is-prop-valid@1.4.0)(@noble/hashes@2.0.1)(@oclif/core@4.11.4)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/node@24.13.0)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.32.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(styled-components@6.3.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(terser@5.46.1)(ts-toolbelt@9.6.0)(typescript@5.9.3)
     devDependencies:
       '@sanity/codegen':
         specifier: workspace:*
@@ -10937,7 +10937,7 @@ snapshots:
       esbuild: 0.28.0
       nock: 14.0.15
       ora: 9.3.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       vitest: 4.1.5(@types/node@24.13.0)(@vitest/coverage-istanbul@4.1.5)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.2(@types/node@24.13.0)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.22.4)(yaml@2.8.3))
     transitivePeerDependencies:
       - '@swc/helpers'
@@ -11005,7 +11005,7 @@ snapshots:
       tar: 7.5.13
       tar-fs: 3.1.2
       tar-stream: 3.1.8
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       tsx: 4.21.0
       typeid-js: 1.2.0
       vite: 7.3.2(@types/node@24.13.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
@@ -11180,7 +11180,7 @@ snapshots:
       gunzip-maybe: 1.4.2
       p-map: 7.0.4
       tar-fs: 3.1.2
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     transitivePeerDependencies:
       - '@types/react'
       - bare-abort-controller
@@ -11237,9 +11237,9 @@ snapshots:
       - supports-color
       - xstate
 
-  '@sanity/migrate@6.1.1(@oclif/core@4.10.6)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/react@19.2.14)(xstate@5.31.0)':
+  '@sanity/migrate@6.1.1(@oclif/core@4.11.4)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/react@19.2.14)(xstate@5.31.0)':
     dependencies:
-      '@oclif/core': 4.10.6
+      '@oclif/core': 4.11.4
       '@sanity/cli-core': 2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3)
       '@sanity/client': 7.22.0
       '@sanity/mutate': 0.16.1(xstate@5.31.0)
@@ -12264,7 +12264,7 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.5
       semver: 7.7.4
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -12279,7 +12279,7 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.5
       semver: 7.7.4
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -15145,7 +15145,7 @@ snapshots:
 
   postcss@8.4.49:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -15554,7 +15554,7 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  sanity@5.23.0(@emotion/is-prop-valid@1.4.0)(@noble/hashes@2.0.1)(@oclif/core@4.10.6)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/node@24.13.0)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.32.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(styled-components@6.3.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(terser@5.46.1)(ts-toolbelt@9.6.0)(typescript@5.9.3):
+  sanity@5.23.0(@emotion/is-prop-valid@1.4.0)(@noble/hashes@2.0.1)(@oclif/core@4.11.4)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/node@24.13.0)(@types/react@19.2.14)(jiti@2.6.1)(lightningcss@1.32.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(styled-components@6.3.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(terser@5.46.1)(ts-toolbelt@9.6.0)(typescript@5.9.3):
     dependencies:
       '@algorithm.ts/lcs': 4.0.6
       '@date-fns/tz': 1.4.1
@@ -15593,7 +15593,7 @@ snapshots:
       '@sanity/logos': 2.2.2(react@19.2.4)
       '@sanity/media-library-types': 1.4.0
       '@sanity/message-protocol': 0.23.0
-      '@sanity/migrate': 6.1.1(@oclif/core@4.10.6)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/react@19.2.14)(xstate@5.31.0)
+      '@sanity/migrate': 6.1.1(@oclif/core@4.11.4)(@sanity/cli-core@2.0.0(@noble/hashes@2.0.1)(@types/node@24.13.0)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.0)(terser@5.46.1)(yaml@2.8.3))(@types/react@19.2.14)(xstate@5.31.0)
       '@sanity/mutate': 0.16.1(xstate@5.31.0)
       '@sanity/mutator': 5.23.0(@types/react@19.2.14)
       '@sanity/presentation-comlink': 2.0.1(@sanity/client@7.22.0)(@sanity/types@5.23.0(@types/react@19.2.14))
