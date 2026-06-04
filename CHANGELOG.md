@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [7.0.0](https://github.com/sanity-io/codegen/compare/codegen-v6.1.2...codegen-v7.0.0) (2026-06-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* update @sanity/cli-core peer dep to ^2 for vite 8 support ([#120](https://github.com/sanity-io/codegen/issues/120))
+
+### Features
+
+* update @sanity/cli-core peer dep to ^2 for vite 8 support ([#120](https://github.com/sanity-io/codegen/issues/120)) ([d1f4956](https://github.com/sanity-io/codegen/commit/d1f4956ad4f1938393f195a02b020521128e7d5d))
+
+
+### Bug Fixes
+
+* **deps:** Update babel monorepo to ^7.29.7 ([#122](https://github.com/sanity-io/codegen/issues/122)) ([5db211e](https://github.com/sanity-io/codegen/commit/5db211ef80fcbdf77c4b3853974199e50a435fba))
+* **deps:** Update linters to ^3.8.3 ([#123](https://github.com/sanity-io/codegen/issues/123)) ([7c05650](https://github.com/sanity-io/codegen/commit/7c05650a5669a0335f7cfeb6c68a430b9bdce0da))
+* **deps:** update sanity-tooling to v2 ([#132](https://github.com/sanity-io/codegen/issues/132)) ([5a349f1](https://github.com/sanity-io/codegen/commit/5a349f17b953aaf2b295eabff56273d792c7d936))
+
 ## [6.1.2](https://github.com/sanity-io/codegen/compare/codegen-v6.1.1...codegen-v6.1.2) (2026-06-04)
 
 
