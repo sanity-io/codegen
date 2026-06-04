@@ -43,6 +43,7 @@ export type CodegenConfig = TypeGenConfig
 export async function readConfig(path: string): Promise<TypeGenConfig> {
   try {
     const content = await readFile(path, 'utf8')
+    // eslint-disable-next-line import-x/no-named-as-default-member -- json5 is CJS and doesn't support named exports
     const json = json5.parse(content)
     return configDefinition.parseAsync(json)
   } catch (error) {
@@ -52,7 +53,7 @@ export async function readConfig(path: string): Promise<TypeGenConfig> {
       'issues' in error &&
       Array.isArray(error.issues)
     ) {
-      throw new Error(
+      throw new TypeError(
         `Error in config file\n ${error.issues.map((err: {message: string}) => err.message).join('\n')}`,
         {cause: error},
       )
