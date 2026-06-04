@@ -47,9 +47,14 @@ export async function readConfig(path: string): Promise<TypeGenConfig> {
     const json = json5.parse(content)
     return configDefinition.parseAsync(json)
   } catch (error) {
-    if (error instanceof z.core.$ZodError) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'issues' in error &&
+      Array.isArray(error.issues)
+    ) {
       throw new TypeError(
-        `Error in config file\n ${error.issues.map((err) => err.message).join('\n')}`,
+        `Error in config file\n ${error.issues.map((err: {message: string}) => err.message).join('\n')}`,
         {cause: error},
       )
     }
