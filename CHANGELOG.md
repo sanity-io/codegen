@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.1.2](https://github.com/sanity-io/codegen/compare/codegen-v6.1.1...codegen-v6.1.2) (2026-06-04)
+
+
+### Bug Fixes
+
+* move @sanity/telemetry from peerDependencies to dependencies ([#116](https://github.com/sanity-io/codegen/issues/116)) ([4697e9e](https://github.com/sanity-io/codegen/commit/4697e9ec095af7e18e948c620708692a5506f6f2))
+
 ## [6.1.1](https://github.com/sanity-io/codegen/compare/codegen-v6.1.0...codegen-v6.1.1) (2026-05-27)
 
 
