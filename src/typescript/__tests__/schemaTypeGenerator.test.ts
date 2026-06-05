@@ -10,6 +10,22 @@ function generateCode(node: t.Node | undefined) {
   return new CodeGenerator(node).generate().code.trim()
 }
 
+function inlineTypeNode(name: string): TypeNode {
+  return {name, type: 'inline'}
+}
+
+function objectTypeNode(typeName: string): TypeNode {
+  return {
+    attributes: {
+      _type: {
+        type: 'objectAttribute',
+        value: {type: 'string', value: typeName},
+      },
+    },
+    type: 'object',
+  }
+}
+
 describe(SchemaTypeGenerator.name, () => {
   test('takes in a schema and pre-computes all TS types and identifiers', () => {
     const schema = new SchemaTypeGenerator([
@@ -328,6 +344,266 @@ describe(SchemaTypeGenerator.name, () => {
       expect(t.isTSStringKeyword(unionOfOneAlias)).toBe(true)
     })
 
+    test('uses schema aliases for named union nodes', () => {
+      const promotionUnion = {
+        declaredOf: [inlineTypeNode('productPromotion'), inlineTypeNode('articlePromotion')],
+        name: 'promotion',
+        of: [objectTypeNode('productPromotion'), objectTypeNode('articlePromotion')],
+        type: 'union',
+      } as TypeNode
+
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'productPromotion',
+          type: 'type',
+          value: objectTypeNode('productPromotion'),
+        },
+        {
+          name: 'articlePromotion',
+          type: 'type',
+          value: objectTypeNode('articlePromotion'),
+        },
+        {
+          name: 'promotion',
+          type: 'type',
+          value: promotionUnion,
+        },
+        {
+          name: 'campaign',
+          type: 'type',
+          value: {
+            attributes: {
+              featuredPromotion: {
+                optional: true,
+                type: 'objectAttribute',
+                value: promotionUnion,
+              },
+            },
+            type: 'object',
+          },
+        },
+      ])
+
+      expect(generateCode(schema.getType('promotion')?.tsType)).toMatchInlineSnapshot(
+        `"ProductPromotion | ArticlePromotion"`,
+      )
+      expect(generateCode(schema.getType('campaign')?.tsType)).toMatchInlineSnapshot(`
+        "{
+          featuredPromotion?: Promotion;
+        }"
+      `)
+    })
+
+    test('uses declared union members as schema aliases', () => {
+      const promotionUnion = {
+        declaredOf: [inlineTypeNode('productPromotion'), inlineTypeNode('articlePromotion')],
+        name: 'promotion',
+        of: [objectTypeNode('productPromotion'), objectTypeNode('articlePromotion')],
+        type: 'union',
+      } as TypeNode
+      const pageBlockUnion = {
+        declaredOf: [inlineTypeNode('promotion'), inlineTypeNode('imageBlock')],
+        name: 'pageBlock',
+        of: [
+          objectTypeNode('productPromotion'),
+          objectTypeNode('articlePromotion'),
+          objectTypeNode('imageBlock'),
+        ],
+        type: 'union',
+      } as TypeNode
+
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'productPromotion',
+          type: 'type',
+          value: objectTypeNode('productPromotion'),
+        },
+        {
+          name: 'articlePromotion',
+          type: 'type',
+          value: objectTypeNode('articlePromotion'),
+        },
+        {
+          name: 'imageBlock',
+          type: 'type',
+          value: objectTypeNode('imageBlock'),
+        },
+        {
+          name: 'promotion',
+          type: 'type',
+          value: promotionUnion,
+        },
+        {
+          name: 'pageBlock',
+          type: 'type',
+          value: pageBlockUnion,
+        },
+      ])
+
+      expect(generateCode(schema.getType('promotion')?.tsType)).toMatchInlineSnapshot(
+        `"ProductPromotion | ArticlePromotion"`,
+      )
+      expect(generateCode(schema.getType('pageBlock')?.tsType)).toMatchInlineSnapshot(
+        `"Promotion | ImageBlock"`,
+      )
+    })
+
+    test('uses declared union members in object and array fields', () => {
+      const mixedDeclaredUnion = {
+        declaredOf: [inlineTypeNode('promotion'), inlineTypeNode('callout')],
+        of: [
+          objectTypeNode('productPromotion'),
+          objectTypeNode('articlePromotion'),
+          objectTypeNode('callout'),
+        ],
+        type: 'union',
+      } as TypeNode
+
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'productPromotion',
+          type: 'type',
+          value: objectTypeNode('productPromotion'),
+        },
+        {
+          name: 'articlePromotion',
+          type: 'type',
+          value: objectTypeNode('articlePromotion'),
+        },
+        {
+          name: 'callout',
+          type: 'type',
+          value: objectTypeNode('callout'),
+        },
+        {
+          name: 'promotion',
+          type: 'type',
+          value: {
+            declaredOf: [inlineTypeNode('productPromotion'), inlineTypeNode('articlePromotion')],
+            name: 'promotion',
+            of: [objectTypeNode('productPromotion'), objectTypeNode('articlePromotion')],
+            type: 'union',
+          } as TypeNode,
+        },
+        {
+          name: 'campaign',
+          type: 'type',
+          value: {
+            attributes: {
+              body: {
+                optional: true,
+                type: 'objectAttribute',
+                value: {
+                  of: mixedDeclaredUnion,
+                  type: 'array',
+                },
+              },
+              featured: {
+                optional: true,
+                type: 'objectAttribute',
+                value: mixedDeclaredUnion,
+              },
+            },
+            type: 'object',
+          },
+        },
+      ])
+
+      expect(generateCode(schema.getType('campaign')?.tsType)).toMatchInlineSnapshot(`
+        "{
+          body?: Array<Promotion | Callout>;
+          featured?: Promotion | Callout;
+        }"
+      `)
+    })
+
+    test('uses effective union members when declared members are absent', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'generatedUnion',
+          type: 'type',
+          value: {
+            of: [
+              {name: 'productPromotion', type: 'inline'},
+              {name: 'articlePromotion', type: 'inline'},
+            ],
+            type: 'union',
+          },
+        },
+        {
+          name: 'productPromotion',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'productPromotion'},
+              },
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'articlePromotion',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'articlePromotion'},
+              },
+            },
+            type: 'object',
+          },
+        },
+      ])
+
+      expect(generateCode(schema.getType('generatedUnion')?.tsType)).toMatchInlineSnapshot(
+        `"ProductPromotion | ArticlePromotion"`,
+      )
+    })
+
+    test('emits unknown for unresolved declared union members', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'brokenDeclaredUnion',
+          type: 'type',
+          value: {
+            declaredOf: [inlineTypeNode('missingUnion')],
+            of: [{type: 'string'}],
+            type: 'union',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('brokenDeclaredUnion')?.tsType)).toMatchInlineSnapshot(
+        `"unknown // Unable to locate the referenced type "missingUnion" in schema"`,
+      )
+    })
+
+    test('treats declared primitive union members as type nodes', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'string',
+          type: 'type',
+          value: {type: 'number'},
+        },
+        {
+          name: 'primitiveDeclaredUnion',
+          type: 'type',
+          value: {
+            declaredOf: [{type: 'string'}],
+            of: [{type: 'string'}],
+            type: 'union',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('primitiveDeclaredUnion')?.tsType)).toMatchInlineSnapshot(
+        `"string"`,
+      )
+    })
+
     test('generates TS Types for inline types', () => {
       const schema = new SchemaTypeGenerator([
         {
@@ -534,6 +810,269 @@ describe(SchemaTypeGenerator.name, () => {
           _type: "reference";
           [internalGroqTypeReferenceTo]?: "person";
         }"
+      `)
+    })
+
+    test('uses declared reference targets when present', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'book',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {type: 'objectAttribute', value: {type: 'string', value: 'book'}},
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'author',
+          type: 'type',
+          value: {
+            attributes: {
+              _type: {type: 'objectAttribute', value: {type: 'string', value: 'author'}},
+            },
+            type: 'object',
+          },
+        },
+        {
+          name: 'editorialTarget',
+          type: 'type',
+          value: {
+            declaredOf: [inlineTypeNode('book'), inlineTypeNode('author')],
+            name: 'editorialTarget',
+            of: [objectTypeNode('book'), objectTypeNode('author')],
+            type: 'union',
+          } as TypeNode,
+        },
+        {
+          name: 'referenceToEditorialTarget',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            declaredTo: [{type: 'editorialTarget'}],
+            dereferencesTo: 'book',
+            type: 'object',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('referenceToEditorialTarget')?.tsType))
+        .toMatchInlineSnapshot(`
+        "{
+          _ref: string;
+          _type: "reference";
+          [internalGroqTypeReferenceTo]?: "editorialTarget";
+        }"
+      `)
+    })
+
+    test('uses inline declared reference target names when present', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'editorialTarget',
+          type: 'type',
+          value: {
+            declaredOf: [inlineTypeNode('book'), inlineTypeNode('author')],
+            name: 'editorialTarget',
+            of: [objectTypeNode('book'), objectTypeNode('author')],
+            type: 'union',
+          } as TypeNode,
+        },
+        {
+          name: 'referenceToEditorialTarget',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            declaredTo: [inlineTypeNode('editorialTarget')],
+            dereferencesTo: 'book',
+            type: 'object',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('referenceToEditorialTarget')?.tsType))
+        .toMatchInlineSnapshot(`
+        "{
+          _ref: string;
+          _type: "reference";
+          [internalGroqTypeReferenceTo]?: "editorialTarget";
+        }"
+      `)
+    })
+
+    test('uses declared reference targets from inline reference nodes', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'book.reference',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            dereferencesTo: 'book',
+            type: 'object',
+          },
+        },
+        {
+          name: 'referenceToEditorialTarget',
+          type: 'type',
+          // TODO: Remove the unknown bridge once groq-js types declaredTo on inline nodes.
+          value: {
+            ...inlineTypeNode('book.reference'),
+            declaredTo: [inlineTypeNode('editorialTarget')],
+          } as unknown as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('referenceToEditorialTarget')?.tsType))
+        .toMatchInlineSnapshot(`
+        "Omit<BookReference, typeof internalGroqTypeReferenceTo> & {
+          [internalGroqTypeReferenceTo]?: "editorialTarget";
+        }"
+      `)
+    })
+
+    test('uses declared reference targets from union reference nodes', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'book.reference',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            dereferencesTo: 'book',
+            type: 'object',
+          },
+        },
+        {
+          name: 'author.reference',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            dereferencesTo: 'author',
+            type: 'object',
+          },
+        },
+        {
+          name: 'referenceToEditorialTarget',
+          type: 'type',
+          value: {
+            declaredTo: [inlineTypeNode('editorialTarget')],
+            of: [inlineTypeNode('book.reference'), inlineTypeNode('author.reference')],
+            type: 'union',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('referenceToEditorialTarget')?.tsType))
+        .toMatchInlineSnapshot(`
+        "(Omit<BookReference, typeof internalGroqTypeReferenceTo> | Omit<AuthorReference, typeof internalGroqTypeReferenceTo>) & {
+          [internalGroqTypeReferenceTo]?: "editorialTarget";
+        }"
+      `)
+    })
+
+    test('preserves null in declared reference target unions', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          name: 'book.reference',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            dereferencesTo: 'book',
+            type: 'object',
+          },
+        },
+        {
+          name: 'author.reference',
+          type: 'type',
+          value: {
+            attributes: {
+              _ref: {
+                type: 'objectAttribute',
+                value: {type: 'string'},
+              },
+              _type: {
+                type: 'objectAttribute',
+                value: {type: 'string', value: 'reference'},
+              },
+            },
+            dereferencesTo: 'author',
+            type: 'object',
+          },
+        },
+        {
+          name: 'referenceToOptionalEditorialTarget',
+          type: 'type',
+          value: {
+            declaredTo: [inlineTypeNode('editorialTarget')],
+            of: [
+              inlineTypeNode('book.reference'),
+              inlineTypeNode('author.reference'),
+              {type: 'null'},
+            ],
+            type: 'union',
+          } as TypeNode,
+        },
+      ])
+
+      expect(generateCode(schema.getType('referenceToOptionalEditorialTarget')?.tsType))
+        .toMatchInlineSnapshot(`
+        "(Omit<BookReference, typeof internalGroqTypeReferenceTo> | Omit<AuthorReference, typeof internalGroqTypeReferenceTo>) & {
+          [internalGroqTypeReferenceTo]?: "editorialTarget";
+        } | null"
       `)
     })
   })

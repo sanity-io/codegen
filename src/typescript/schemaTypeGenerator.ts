@@ -22,6 +22,63 @@ import {
 } from './helpers.js'
 import {type ExtractedQuery, type TypeEvaluationStats} from './types.js'
 
+type TypeGenerationContext = {
+  currentTypeName?: string
+}
+
+// TODO: Remove these local groq-js metadata extensions once UnionTypeNode exposes
+// `name` and `declaredOf`, and the reference target node exposes `declaredTo`.
+type UnionTypeNodeWithName = UnionTypeNode & {
+  name?: unknown
+}
+
+type UnionTypeNodeWithDeclaredMembers = UnionTypeNode & {
+  declaredOf?: unknown
+}
+
+type TypeNodeWithDeclaredTargets = TypeNode & {
+  declaredTo?: unknown
+}
+
+const TYPE_NODE_TYPES = new Set([
+  'array',
+  'boolean',
+  'document',
+  'inline',
+  'null',
+  'number',
+  'object',
+  'string',
+  'type',
+  'union',
+  'unknown',
+])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return (typeof value === 'object' || typeof value === 'function') && value !== null
+}
+
+// Runtime readers for the temporary metadata fields above. These should collapse
+// back to direct property reads when groq-js ships the typed properties.
+function getNamedUnionName(typeNode: UnionTypeNode): string | undefined {
+  const {name} = typeNode as UnionTypeNodeWithName
+  return typeof name === 'string' ? name : undefined
+}
+
+function getDeclaredOf(typeNode: UnionTypeNode): unknown[] | undefined {
+  const {declaredOf} = typeNode as UnionTypeNodeWithDeclaredMembers
+  return Array.isArray(declaredOf) ? declaredOf : undefined
+}
+
+function getDeclaredTo(typeNode: TypeNode): unknown[] | undefined {
+  const {declaredTo} = typeNode as TypeNodeWithDeclaredTargets
+  return Array.isArray(declaredTo) ? declaredTo : undefined
+}
+
+function isTypeNodeType(type: string): boolean {
+  return TYPE_NODE_TYPES.has(type)
+}
+
 export class SchemaTypeGenerator {
   public readonly schema: SchemaType
   evaluateQuery = weakMapMemo(
@@ -93,34 +150,40 @@ export class SchemaTypeGenerator {
    * Helper function used to generate TS types for arrays of inline types, or arrays of inline types
    * wrapped in the ArrayOf wrapper that adds _key prop
    */
-  private generateArrayOfTsType(typeNode: ArrayTypeNode): t.TSTypeReference {
+  private generateArrayOfTsType(
+    typeNode: ArrayTypeNode,
+    context: TypeGenerationContext,
+  ): t.TSTypeReference {
     this.arrayOfUsed = true
-    const typeNodes = this.generateTsType(typeNode.of)
+    const typeNodes = this.generateTsType(typeNode.of, context)
     return t.tsTypeReference(ARRAY_OF, t.tsTypeParameterInstantiation([typeNodes]))
   }
 
   // Helper function used to generate TS types for array type nodes.
-  private generateArrayTsType(typeNode: ArrayTypeNode): t.TSTypeReference | t.TSUnionType {
+  private generateArrayTsType(
+    typeNode: ArrayTypeNode,
+    context: TypeGenerationContext,
+  ): t.TSTypeReference | t.TSUnionType {
     // if it's an array of a single inline type, wrap it in ArrayOf
     if (typeNode.of.type === 'inline') {
-      return this.generateArrayOfTsType(typeNode)
+      return this.generateArrayOfTsType(typeNode, context)
     }
 
     // if it's not an inline object and not a union, wrap in Array
     if (typeNode.of.type !== 'union') {
-      const typeNodes = this.generateTsType(typeNode.of)
+      const typeNodes = this.generateTsType(typeNode.of, context)
       return t.tsTypeReference(t.identifier('Array'), t.tsTypeParameterInstantiation([typeNodes]))
     }
 
     // if it's not a union type or all of the union type members are non-inlines, wrap type in Array
     if (typeNode.of.of.every((unionTypeNode) => unionTypeNode.type !== 'inline')) {
-      const typeNodes = this.generateTsType(typeNode.of)
+      const typeNodes = this.generateTsType(typeNode.of, context)
       return t.tsTypeReference(t.identifier('Array'), t.tsTypeParameterInstantiation([typeNodes]))
     }
 
     // all the union types nodes are inline
     if (typeNode.of.of.every((unionMember) => unionMember.type === 'inline')) {
-      return this.generateArrayOfTsType(typeNode)
+      return this.generateArrayOfTsType(typeNode, context)
     }
 
     // some of the union types are inlines, while some are not - split and recurse
@@ -128,28 +191,40 @@ export class SchemaTypeGenerator {
     const arrayOfInline = getFilterArrayUnionType(typeNode, (member) => member.type === 'inline')
 
     return t.tsUnionType([
-      this.generateArrayTsType(arrayOfNonInline),
-      this.generateArrayTsType(arrayOfInline),
+      this.generateArrayTsType(arrayOfNonInline, context),
+      this.generateArrayTsType(arrayOfInline, context),
     ])
   }
 
   // Helper function used to generate TS types for document type nodes.
-  private generateDocumentTsType(document: DocumentSchemaType): t.TSType {
+  private generateDocumentTsType(
+    document: DocumentSchemaType,
+    context: TypeGenerationContext,
+  ): t.TSType {
     const props = Object.entries(document.attributes).map(([key, node]) =>
-      this.generateTsObjectProperty(key, node),
+      this.generateTsObjectProperty(key, node, context),
     )
 
     return t.tsTypeLiteral(props)
   }
 
   private generateInlineTsType(typeNode: InlineTypeNode): t.TSType {
-    const id = this.identifiers.get(typeNode.name)
+    const schemaReferenceType = this.generateSchemaReferenceTsType(typeNode.name)
+    const referenceTargetType = this.generateReferenceTargetTsType(typeNode)
+
+    return referenceTargetType
+      ? this.generateReferenceTargetOverrideTsType(schemaReferenceType, referenceTargetType)
+      : schemaReferenceType
+  }
+
+  private generateSchemaReferenceTsType(typeName: string): t.TSType {
+    const id = this.identifiers.get(typeName)
     if (!id) {
       // Not found in schema, return unknown type
       return t.addComment(
         t.tsUnknownKeyword(),
         'trailing',
-        ` Unable to locate the referenced type "${typeNode.name}" in schema`,
+        ` Unable to locate the referenced type "${typeName}" in schema`,
         true,
       )
     }
@@ -157,11 +232,154 @@ export class SchemaTypeGenerator {
     return t.tsTypeReference(id)
   }
 
+  private generateUnionFromTsTypes(types: t.TSType[]): t.TSType {
+    if (types.length === 0) return t.tsNeverKeyword()
+    if (types.length === 1) return types[0]!
+    return t.tsUnionType(types)
+  }
+
+  private generateDeclaredMemberTsType(
+    member: unknown,
+    context: TypeGenerationContext,
+  ): t.TSType {
+    if (isRecord(member) && typeof member.type === 'string') {
+      if (isTypeNodeType(member.type)) {
+        return this.generateTsType(member as TypeNode, context)
+      }
+
+      return this.generateSchemaReferenceTsType(member.type)
+    }
+
+    return t.tsUnknownKeyword()
+  }
+
+  private generateDeclaredUnionTsType(
+    typeNode: UnionTypeNode,
+    context: TypeGenerationContext,
+  ): t.TSType | undefined {
+    const declaredOf = getDeclaredOf(typeNode)
+    if (!declaredOf || declaredOf.length === 0) return undefined
+
+    return this.generateUnionFromTsTypes(
+      declaredOf.map((member) => this.generateDeclaredMemberTsType(member, context)),
+    )
+  }
+
+  private generateDeclaredReferenceTargetTsType(target: unknown): t.TSType {
+    if (isRecord(target) && typeof target.type === 'string') {
+      if (target.type === 'inline' && typeof target.name === 'string') {
+        return t.tsLiteralType(t.stringLiteral(target.name))
+      }
+
+      return t.tsLiteralType(t.stringLiteral(target.type))
+    }
+
+    return t.tsUnknownKeyword()
+  }
+
+  private generateReferenceTargetTsType(typeNode: TypeNode): t.TSType | undefined {
+    const declaredTo = getDeclaredTo(typeNode)
+    if (declaredTo && declaredTo.length > 0) {
+      return this.generateUnionFromTsTypes(
+        declaredTo.map((target) => this.generateDeclaredReferenceTargetTsType(target)),
+      )
+    }
+
+    if (typeNode.type === 'object' && typeNode.dereferencesTo) {
+      return t.tsLiteralType(t.stringLiteral(typeNode.dereferencesTo))
+    }
+
+    return undefined
+  }
+
+  private generateInternalReferenceProperty(referenceTargetType: t.TSType): t.TSPropertySignature {
+    return Object.assign(
+      t.tsPropertySignature(
+        INTERNAL_REFERENCE_SYMBOL,
+        t.tsTypeAnnotation(referenceTargetType),
+      ),
+      {computed: true, optional: true},
+    )
+  }
+
+  private generateInternalReferenceTargetType(referenceTargetType: t.TSType): t.TSTypeLiteral {
+    return t.tsTypeLiteral([this.generateInternalReferenceProperty(referenceTargetType)])
+  }
+
+  private generateInternalReferenceTargetKeyTsType(): t.TSTypeQuery {
+    return t.tsTypeQuery(t.cloneNode(INTERNAL_REFERENCE_SYMBOL))
+  }
+
+  private shouldPreserveReferenceTargetOverride(typeNode: t.TSType): boolean {
+    return (
+      t.isTSNeverKeyword(typeNode) || t.isTSNullKeyword(typeNode) || t.isTSUnknownKeyword(typeNode)
+    )
+  }
+
+  private generateReferenceTargetStrippedTsType(typeNode: t.TSType): t.TSType {
+    if (t.isTSUnionType(typeNode)) {
+      return t.tsUnionType(
+        typeNode.types.map((member) => this.generateReferenceTargetStrippedTsType(member)),
+      )
+    }
+
+    if (this.shouldPreserveReferenceTargetOverride(typeNode)) {
+      return t.cloneNode(typeNode)
+    }
+
+    return t.tsTypeReference(
+      t.identifier('Omit'),
+      t.tsTypeParameterInstantiation([
+        t.cloneNode(typeNode),
+        this.generateInternalReferenceTargetKeyTsType(),
+      ]),
+    )
+  }
+
+  private generateReferenceTargetOverrideTsType(
+    baseType: t.TSType,
+    referenceTargetType: t.TSType,
+  ): t.TSType {
+    if (t.isTSUnionType(baseType)) {
+      const strippedMembers: t.TSType[] = []
+      const preservedMembers: t.TSType[] = []
+
+      for (const member of baseType.types) {
+        if (this.shouldPreserveReferenceTargetOverride(member)) {
+          preservedMembers.push(t.cloneNode(member))
+        } else {
+          strippedMembers.push(this.generateReferenceTargetStrippedTsType(member))
+        }
+      }
+
+      return this.generateUnionFromTsTypes([
+        ...(strippedMembers.length > 0
+          ? [
+              t.tsIntersectionType([
+                this.generateUnionFromTsTypes(strippedMembers),
+                this.generateInternalReferenceTargetType(referenceTargetType),
+              ]),
+            ]
+          : []),
+        ...preservedMembers,
+      ])
+    }
+
+    if (this.shouldPreserveReferenceTargetOverride(baseType)) {
+      return t.cloneNode(baseType)
+    }
+
+    return t.tsIntersectionType([
+      this.generateReferenceTargetStrippedTsType(baseType),
+      this.generateInternalReferenceTargetType(referenceTargetType),
+    ])
+  }
+
   // Helper function used to generate TS types for object type nodes.
-  private generateObjectTsType(typeNode: ObjectTypeNode): t.TSType {
+  private generateObjectTsType(typeNode: ObjectTypeNode, context: TypeGenerationContext): t.TSType {
     const props: t.TSPropertySignature[] = []
     for (const [key, attribute] of Object.entries(typeNode.attributes)) {
-      props.push(this.generateTsObjectProperty(key, attribute))
+      props.push(this.generateTsObjectProperty(key, attribute, context))
     }
     const rest = typeNode.rest
 
@@ -175,7 +393,7 @@ export class SchemaTypeGenerator {
         }
         case 'object': {
           for (const [key, attribute] of Object.entries(rest.attributes)) {
-            props.push(this.generateTsObjectProperty(key, attribute))
+            props.push(this.generateTsObjectProperty(key, attribute, context))
           }
           break
         }
@@ -189,23 +407,21 @@ export class SchemaTypeGenerator {
       }
     }
 
-    if (typeNode.dereferencesTo) {
-      const derefType = Object.assign(
-        t.tsPropertySignature(
-          INTERNAL_REFERENCE_SYMBOL,
-          t.tsTypeAnnotation(t.tsLiteralType(t.stringLiteral(typeNode.dereferencesTo))),
-        ),
-        {computed: true, optional: true},
-      )
-      props.push(derefType)
+    const referenceTargetType = this.generateReferenceTargetTsType(typeNode)
+    if (referenceTargetType) {
+      props.push(this.generateInternalReferenceProperty(referenceTargetType))
     }
 
     return t.tsTypeLiteral(props)
   }
 
   // Helper function used to generate TS types for object properties.
-  private generateTsObjectProperty(key: string, attribute: ObjectAttribute): t.TSPropertySignature {
-    const type = this.generateTsType(attribute.value)
+  private generateTsObjectProperty(
+    key: string,
+    attribute: ObjectAttribute,
+    context: TypeGenerationContext,
+  ): t.TSPropertySignature {
+    const type = this.generateTsType(attribute.value, context)
     const keyNode = isIdentifierName(key) ? t.identifier(key) : t.stringLiteral(key)
     const propertySignature = t.tsPropertySignature(keyNode, t.tsTypeAnnotation(type))
     propertySignature.optional = attribute.optional
@@ -215,10 +431,11 @@ export class SchemaTypeGenerator {
 
   private generateTsType(
     typeNode: DocumentSchemaType | TypeDeclarationSchemaType | TypeNode,
+    context: TypeGenerationContext = {},
   ): t.TSType {
     switch (typeNode.type) {
       case 'array': {
-        return this.generateArrayTsType(typeNode)
+        return this.generateArrayTsType(typeNode, context)
       }
       case 'boolean': {
         if (typeNode.value !== undefined) {
@@ -227,7 +444,7 @@ export class SchemaTypeGenerator {
         return t.tsBooleanKeyword()
       }
       case 'document': {
-        return this.generateDocumentTsType(typeNode)
+        return this.generateDocumentTsType(typeNode, context)
       }
       case 'inline': {
         return this.generateInlineTsType(typeNode)
@@ -242,7 +459,7 @@ export class SchemaTypeGenerator {
         return t.tsNumberKeyword()
       }
       case 'object': {
-        return this.generateObjectTsType(typeNode)
+        return this.generateObjectTsType(typeNode, context)
       }
       case 'string': {
         if (typeNode.value !== undefined) {
@@ -251,10 +468,10 @@ export class SchemaTypeGenerator {
         return t.tsStringKeyword()
       }
       case 'type': {
-        return this.generateTsType(typeNode.value)
+        return this.generateTsType(typeNode.value, {currentTypeName: typeNode.name})
       }
       case 'union': {
-        return this.generateUnionTsType(typeNode)
+        return this.generateUnionTsType(typeNode, context)
       }
       case 'unknown': {
         return t.tsUnknownKeyword()
@@ -272,10 +489,30 @@ export class SchemaTypeGenerator {
   }
 
   // Helper function used to generate TS types for union type nodes.
-  private generateUnionTsType(typeNode: UnionTypeNode): t.TSType {
-    if (typeNode.of.length === 0) return t.tsNeverKeyword()
-    if (typeNode.of.length === 1) return this.generateTsType(typeNode.of[0]!)
-    return t.tsUnionType(typeNode.of.map((node) => this.generateTsType(node)))
+  private generateUnionTsType(typeNode: UnionTypeNode, context: TypeGenerationContext): t.TSType {
+    const namedUnionName = getNamedUnionName(typeNode)
+    if (namedUnionName && namedUnionName !== context.currentTypeName) {
+      return this.generateSchemaReferenceTsType(namedUnionName)
+    }
+
+    const declaredType = this.generateDeclaredUnionTsType(typeNode, context)
+    const referenceTargetType = this.generateReferenceTargetTsType(typeNode)
+    if (declaredType) {
+      return referenceTargetType
+        ? this.generateReferenceTargetOverrideTsType(declaredType, referenceTargetType)
+        : declaredType
+    }
+
+    const unionType =
+      typeNode.of.length === 0
+        ? t.tsNeverKeyword()
+        : this.generateUnionFromTsTypes(
+            typeNode.of.map((node) => this.generateTsType(node, context)),
+          )
+
+    return referenceTargetType
+      ? this.generateReferenceTargetOverrideTsType(unionType, referenceTargetType)
+      : unionType
   }
 }
 
