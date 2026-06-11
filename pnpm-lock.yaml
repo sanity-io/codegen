@@ -51,8 +51,8 @@ importers:
         specifier: ^11.1.0
         version: 11.1.0
       groq:
-        specifier: ^5.30.0
-        version: 5.30.0
+        specifier: ^6.0.0
+        version: 6.0.0
       groq-js:
         specifier: ^1.30.2
         version: 1.30.2
@@ -160,8 +160,8 @@ importers:
   dev:
     dependencies:
       groq:
-        specifier: ^5.30.0
-        version: 5.30.0
+        specifier: ^6.0.0
+        version: 6.0.0
       sanity:
         specifier: ^5.30.0
         version: 5.30.0(@emotion/is-prop-valid@1.4.0)(@noble/hashes@2.2.0)(@oclif/core@4.11.4)(@sanity/cli-core@2.0.0(@noble/hashes@2.2.0)(@types/node@24.13.0)(esbuild@0.28.0)(terser@5.48.0)(yaml@2.9.0))(@types/node@24.13.0)(@types/react@19.2.16)(jiti@2.7.0)(lightningcss@1.32.0)(oxfmt@0.53.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(styled-components@6.4.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(terser@5.48.0)(typescript@5.9.3)
@@ -4926,6 +4926,10 @@ packages:
   groq@5.30.0:
     resolution: {integrity: sha512-jtjDc8JVVwE34tVQvA1r3U4ALkESREXEFPz8rZEBgCIr2lgpvNotiqxQk5goHtzO5j5F8gYci8/70noIJ8QwRw==}
     engines: {node: '>=20.19 <22 || >=22.12'}
+
+  groq@6.0.0:
+    resolution: {integrity: sha512-NPvl5mh4Y05WF80dEi8WPObeSxXjV3l2/SbfI7LPkoHH5tOdXnfHPpcsD60p/lIBioU/cn+ZkxwrAIyTVgqiew==}
+    engines: {node: '>=22.12'}
 
   gunzip-maybe@1.4.2:
     resolution: {integrity: sha512-4haO1M4mLO91PW57BMsDFf75UmwoRX0GkdD+Faw+Lr+r/OZrOCS0pIBwOL1xCKQqnQzbNFGgK2V2CpBUPeFNTw==}
@@ -12824,6 +12828,8 @@ snapshots:
   groq@3.88.1-typegen-experimental.0: {}
 
   groq@5.30.0: {}
+
+  groq@6.0.0: {}
 
   gunzip-maybe@1.4.2:
     dependencies:
