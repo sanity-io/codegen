@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [7.0.2](https://github.com/sanity-io/codegen/compare/codegen-v7.0.1...codegen-v7.0.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* **deps:** bump groq and sanity to ^6.0.0 ([#141](https://github.com/sanity-io/codegen/issues/141)) ([4438161](https://github.com/sanity-io/codegen/commit/443816106d89c2c069753a64e873a625efcf2311))
+
 ## [7.0.1](https://github.com/sanity-io/codegen/compare/codegen-v7.0.0...codegen-v7.0.1) (2026-06-04)
 
 
