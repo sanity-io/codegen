@@ -1,4 +1,3 @@
-import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannel} from '@sanity/worker-channels'
 
 import {TypeGenConfig} from '../readConfig.js'
@@ -34,22 +33,6 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<
 >
 
 /**
- * Options for running a single typegen generation.
- * This is the programmatic API for one-off generation without file watching.
- * @public
- */
-export interface RunTypegenOptions {
-  /** Working directory (usually project root) */
-  workDir: string
-
-  /** Typegen configuration */
-  config?: Partial<TypeGenConfig>
-
-  /** Optional spinner instance for progress display */
-  spin?: ReturnType<typeof spinner>
-}
-
-/**
  * Result from a single generation run.
  * @public
  */
@@ -65,4 +48,40 @@ export interface GenerationResult {
   typeNodesGenerated: number
   unknownTypeNodesGenerated: number
   unknownTypeNodesRatio: number
+}
+
+/**
+ * A progress event emitted during a single typegen run.
+ * Consumers (e.g. the Sanity CLI) render these; the library performs no terminal output.
+ * @public
+ */
+export type TypegenProgressEvent =
+  | {type: 'schemaLoaded'}
+  | {type: 'typegenStarted'; expectedFileCount: number}
+  | {type: 'schemaTypesGenerated'; schemaTypesCount: number}
+  | {
+      type: 'moduleEvaluated'
+      evaluatedFiles: number
+      expectedFileCount: number
+      queriesCount: number
+      queryFilesCount: number
+      errors: string[]
+    }
+  | {type: 'formatting'; formatterName: string}
+  | {type: 'formatFailed'; formatterName: string; message: string}
+  | {type: 'complete'; result: GenerationResult}
+
+/**
+ * Options for running a single typegen generation.
+ * @public
+ */
+export interface RunTypegenOptions {
+  /** Working directory (usually project root) */
+  workDir: string
+
+  /** Typegen configuration */
+  config?: Partial<TypeGenConfig>
+
+  /** Optional progress reporter. Called synchronously as generation proceeds. */
+  onProgress?: (event: TypegenProgressEvent) => void
 }
