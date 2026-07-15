@@ -19,7 +19,7 @@ import {
  * Runs a single typegen generation.
  *
  * This is the programmatic API for generating TypeScript types from GROQ queries.
- * It spawns a worker thread to perform the generation and displays progress via CLI spinners.
+ * It spawns a worker thread to perform the generation and reports progress via the optional `onProgress` callback.
  *
  * @param options - Configuration options including typegen config and working directory
  * @returns Generation result containing the generated code and statistics
