@@ -1,8 +1,6 @@
 import {defineConfig} from 'vitest/config'
 
 export default defineConfig({
-  // This is needed to avoid listening to changes in the tmp directory
-  // Without this, watch will go in an infinite loop
   server: {
     watch: {
       ignored: ['**/tmp/**/*'],
@@ -12,9 +10,7 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
     },
-    disableConsoleIntercept: true, // needed for @sanity/cli-test
     exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/dist/**', '**/node_modules/**'],
-    globalSetup: ['test/workerBuild.ts', 'test/cliTestSetup.ts'],
     includeSource: ['./src/**/*.ts'],
   },
 })
