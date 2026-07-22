@@ -1,47 +1,40 @@
 import {writeFile} from 'node:fs/promises'
 
-import {spinner} from '@sanity/cli-core/ux'
 import {WorkerChannelReceiver} from '@sanity/worker-channels'
 
 import {TypeGenConfig} from '../readConfig.js'
-import {count} from '../utils/count.js'
 import {debug} from '../utils/debug.js'
-import {formatPath} from '../utils/formatPath.js'
 import {getMessage} from '../utils/getMessage.js'
-import {percent} from '../utils/percent.js'
 import {defineFormatter} from '../utils/resolveFormatter.js'
 import {generatedFileWarning} from './generatedFileWarning.js'
-import {TypegenWorkerChannel} from './types.js'
+import {type TypegenProgressEvent, TypegenWorkerChannel} from './types.js'
+
+const noopProgress = (_event: TypegenProgressEvent): void => {}
 
 /**
  * Processes the event stream from a typegen worker thread.
  *
- * Listens to worker channel events, displays progress via CLI spinners,
- * writes the generated types to disk, and optionally formats with prettier.
- *
- * @param receiver - Worker channel receiver for typegen events
- * @param options - Typegen configuration options
- * @returns Generation result containing the generated code and statistics
+ * Consumes worker channel events, reports progress via `onProgress`,
+ * writes generated types to disk, and optionally formats them.
  */
 export async function processTypegenWorkerStream(
   receiver: WorkerChannelReceiver<TypegenWorkerChannel>,
   options: TypeGenConfig,
+  onProgress: (event: TypegenProgressEvent) => void = noopProgress,
 ) {
   const start = Date.now()
-  const {formatGeneratedCode, generates, schema} = options
-
-  const spin = spinner().start(`Loading schema…`)
+  const {formatGeneratedCode, generates} = options
 
   try {
     await receiver.event.loadedSchema()
-    spin.succeed(`Schema loaded from ${formatPath(schema ?? '')}`)
+    onProgress({type: 'schemaLoaded'})
 
-    spin.start('Generating schema types…')
     const {expectedFileCount} = await receiver.event.typegenStarted()
+    onProgress({expectedFileCount, type: 'typegenStarted'})
+
     const {schemaTypeDeclarations} = await receiver.event.generatedSchemaTypes()
     const schemaTypesCount = schemaTypeDeclarations.length
-
-    spin.text = 'Generating query types…'
+    onProgress({schemaTypesCount, type: 'schemaTypesGenerated'})
 
     let queriesCount = 0
     let evaluatedFiles = 0
@@ -63,49 +56,42 @@ export async function processTypegenWorkerStream(
         emptyUnionTypeNodesGenerated += stats.emptyUnions
       }
 
-      for (const error of errors) {
-        spin.fail(getMessage(error))
-      }
-
-      if (!spin.isSpinning) {
-        spin.start()
-      }
-
-      spin.text =
-        `Generating query types… (${percent(evaluatedFiles / expectedFileCount)})\n` +
-        `  └─ Processed ${count(evaluatedFiles)} of ${count(expectedFileCount, 'files')}. ` +
-        `Found ${count(queriesCount, 'queries', 'query')} from ${count(queryFilesCount, 'files')}.`
+      onProgress({
+        errors: errors.map((error) => getMessage(error)),
+        evaluatedFiles,
+        expectedFileCount,
+        queriesCount,
+        queryFilesCount,
+        type: 'moduleEvaluated',
+      })
     }
 
     const result = await receiver.event.typegenComplete()
     const code = `${generatedFileWarning}${result.code}`
     await writeFile(generates, code)
 
-    let formattingError = false
-    let formatterName: string | undefined
     if (formatGeneratedCode !== false) {
       const formatter = defineFormatter(formatGeneratedCode)
       if (formatter) {
-        formatterName = formatter.name
         try {
           const {format} = await formatter.resolve()
           if (format) {
-            spin.text = `Formatting generated types with ${formatter.name}…`
+            onProgress({formatterName: formatter.name, type: 'formatting'})
             const formattedCode = await format(generates, code)
             await writeFile(generates, formattedCode)
           }
         } catch (err) {
-          formattingError = true
-          spin.warn(`Failed to format generated types with ${formatter.name}: ${getMessage(err)}`)
+          onProgress({
+            formatterName: formatter.name,
+            message: getMessage(err),
+            type: 'formatFailed',
+          })
         }
       }
     }
 
-    if (filesWithErrors > 0) {
-      spin.warn(`Encountered errors in ${count(filesWithErrors, 'files')} while generating types`)
-    }
-
-    const stats = {
+    const generationResult = {
+      code,
       duration: Date.now() - start,
       emptyUnionTypeNodesGenerated,
       filesWithErrors,
@@ -119,23 +105,10 @@ export async function processTypegenWorkerStream(
         typeNodesGenerated > 0 ? unknownTypeNodesGenerated / typeNodesGenerated : 0,
     }
 
-    let successText =
-      `Successfully generated types to ${formatPath(generates)} in ${Number(stats.duration).toFixed(0)}ms` +
-      `\n  └─ ${count(queriesCount, 'queries', 'query')} and ${count(schemaTypesCount, 'schema types', 'schema type')}` +
-      `\n  └─ found queries in ${count(queryFilesCount, 'files', 'file')} after evaluating ${count(evaluatedFiles, 'files', 'file')}`
+    onProgress({result: generationResult, type: 'complete'})
 
-    if (formatterName) {
-      successText += `\n  └─ ${formattingError ? 'an error occurred during formatting' : `formatted the generated code with ${formatterName}`}`
-    }
-
-    spin.succeed(successText)
-
-    return {
-      ...stats,
-      code,
-    }
+    return generationResult
   } catch (err) {
-    spin.fail()
     debug('error generating types', err)
     throw err
   } finally {

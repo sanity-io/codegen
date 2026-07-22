@@ -1,7 +1,10 @@
 export {runTypegenGenerate} from '../actions/typegenGenerate.js'
 export {runTypegenWatcher} from '../actions/typegenWatch.js'
-export {type GenerationResult, type RunTypegenOptions} from '../actions/types.js'
-export {TypegenGenerateCommand} from '../commands/typegen/generate.js'
+export {
+  type GenerationResult,
+  type RunTypegenOptions,
+  type TypegenProgressEvent,
+} from '../actions/types.js'
 export {
   type CodegenConfig,
   configDefinition,

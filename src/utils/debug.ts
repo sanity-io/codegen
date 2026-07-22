@@ -1,3 +1,3 @@
-import {subdebug} from '@sanity/cli-core'
+import createDebug from 'debug'
 
-export const debug = subdebug('typegen:generate')
+export const debug = createDebug('sanity:typegen:generate')

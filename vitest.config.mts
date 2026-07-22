@@ -12,9 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
     },
-    disableConsoleIntercept: true, // needed for @sanity/cli-test
     exclude: ['**/.tmp/**', 'dev/**', '**/lib/**', '**/dist/**', '**/node_modules/**'],
-    globalSetup: ['test/workerBuild.ts', 'test/cliTestSetup.ts'],
     includeSource: ['./src/**/*.ts'],
   },
 })
