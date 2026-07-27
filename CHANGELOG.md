@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.0.0](https://github.com/sanity-io/codegen/compare/codegen-v7.0.3...codegen-v8.0.0) (2026-07-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* drop cli, expose library API methods, drop node 20 ([#148](https://github.com/sanity-io/codegen/issues/148))
+
+### Features
+
+* drop cli, expose library API methods, drop node 20 ([#148](https://github.com/sanity-io/codegen/issues/148)) ([e537087](https://github.com/sanity-io/codegen/commit/e53708731431c8e4299c514e5897e742d7cb812e))
+
+
+### Bug Fixes
+
+* **deps:** bump groq-js to ^2.0.0 ([#151](https://github.com/sanity-io/codegen/issues/151)) ([fe9b8e1](https://github.com/sanity-io/codegen/commit/fe9b8e1b1b8af70fbe685d7165668e186cc2b59d))
+
 ## [7.0.3](https://github.com/sanity-io/codegen/compare/codegen-v7.0.2...codegen-v7.0.3) (2026-06-15)
 
 
