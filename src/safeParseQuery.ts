@@ -1,11 +1,11 @@
-import {parse} from 'groq-js'
+import {type ExprNode, parse} from 'groq-js'
 
 /**
  * safeParseQuery parses a GROQ query string, but first attempts to extract any parameters used in slices. This method is _only_
  * intended for use in type generation where we don't actually execute the parsed AST on a dataset, and should not be used elsewhere.
  * @internal
  */
-export function safeParseQuery(query: string) {
+export function safeParseQuery(query: string): ExprNode {
   const params: Record<string, unknown> = {}
 
   for (const param of extractSliceParams(query)) {
