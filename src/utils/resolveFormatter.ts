@@ -1,3 +1,6 @@
+import {parseAsync} from '@babel/core'
+import {CodeGenerator} from '@babel/generator'
+
 import {type FormatGeneratedCode} from '../readConfig.js'
 import {debug} from './debug.js'
 
@@ -49,8 +52,11 @@ export function defineFormatter(
     return {name: 'oxfmt', resolve: resolveOxfmt}
   }
 
-  // true or 'prettier' → use prettier
-  return {name: 'prettier', resolve: resolvePrettier}
+  if (formatGeneratedCode === 'prettier') {
+    return {name: 'prettier', resolve: resolvePrettier}
+  }
+
+  return {name: 'babel', resolve: resolveBabel}
 }
 
 /**
@@ -58,7 +64,8 @@ export function defineFormatter(
  *
  * Resolution:
  * - `false` → no formatter
- * - `true` | `'prettier'` → prettier (always available as a dependency)
+ * - `true` → built-in Babel formatter
+ * - `'prettier'` → prettier, throws if not installed
  * - `'oxfmt'` → oxfmt, throws if not installed
  *
  * @param formatGeneratedCode - The formatter mode to resolve
@@ -71,6 +78,29 @@ export async function resolveFormatter(
     return {format: undefined, name: undefined}
   }
   return defined.resolve()
+}
+
+async function resolveBabel(): Promise<ResolvedFormatter> {
+  return {
+    format: async (filename: string, text: string) => {
+      const ast = await parseAsync(text, {
+        babelrc: false,
+        configFile: false,
+        filename,
+        parserOpts: {
+          plugins: ['typescript'],
+          sourceType: 'module',
+        },
+      })
+
+      if (!ast) {
+        throw new Error('Failed to parse generated code with Babel')
+      }
+
+      return `${new CodeGenerator(ast, {retainLines: true}).generate().code}\n`
+    },
+    name: 'babel',
+  }
 }
 
 async function resolveOxfmt(): Promise<ResolvedFormatter> {
@@ -121,6 +151,11 @@ async function resolvePrettier(): Promise<ResolvedFormatter> {
     }
   } catch (err) {
     debug('prettier not available: %s', err instanceof Error ? err.message : err)
-    return {format: undefined, name: undefined}
+    throw new Error(
+      'formatGeneratedCode is set to "prettier" but prettier could not be loaded. ' +
+        'Make sure prettier is installed as a dependency in your project. ' +
+        'See: https://prettier.io/docs/install',
+      {cause: err},
+    )
   }
 }
