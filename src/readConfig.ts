@@ -6,7 +6,8 @@ import * as v from 'valibot'
 /**
  * The formatter to use for generated code.
  * - `false` - Do not format generated code.
- * - `true` | `'prettier'` - Format with prettier.
+ * - `true` - Format with the built-in Babel formatter.
+ * - `'prettier'` - Format with prettier. Throws if prettier is not installed.
  * - `'oxfmt'` - Format with oxfmt. Throws if oxfmt is not installed.
  * @public
  */
