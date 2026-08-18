@@ -6,7 +6,7 @@ const bundle = {
     config.target = 'node22'
     return config
   },
-  path: '.size-limit-entry.mjs',
+  path: 'dist/_exports/index.js',
 }
 
 export default [
