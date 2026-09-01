@@ -17,7 +17,6 @@ export {TypegenWatchModeTrace, TypesGeneratedTrace} from '../typegen.telemetry.j
 export {findQueriesInPath} from '../typescript/findQueriesInPath.js'
 export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
 export {getResolver} from '../typescript/moduleResolver.js'
-export {registerBabel} from '../typescript/registerBabel.js'
 export {
   type GenerateTypesOptions,
   TypeGenerator,

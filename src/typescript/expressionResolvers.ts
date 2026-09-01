@@ -1,8 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {type TransformOptions, traverse} from '@babel/core'
-import {Scope} from '@babel/traverse'
+import {type ParserOptions} from '@babel/parser'
+import traverse, {Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 import createDebug from 'debug'
 
@@ -22,21 +22,21 @@ const FUNCTION_WRAPPER_ALLOW_LIST = new Set(['defineQuery'])
  * @internal
  */
 export function resolveExpression({
-  babelConfig,
   file,
   filename,
   fnArguments = [],
   node,
   params = [],
+  parserOptions,
   resolver,
   scope,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   fnArguments?: babelTypes.Node[]
   node: babelTypes.Node
   params?: babelTypes.Node[]
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
   scope: Scope
 }): resolveExpressionReturnType {
@@ -49,12 +49,12 @@ export function resolveExpression({
     TAGGED_TEMPLATE_ALLOW_LIST.has(node.tag.name)
   ) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: node.quasi,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -63,12 +63,12 @@ export function resolveExpression({
   if (babelTypes.isTemplateLiteral(node)) {
     const resolvedExpressions = node.expressions.map((expression) =>
       resolveExpression({
-        babelConfig,
         file,
         filename,
         fnArguments,
         node: expression,
         params,
+        parserOptions,
         resolver,
         scope,
       }),
@@ -90,12 +90,12 @@ export function resolveExpression({
 
   if (babelTypes.isIdentifier(node)) {
     return resolveIdentifier({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -108,11 +108,11 @@ export function resolveExpression({
     }
 
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: init,
+      parserOptions,
       resolver,
       scope,
     })
@@ -124,11 +124,11 @@ export function resolveExpression({
     FUNCTION_WRAPPER_ALLOW_LIST.has(node.callee.name)
   ) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       node: node.arguments[0]!,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -136,12 +136,12 @@ export function resolveExpression({
 
   if (babelTypes.isCallExpression(node)) {
     return resolveCallExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -162,12 +162,12 @@ export function resolveExpression({
     }
 
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: node.body,
       params: node.params,
+      parserOptions,
       resolver,
       scope: newScope,
     })
@@ -175,27 +175,27 @@ export function resolveExpression({
 
   if (babelTypes.isNewExpression(node)) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       node: node.callee,
+      parserOptions,
       resolver,
       scope,
     })
   }
 
   if (babelTypes.isImportDefaultSpecifier(node) || babelTypes.isImportSpecifier(node)) {
-    return resolveImportSpecifier({babelConfig, file, filename, fnArguments, node, resolver})
+    return resolveImportSpecifier({file, filename, fnArguments, node, parserOptions, resolver})
   }
 
   if (babelTypes.isAssignmentPattern(node)) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: node.right,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -204,12 +204,12 @@ export function resolveExpression({
   // Handle TypeScript type assertions (e.g., `'foo' as string`)
   if (babelTypes.isTSAsExpression(node)) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: node.expression,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -218,21 +218,21 @@ export function resolveExpression({
   if (babelTypes.isMemberExpression(node)) {
     const propertyName = getMemberPropertyName(node)
     const objExpr = resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: node.object,
+      parserOptions,
       resolver,
       scope,
     })
     const prop = findObjectProperty(objExpr, propertyName, filename, node)
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: prop.value,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -244,21 +244,21 @@ export function resolveExpression({
 }
 
 function resolveIdentifier({
-  babelConfig,
   file,
   filename,
   fnArguments,
   node,
   params,
+  parserOptions,
   resolver,
   scope,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   fnArguments: babelTypes.Node[]
   node: babelTypes.Identifier
   params: babelTypes.Node[]
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
   scope: Scope
 }): resolveExpressionReturnType {
@@ -275,12 +275,12 @@ function resolveIdentifier({
   }
   if (argument && babelTypes.isLiteral(argument)) {
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: argument,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -296,12 +296,12 @@ function resolveIdentifier({
       }
     }
     return resolveExpression({
-      babelConfig,
       file,
       filename,
       fnArguments,
       node: binding.path.node,
       params,
+      parserOptions,
       resolver,
       scope,
     })
@@ -313,47 +313,47 @@ function resolveIdentifier({
 }
 
 function resolveCallExpression({
-  babelConfig,
   file,
   filename,
   node,
   params,
+  parserOptions,
   resolver,
   scope,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   fnArguments: babelTypes.Node[]
   node: babelTypes.CallExpression
   params: babelTypes.Node[]
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
   scope: Scope
 }): resolveExpressionReturnType {
   const {callee} = node
   return resolveExpression({
-    babelConfig,
     file,
     filename,
     fnArguments: node.arguments,
     node: callee,
     params,
+    parserOptions,
     resolver,
     scope,
   })
 }
 
 function resolveImportBinding({
-  babelConfig,
   file,
   filename,
   node,
+  parserOptions,
   resolver,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   node: babelTypes.ExportSpecifier | babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
 }) {
   let importDeclaration: babelTypes.ImportDeclaration | undefined
@@ -391,7 +391,7 @@ function resolveImportBinding({
 
   const resolvedFile = resolver(formatPath(importPath))
   const source = fs.readFileSync(resolvedFile)
-  const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
+  const tree = parseSourceFile(source.toString(), resolvedFile, parserOptions)
 
   let scope: Scope | undefined
   traverse(tree, {
@@ -408,35 +408,35 @@ function resolveImportBinding({
 }
 
 function resolveImportSpecifier({
-  babelConfig,
   file,
   filename,
   fnArguments,
   node,
+  parserOptions,
   resolver,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   fnArguments: babelTypes.Node[]
   node: babelTypes.ExportSpecifier | babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
 }): resolveExpressionReturnType {
   const {binding, importFileName, importName, resolvedFile, scope, tree} = resolveImportBinding({
-    babelConfig,
     file,
     filename,
     node,
+    parserOptions,
     resolver,
   })
 
   if (binding) {
     return resolveExpression({
-      babelConfig,
       file: tree,
       filename: resolvedFile,
       fnArguments,
       node: binding.path.node,
+      parserOptions,
       resolver,
       scope,
     })
@@ -464,11 +464,11 @@ function resolveImportSpecifier({
 
   if (namedExport && newImportName) {
     return resolveExportSpecifier({
-      babelConfig,
       filename: resolvedFile,
       fnArguments,
       importName: newImportName,
       node: namedExport,
+      parserOptions,
       resolver,
     })
   }
@@ -479,11 +479,11 @@ function resolveImportSpecifier({
       if (p.node.type === 'ExportAllDeclaration') {
         try {
           result = resolveExportSpecifier({
-            babelConfig,
             filename: resolvedFile,
             fnArguments,
             importName,
             node: p.node,
+            parserOptions,
             resolver,
           })
         } catch (e) {
@@ -498,18 +498,18 @@ function resolveImportSpecifier({
 }
 
 function resolveExportSpecifier({
-  babelConfig,
   filename,
   fnArguments,
   importName,
   node,
+  parserOptions,
   resolver,
 }: {
-  babelConfig: TransformOptions
   filename: string
   fnArguments: babelTypes.Node[]
   importName: string
   node: babelTypes.ExportAllDeclaration | babelTypes.ExportNamedDeclaration
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
 }): resolveExpressionReturnType {
   if (!node.source) {
@@ -520,7 +520,7 @@ function resolveExportSpecifier({
   const importPath = path.resolve(path.dirname(filename), importFileName)
   const resolvedFile = resolver(formatPath(importPath))
   const source = fs.readFileSync(resolvedFile)
-  const tree = parseSourceFile(source.toString(), resolvedFile, babelConfig)
+  const tree = parseSourceFile(source.toString(), resolvedFile, parserOptions)
 
   let newScope: Scope | undefined
   traverse(tree, {
@@ -535,11 +535,11 @@ function resolveExportSpecifier({
   const binding = newScope.getBinding(importName)
   if (binding) {
     return resolveExpression({
-      babelConfig,
       file: tree,
       filename: resolvedFile,
       fnArguments,
       node: binding.path.node,
+      parserOptions,
       resolver,
       scope: newScope,
     })
@@ -583,17 +583,17 @@ function findObjectProperty(
 }
 
 function resolveToObjectExpression({
-  babelConfig,
   file,
   filename,
   node,
+  parserOptions,
   resolver,
   scope,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   node: babelTypes.Node
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
   scope: Scope
 }): babelTypes.ObjectExpression {
@@ -602,10 +602,10 @@ function resolveToObjectExpression({
   }
   if (babelTypes.isTSAsExpression(node)) {
     return resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: node.expression,
+      parserOptions,
       resolver,
       scope,
     })
@@ -616,10 +616,10 @@ function resolveToObjectExpression({
       throw new Error(`Could not find binding for "${node.name}" in ${filename}`)
     }
     return resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: binding.path.node,
+      parserOptions,
       resolver,
       scope,
     })
@@ -629,10 +629,10 @@ function resolveToObjectExpression({
       throw new Error(`Variable declarator has no init`)
     }
     return resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: node.init,
+      parserOptions,
       resolver,
       scope,
     })
@@ -640,25 +640,25 @@ function resolveToObjectExpression({
   if (babelTypes.isMemberExpression(node)) {
     const propertyName = getMemberPropertyName(node)
     const objExpr = resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: node.object,
+      parserOptions,
       resolver,
       scope,
     })
     const prop = findObjectProperty(objExpr, propertyName, filename, node)
     return resolveToObjectExpression({
-      babelConfig,
       file,
       filename,
       node: prop.value,
+      parserOptions,
       resolver,
       scope,
     })
   }
   if (babelTypes.isImportDefaultSpecifier(node) || babelTypes.isImportSpecifier(node)) {
-    return resolveImportToObjectExpression({babelConfig, file, filename, node, resolver})
+    return resolveImportToObjectExpression({file, filename, node, parserOptions, resolver})
   }
   throw new Error(
     `Cannot resolve node type "${node.type}" to ObjectExpression in ${filename}:${node.loc?.start.line}:${node.loc?.start.column}`,
@@ -666,23 +666,23 @@ function resolveToObjectExpression({
 }
 
 function resolveImportToObjectExpression({
-  babelConfig,
   file,
   filename,
   node,
+  parserOptions,
   resolver,
 }: {
-  babelConfig: TransformOptions
   file: babelTypes.File
   filename: string
   node: babelTypes.ImportDefaultSpecifier | babelTypes.ImportSpecifier
+  parserOptions?: ParserOptions
   resolver: NodeJS.RequireResolve
 }): babelTypes.ObjectExpression {
   const {binding, importFileName, importName, resolvedFile, scope, tree} = resolveImportBinding({
-    babelConfig,
     file,
     filename,
     node,
+    parserOptions,
     resolver,
   })
 
@@ -691,10 +691,10 @@ function resolveImportToObjectExpression({
   }
 
   return resolveToObjectExpression({
-    babelConfig,
     file: tree,
     filename: resolvedFile,
     node: binding.path.node,
+    parserOptions,
     resolver,
     scope,
   })

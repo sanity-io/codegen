@@ -1,12 +1,17 @@
 import type * as babelTypes from '@babel/types'
 
-import {parse, type TransformOptions} from '@babel/core'
+import {parse, type ParserOptions} from '@babel/parser'
+
+const DEFAULT_PARSER_OPTIONS = {
+  plugins: ['jsx', 'typescript'],
+  sourceType: 'module',
+} satisfies ParserOptions
 
 // helper function to parse a source file
 export function parseSourceFile(
   _source: string,
   _filename: string,
-  babelOptions: TransformOptions,
+  parserOptions: ParserOptions = {},
 ): babelTypes.File {
   let source = _source
   let filename = _filename
@@ -23,16 +28,11 @@ export function parseSourceFile(
     filename += '.ts'
     source = parseSvelte(source)
   }
-  const result = parse(source, {
-    ...babelOptions,
-    filename,
+  return parse(source, {
+    ...DEFAULT_PARSER_OPTIONS,
+    ...parserOptions,
+    sourceFilename: filename,
   })
-
-  if (!result) {
-    throw new Error(`Failed to parse ${filename}`)
-  }
-
-  return result
 }
 
 function parseAstro(source: string): string {

@@ -1,10 +1,9 @@
 import fs from 'node:fs/promises'
 
-import {type TransformOptions} from '@babel/core'
+import {type ParserOptions} from '@babel/parser'
 import createDebug from 'debug'
 import glob from 'globby'
 
-import {getBabelConfig} from '../getBabelConfig.js'
 import {findQueriesInSource} from './findQueriesInSource.js'
 import {normalizeGlobPattern} from './helpers.js'
 import {getResolver} from './moduleResolver.js'
@@ -15,21 +14,21 @@ const debug = createDebug('sanity:codegen:findQueries:debug')
 interface FindQueriesInPathOptions {
   path: string | string[]
 
-  babelOptions?: TransformOptions
+  parserOptions?: ParserOptions
   resolver?: NodeJS.RequireResolve
 }
 
 /**
  * findQueriesInPath takes a path or array of paths and returns all GROQ queries in the files.
  * @param path - The path or array of paths to search for queries
- * @param babelOptions - The babel configuration to use when parsing the source
+ * @param parserOptions - Additional Babel parser options
  * @param resolver - A resolver function to use when resolving module imports
  * @returns An async generator that yields the results of the search
  * @beta
  * @internal
  */
 export function findQueriesInPath({
-  babelOptions = getBabelConfig(),
+  parserOptions,
   path,
   resolver = getResolver(),
 }: FindQueriesInPathOptions): {files: string[]; queries: AsyncIterable<ExtractedModule>} {
@@ -57,7 +56,7 @@ export function findQueriesInPath({
       debug(`Found file "${filename}"`)
       try {
         const source = await fs.readFile(filename, 'utf8')
-        const pluckedModuleResult = findQueriesInSource(source, filename, babelOptions, resolver)
+        const pluckedModuleResult = findQueriesInSource(source, filename, parserOptions, resolver)
         // Check and error on duplicate query names, because we can't generate types with the same name.
         for (const {variable} of pluckedModuleResult.queries) {
           if (queryNames.has(variable.id.name)) {

@@ -32,8 +32,7 @@
   "main": "./dist/_exports/index.js",
   "types": "./dist/_exports/index.d.ts",
   "files": [
-    "dist",
-    "babel.config.json"
+    "dist"
   ],
   "scripts": {
     "build": "swc --delete-dir-on-start src -d dist --strip-leading-paths --ignore '**/__tests__/**'  && pnpm run build:types",
@@ -48,12 +47,8 @@
     "watch": "swc src -d dist --strip-leading-paths --watch"
   },
   "dependencies": {
-    "@babel/core": "^7.29.7",
     "@babel/generator": "^7.29.7",
-    "@babel/preset-env": "^7.29.7",
-    "@babel/preset-react": "^7.29.7",
-    "@babel/preset-typescript": "^7.29.7",
-    "@babel/register": "^7.29.7",
+    "@babel/parser": "^7.29.7",
     "@babel/traverse": "^7.29.7",
     "@babel/types": "^7.29.7",
     "@sanity/telemetry": "^1.1.0",
@@ -77,9 +72,7 @@
     "@size-limit/file": "^13.0.3",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.40",
-    "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.27.0",
-    "@types/babel__register": "^7.17.3",
     "@types/babel__traverse": "^7.28.0",
     "@types/debug": "^4.1.13",
     "@types/lodash-es": "^4.17.12",

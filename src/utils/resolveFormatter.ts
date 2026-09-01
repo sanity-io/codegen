@@ -1,5 +1,5 @@
-import {parseAsync} from '@babel/core'
 import {CodeGenerator} from '@babel/generator'
+import {parse} from '@babel/parser'
 
 import {type FormatGeneratedCode} from '../readConfig.js'
 import {debug} from './debug.js'
@@ -83,19 +83,11 @@ export async function resolveFormatter(
 async function resolveBabel(): Promise<ResolvedFormatter> {
   return {
     format: async (filename: string, text: string) => {
-      const ast = await parseAsync(text, {
-        babelrc: false,
-        configFile: false,
-        filename,
-        parserOpts: {
-          plugins: ['typescript'],
-          sourceType: 'module',
-        },
+      const ast = parse(text, {
+        plugins: ['typescript'],
+        sourceFilename: filename,
+        sourceType: 'module',
       })
-
-      if (!ast) {
-        throw new Error('Failed to parse generated code with Babel')
-      }
 
       return `${new CodeGenerator(ast, {retainLines: true}).generate().code}\n`
     },
