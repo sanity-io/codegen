@@ -42,8 +42,8 @@
     "lint": "eslint . --fix",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
-    "pretest": "pnpm build",
     "size": "size-limit",
+    "pretest": "pnpm build",
     "test": "vitest",
     "watch": "swc src -d dist --strip-leading-paths --watch"
   },
