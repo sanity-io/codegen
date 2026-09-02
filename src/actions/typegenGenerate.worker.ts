@@ -7,15 +7,12 @@ import {WorkerChannelReporter} from '@sanity/worker-channels'
 import {readSchema} from '../readSchema.js'
 import {findQueriesInPath} from '../typescript/findQueriesInPath.js'
 import {getResolver} from '../typescript/moduleResolver.js'
-import {registerBabel} from '../typescript/registerBabel.js'
 import {TypeGenerator} from '../typescript/typeGenerator.js'
 import {TypegenGenerateTypesWorkerData, TypegenWorkerChannel} from './types.js'
 
 if (isMainThread || !parentPort) {
   throw new Error('This module must be run as a worker thread')
 }
-
-registerBabel()
 
 async function main({
   overloadClientMethods,

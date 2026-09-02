@@ -1,15 +1,11 @@
-import {createRequire} from 'node:module'
-
-import {type NodePath, type TransformOptions, traverse} from '@babel/core'
-import {type Scope} from '@babel/traverse'
+import {type ParserOptions} from '@babel/parser'
+import traverse, {type NodePath, type Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
 
-import {getBabelConfig} from '../getBabelConfig.js'
 import {resolveExpression} from './expressionResolvers.js'
+import {getResolver} from './moduleResolver.js'
 import {parseSourceFile} from './parseSource.js'
 import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types.js'
-
-const require = createRequire(import.meta.url)
 
 const groqTagName = 'groq'
 const defineQueryFunctionName = 'defineQuery'
@@ -23,7 +19,7 @@ const ignoreValue = '@sanity-typegen-ignore'
  * findQueriesInSource takes a source string and returns all GROQ queries in it.
  * @param source - The source code to search for queries
  * @param filename - The filename of the source code
- * @param babelConfig - The babel configuration to use when parsing the source
+ * @param parserOptions - Additional Babel parser options
  * @param resolver - A resolver function to use when resolving module imports
  * @returns
  * @beta
@@ -32,12 +28,12 @@ const ignoreValue = '@sanity-typegen-ignore'
 export function findQueriesInSource(
   source: string,
   filename: string,
-  babelConfig: TransformOptions = getBabelConfig(),
-  resolver: NodeJS.RequireResolve = require.resolve,
+  parserOptions?: ParserOptions,
+  resolver: NodeJS.RequireResolve = getResolver(),
 ): ExtractedModule {
   const queries: ExtractedQuery[] = []
   const errors: QueryExtractionError[] = []
-  const file = parseSourceFile(source, filename, babelConfig)
+  const file = parseSourceFile(source, filename, parserOptions)
 
   traverse(file, {
     // Look for variable declarations, e.g. `const myQuery = groq`... and extract the query.
@@ -72,10 +68,10 @@ export function findQueriesInSource(
 
         try {
           const query = resolveExpression({
-            babelConfig,
             file,
             filename,
             node: init,
+            parserOptions,
             resolver,
             scope,
           })
