@@ -68,7 +68,7 @@
     "prettier": "^3.8.3",
     "reselect": "^5.2.0",
     "tsconfig-paths": "^4.2.0",
-    "zod": "^4.4.3"
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",
