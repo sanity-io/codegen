@@ -7,10 +7,10 @@ describe('defineFormatter', () => {
     expect(defineFormatter(false)).toBeUndefined()
   })
 
-  it('returns name "prettier" for true', () => {
+  it('returns name "babel" for true', () => {
     const formatter = defineFormatter(true)
     expect(formatter).toBeDefined()
-    expect(formatter!.name).toBe('prettier')
+    expect(formatter!.name).toBe('babel')
   })
 
   it('returns name "prettier" for "prettier"', () => {
@@ -36,9 +36,9 @@ describe('resolveFormatter', () => {
   })
 
   describe('formatGeneratedCode: true', () => {
-    it('resolves prettier', async () => {
+    it('resolves the built-in Babel formatter', async () => {
       const result = await resolveFormatter(true)
-      expect(result.name).toBe('prettier')
+      expect(result.name).toBe('babel')
       expect(result.format).toBeTypeOf('function')
     })
 
@@ -46,8 +46,13 @@ describe('resolveFormatter', () => {
       const result = await resolveFormatter(true)
       expect(result.format).toBeDefined()
       const formatted = await result.format!('test.ts', 'const x:string = "hello"')
-      expect(formatted).toContain('const x')
-      expect(formatted).toContain('hello')
+      expect(formatted).toBe('const x: string = "hello";\n')
+    })
+
+    it('preserves blank lines between generated declarations', async () => {
+      const result = await resolveFormatter(true)
+      const source = 'export type Foo = string;\n\nexport type Bar = number;\n'
+      await expect(result.format!('test.ts', source)).resolves.toBe(source)
     })
   })
 
@@ -65,6 +70,23 @@ describe('resolveFormatter', () => {
       expect(formatted).toContain('Foo')
       expect(formatted).toContain('bar')
       expect(formatted).toContain('string')
+    })
+
+    it('throws a helpful error when prettier cannot be loaded', async () => {
+      vi.doMock('prettier', () => {
+        throw new Error('Cannot find module prettier')
+      })
+
+      const {resolveFormatter: resolveFormatterMocked} = await import('../resolveFormatter.js')
+
+      await expect(resolveFormatterMocked('prettier')).rejects.toThrow(
+        'formatGeneratedCode is set to "prettier" but prettier could not be loaded',
+      )
+      await expect(resolveFormatterMocked('prettier')).rejects.toThrow(
+        'Make sure prettier is installed as a dependency',
+      )
+
+      vi.doUnmock('prettier')
     })
   })
 
