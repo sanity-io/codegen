@@ -257,18 +257,50 @@ export class TypeGenerator {
       ),
     )
 
-    const declareModule = t.declareModule(
+    // The registry itself lives on the global `SanityQueries` interface, which `@sanity/client`'s
+    // exported `SanityQueries` inherits from. Registering globally needs no import of, and no
+    // module resolution to, `@sanity/client`: the registrations are seen whether or not the client
+    // is a direct dependency of this file, however many copies of it are installed, and from every
+    // entry point including `@sanity/client/stega`.
+    const globalRegistry = t.tsModuleDeclaration(
+      t.identifier('global'),
+      t.tsModuleBlock([queryReturnInterface]),
+    )
+    globalRegistry.declare = true
+    // Babel 7 prints the keyword from `global`, Babel 8 from `kind`; set both so the output is
+    // `declare global {` on either.
+    globalRegistry.global = true
+    globalRegistry.kind = 'global'
+    t.addComments(globalRegistry, 'leading', [{type: 'CommentLine', value: ' Query TypeMap'}])
+
+    // `@sanity/client` releases that predate the global registry only read their exported
+    // `SanityQueries` interface. Interface merging unions the `extends` clauses of every
+    // declaration, so augmenting that interface with the global one as a base type makes those
+    // releases read the registry above. Releases that already inherit the global see a duplicate
+    // `extends` of the same type, which is accepted, so the same output works with either.
+    const bridge = t.declareModule(
       t.stringLiteral('@sanity/client'),
-      t.blockStatement([queryReturnInterface]),
+      t.blockStatement([
+        t.tsInterfaceDeclaration(
+          t.identifier(SANITY_QUERIES.name),
+          null,
+          [
+            t.tsExpressionWithTypeArguments(
+              t.tsQualifiedName(t.identifier('globalThis'), t.identifier(SANITY_QUERIES.name)),
+            ),
+          ],
+          t.tsInterfaceBody([]),
+        ),
+      ]),
     )
+    t.addComments(bridge, 'leading', [
+      {
+        type: 'CommentLine',
+        value: ' Lets @sanity/client releases that predate the global registry read it too',
+      },
+    ])
 
-    const clientImport = t.addComments(
-      t.importDeclaration([], t.stringLiteral('@sanity/client')),
-      'leading',
-      [{type: 'CommentLine', value: ' Query TypeMap'}],
-    )
-
-    const ast = t.program([clientImport, declareModule])
+    const ast = t.program([globalRegistry, bridge])
     const code = generateCode(ast)
     return {ast, code}
   }
