@@ -1,6 +1,31 @@
+import * as t from '@babel/types'
 import {describe, expect, test} from 'vitest'
 
-import {normalizePrintablePath} from '../helpers.js'
+import {generateCode, normalizePrintablePath, tsDeclareGlobal, tsDeclareModule} from '../helpers.js'
+
+describe('tsDeclareGlobal', () => {
+  test('prints a `declare global` block', () => {
+    const declaration = tsDeclareGlobal([
+      t.tsInterfaceDeclaration(t.identifier('SanityQueries'), null, [], t.tsInterfaceBody([])),
+    ])
+
+    expect(declaration.type).toBe('TSModuleDeclaration')
+    expect(generateCode(declaration)).toBe('declare global {\n  interface SanityQueries {}\n}\n\n')
+  })
+})
+
+describe('tsDeclareModule', () => {
+  test('prints a `declare module` block for the given specifier', () => {
+    const declaration = tsDeclareModule('@sanity/client', [
+      t.tsInterfaceDeclaration(t.identifier('SanityQueries'), null, [], t.tsInterfaceBody([])),
+    ])
+
+    expect(declaration.type).toBe('TSModuleDeclaration')
+    expect(generateCode(declaration)).toBe(
+      'declare module "@sanity/client" {\n  interface SanityQueries {}\n}\n\n',
+    )
+  })
+})
 
 describe('normalizePrintablePath', () => {
   test('handles Unix-style paths', () => {

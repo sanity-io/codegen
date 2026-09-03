@@ -18,6 +18,8 @@ import {
   generateCode,
   getUniqueIdentifierForName,
   normalizePrintablePath,
+  tsDeclareGlobal,
+  tsDeclareModule,
 } from './helpers.js'
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
@@ -248,39 +250,31 @@ export class TypeGenerator {
           return t.tsPropertySignature(
             t.stringLiteral(query),
             t.tsTypeAnnotation(
-              types.length > 0
-                ? t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type))))
-                : t.tsNeverKeyword(),
+              t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type)))),
             ),
           )
         }),
       ),
     )
 
-    // The registry itself lives on the global `SanityQueries` interface, which `@sanity/client`'s
-    // exported `SanityQueries` inherits from. Registering globally needs no import of, and no
-    // module resolution to, `@sanity/client`: the registrations are seen whether or not the client
-    // is a direct dependency of this file, however many copies of it are installed, and from every
-    // entry point including `@sanity/client/stega`.
-    const globalRegistry = t.tsModuleDeclaration(
-      t.identifier('global'),
-      t.tsModuleBlock([queryReturnInterface]),
-    )
-    globalRegistry.declare = true
-    // Babel 7 prints the keyword from `global`, Babel 8 from `kind`; set both so the output is
-    // `declare global {` on either.
-    globalRegistry.global = true
-    globalRegistry.kind = 'global'
-    t.addComments(globalRegistry, 'leading', [{type: 'CommentLine', value: ' Query TypeMap'}])
+    // The registry lives on the global `SanityQueries` interface, which `@sanity/client`'s exported
+    // `SanityQueries` inherits from. Registering globally needs no import of, and no module
+    // resolution to, `@sanity/client`: the registrations are seen whether or not the client is a
+    // direct dependency of this file, however many copies of it are installed, and from every entry
+    // point including `@sanity/client/stega`.
+    const globalRegistry = t.addComments(tsDeclareGlobal([queryReturnInterface]), 'leading', [
+      {type: 'CommentLine', value: ' Query TypeMap'},
+    ])
 
     // `@sanity/client` releases that predate the global registry only read their exported
     // `SanityQueries` interface. Interface merging unions the `extends` clauses of every
-    // declaration, so augmenting that interface with the global one as a base type makes those
-    // releases read the registry above. Releases that already inherit the global see a duplicate
-    // `extends` of the same type, which is accepted, so the same output works with either.
-    const bridge = t.declareModule(
-      t.stringLiteral('@sanity/client'),
-      t.blockStatement([
+    // declaration, so adding the global interface as a base type makes those releases read the
+    // registry above. Releases that already inherit the global see a duplicate `extends` of the
+    // same type, which is accepted, so the same output works with either.
+    // `SANITY_QUERIES` is already the registry's identifier and a node must not appear twice in one
+    // tree, so the bridge mints its own.
+    const bridge = t.addComments(
+      tsDeclareModule('@sanity/client', [
         t.tsInterfaceDeclaration(
           t.identifier(SANITY_QUERIES.name),
           null,
@@ -292,13 +286,14 @@ export class TypeGenerator {
           t.tsInterfaceBody([]),
         ),
       ]),
+      'leading',
+      [
+        {
+          type: 'CommentLine',
+          value: ' Lets @sanity/client releases that predate the global registry read it too',
+        },
+      ],
     )
-    t.addComments(bridge, 'leading', [
-      {
-        type: 'CommentLine',
-        value: ' Lets @sanity/client releases that predate the global registry read it too',
-      },
-    ])
 
     const ast = t.program([globalRegistry, bridge])
     const code = generateCode(ast)
