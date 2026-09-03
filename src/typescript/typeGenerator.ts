@@ -261,14 +261,16 @@ export class TypeGenerator {
       {type: 'CommentLine', value: ' Query TypeMap'},
     ])
 
+    // The client-side global registry: https://github.com/sanity-io/client/pull/1319 (8.x) and
+    // https://github.com/sanity-io/client/pull/1320 (7.x)
     const bridge = t.addComments(
       tsDeclareModule('@sanity/client', [
         t.tsInterfaceDeclaration(
-          t.identifier(SANITY_QUERIES.name),
+          SANITY_QUERIES,
           null,
           [
             t.tsExpressionWithTypeArguments(
-              t.tsQualifiedName(t.identifier('globalThis'), t.identifier(SANITY_QUERIES.name)),
+              t.tsQualifiedName(t.identifier('globalThis'), SANITY_QUERIES),
             ),
           ],
           t.tsInterfaceBody([]),
