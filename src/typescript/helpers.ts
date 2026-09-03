@@ -85,9 +85,6 @@ export function generateCode(node: t.Node) {
   return `${new CodeGenerator(node).generate().code.trim()}\n\n`
 }
 
-/**
- * Builds a `declare global { … }` block.
- */
 export function tsDeclareGlobal(body: t.Statement[]): t.TSModuleDeclaration {
   const declaration = t.tsModuleDeclaration(t.identifier('global'), t.tsModuleBlock(body))
   declaration.declare = true
@@ -98,9 +95,6 @@ export function tsDeclareGlobal(body: t.Statement[]): t.TSModuleDeclaration {
   return declaration
 }
 
-/**
- * Builds a `declare module "<name>" { … }` block.
- */
 export function tsDeclareModule(name: string, body: t.Statement[]): t.TSModuleDeclaration {
   const declaration = t.tsModuleDeclaration(t.stringLiteral(name), t.tsModuleBlock(body))
   declaration.declare = true
