@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.1.0](https://github.com/sanity-io/codegen/compare/codegen-v8.0.0...codegen-v8.1.0) (2026-09-03)
+
+
+### Features
+
+* register query result types globally and bridge older @sanity/client releases ([#161](https://github.com/sanity-io/codegen/issues/161)) ([e6ba729](https://github.com/sanity-io/codegen/commit/e6ba729bfc77556ffe79a68d7eece9082f88eebd))
+
+
+### Performance Improvements
+
+* replace Zod with Valibot for smaller install size ([#158](https://github.com/sanity-io/codegen/issues/158)) ([466edc7](https://github.com/sanity-io/codegen/commit/466edc782e19b65cbc0047f8d9a4c26104e5a2dd))
+
 ## [8.0.0](https://github.com/sanity-io/codegen/compare/codegen-v7.0.3...codegen-v8.0.0) (2026-07-27)
 
 
