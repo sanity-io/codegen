@@ -153,12 +153,15 @@ describe(TypeGenerator.name, () => {
 
     expect(queryMapDeclaration.code).toMatchInlineSnapshot(String.raw`
       "// Query TypeMap
-      import "@sanity/client";
-      declare module "@sanity/client" {
+      declare global {
         interface SanityQueries {
           "*[_type == \"foo\"]": QueryFooResult;
           "*[_type == \"bar\"]": QueryBarResult;
         }
+      }
+      // Lets @sanity/client releases that predate the global registry read it too
+      declare module "@sanity/client" {
+        interface SanityQueries extends globalThis.SanityQueries {}
       }
 
       "
@@ -202,12 +205,15 @@ describe(TypeGenerator.name, () => {
       }>;
 
       // Query TypeMap
-      import "@sanity/client";
-      declare module "@sanity/client" {
+      declare global {
         interface SanityQueries {
           "*[_type == \"foo\"]": QueryFooResult;
           "*[_type == \"bar\"]": QueryBarResult;
         }
+      }
+      // Lets @sanity/client releases that predate the global registry read it too
+      declare module "@sanity/client" {
+        interface SanityQueries extends globalThis.SanityQueries {}
       }
 
       "

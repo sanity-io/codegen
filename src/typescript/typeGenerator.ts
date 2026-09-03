@@ -18,6 +18,8 @@ import {
   generateCode,
   getUniqueIdentifierForName,
   normalizePrintablePath,
+  tsDeclareGlobal,
+  tsDeclareModule,
 } from './helpers.js'
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
@@ -248,27 +250,52 @@ export class TypeGenerator {
           return t.tsPropertySignature(
             t.stringLiteral(query),
             t.tsTypeAnnotation(
-              types.length > 0
-                ? t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type))))
-                : t.tsNeverKeyword(),
+              t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type)))),
             ),
           )
         }),
       ),
     )
 
-    const declareModule = t.declareModule(
-      t.stringLiteral('@sanity/client'),
-      t.blockStatement([queryReturnInterface]),
-    )
+    // The registry lives on the global `SanityQueries` interface, which `@sanity/client`'s exported
+    // `SanityQueries` inherits from. Registering globally needs no import of, and no module
+    // resolution to, `@sanity/client`: the registrations are seen whether or not the client is a
+    // direct dependency of this file, however many copies of it are installed, and from every entry
+    // point including `@sanity/client/stega`.
+    const globalRegistry = t.addComments(tsDeclareGlobal([queryReturnInterface]), 'leading', [
+      {type: 'CommentLine', value: ' Query TypeMap'},
+    ])
 
-    const clientImport = t.addComments(
-      t.importDeclaration([], t.stringLiteral('@sanity/client')),
+    // `@sanity/client` releases that predate the global registry only read their exported
+    // `SanityQueries` interface. Interface merging unions the `extends` clauses of every
+    // declaration, so adding the global interface as a base type makes those releases read the
+    // registry above. Releases that already inherit the global see a duplicate `extends` of the
+    // same type, which is accepted, so the same output works with either.
+    // `SANITY_QUERIES` is already the registry's identifier and a node must not appear twice in one
+    // tree, so the bridge mints its own.
+    const bridge = t.addComments(
+      tsDeclareModule('@sanity/client', [
+        t.tsInterfaceDeclaration(
+          t.identifier(SANITY_QUERIES.name),
+          null,
+          [
+            t.tsExpressionWithTypeArguments(
+              t.tsQualifiedName(t.identifier('globalThis'), t.identifier(SANITY_QUERIES.name)),
+            ),
+          ],
+          t.tsInterfaceBody([]),
+        ),
+      ]),
       'leading',
-      [{type: 'CommentLine', value: ' Query TypeMap'}],
+      [
+        {
+          type: 'CommentLine',
+          value: ' Lets @sanity/client releases that predate the global registry read it too',
+        },
+      ],
     )
 
-    const ast = t.program([clientImport, declareModule])
+    const ast = t.program([globalRegistry, bridge])
     const code = generateCode(ast)
     return {ast, code}
   }

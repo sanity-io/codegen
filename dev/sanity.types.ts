@@ -12,6 +12,8 @@
  * ---------------------------------------------------------------------------------
  */
 
+export declare const internalGroqTypeReferenceTo: unique symbol
+
 // Source: schema.json
 export type SanityImageAssetReference = {
   _ref: string
@@ -270,14 +272,6 @@ export type AllSanitySchemaTypes =
   | SanityAssetSourceData
   | SanityImageAsset
   | Geopoint
-
-export declare const internalGroqTypeReferenceTo: unique symbol
-
-type ArrayOf<T> = Array<
-  T & {
-    _key: string
-  }
->
 
 // Source: src/queries/authorQueries.ts
 // Variable: allAuthorsQuery
@@ -863,8 +857,7 @@ export type PostWithRelatedQueryResult = {
 export type FeaturedPostsQueryResult = Array<never>
 
 // Query TypeMap
-import '@sanity/client'
-declare module '@sanity/client' {
+declare global {
   interface SanityQueries {
     '*[_type == "author"]{\n  _id,\n  name,\n  slug\n}': AllAuthorsQueryResult
     '*[_type == "author" && _id == $id][0]{\n  _id,\n  _type,\n  name,\n  slug,\n  image,\n  bio\n}': AuthorByIdQueryResult
@@ -898,4 +891,8 @@ declare module '@sanity/client' {
     '\n  *[_type == "post" && _id == $postId][0]{\n    _id,\n    title,\n    slug,\n    categories[]->{\n      _id,\n      title\n    },\n    "relatedPosts": *[\n      _type == "post" &&\n      _id != $postId &&\n      count((categories[]._ref)[@ in ^.^.categories[]._ref]) > 0\n    ][0..5]{\n      _id,\n      title,\n      slug,\n      publishedAt,\n      "sharedCategories": categories[_ref in ^.^.categories[]._ref]->{\n        title\n      }\n    }\n  }\n': PostWithRelatedQueryResult
     '\n  *[\n    _type == "post" &&\n    defined(mainImage.asset) &&\n    defined(publishedAt) &&\n    publishedAt > (now() - 60*60*24*30)\n  ] | order(publishedAt desc)[0..5]{\n    _id,\n    title,\n    slug,\n    publishedAt,\n    mainImage{\n      asset->{\n        url,\n        metadata{\n          dimensions,\n          lqip\n        }\n      }\n    },\n    author->{\n      name,\n      slug\n    },\n    "categoryTitles": categories[]->title\n  }\n': FeaturedPostsQueryResult
   }
+}
+// Lets @sanity/client releases that predate the global registry read it too
+declare module '@sanity/client' {
+  interface SanityQueries extends globalThis.SanityQueries {}
 }

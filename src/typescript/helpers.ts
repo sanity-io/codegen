@@ -85,6 +85,29 @@ export function generateCode(node: t.Node) {
   return `${new CodeGenerator(node).generate().code.trim()}\n\n`
 }
 
+/**
+ * Builds a `declare global { … }` block.
+ */
+export function tsDeclareGlobal(body: t.Statement[]): t.TSModuleDeclaration {
+  const declaration = t.tsModuleDeclaration(t.identifier('global'), t.tsModuleBlock(body))
+  declaration.declare = true
+  // Babel 7's generator reads the keyword from `global`, Babel 8's from `kind`; set both so the
+  // output is `declare global {` on either.
+  declaration.global = true
+  declaration.kind = 'global'
+  return declaration
+}
+
+/**
+ * Builds a `declare module "<name>" { … }` block.
+ */
+export function tsDeclareModule(name: string, body: t.Statement[]): t.TSModuleDeclaration {
+  const declaration = t.tsModuleDeclaration(t.stringLiteral(name), t.tsModuleBlock(body))
+  declaration.declare = true
+  declaration.kind = 'module'
+  return declaration
+}
+
 export function getFilterArrayUnionType(
   typeNode: ArrayTypeNode,
   predicate: (unionTypeNode: UnionTypeNode['of'][number]) => boolean,
