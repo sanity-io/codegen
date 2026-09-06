@@ -58,7 +58,7 @@
     "@babel/types": "^7.29.7",
     "@sanity/telemetry": "^1.1.0",
     "@sanity/worker-channels": "^2.0.0",
-    "chokidar": "^3.6.0",
+    "chokidar": "^5.0.0",
     "debug": "^4.4.3",
     "globby": "^11.1.0",
     "groq": "^6.0.0",
