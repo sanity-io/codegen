@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises'
 
 import {type TransformOptions} from '@babel/core'
-import createDebug from 'debug'
 import glob from 'globby'
+import {createDebug} from 'obug'
 
 import {getBabelConfig} from '../getBabelConfig.js'
 import {findQueriesInSource} from './findQueriesInSource.js'
