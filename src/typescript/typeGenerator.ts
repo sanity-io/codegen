@@ -257,30 +257,20 @@ export class TypeGenerator {
       ),
     )
 
-    // The registry lives on the global `SanityQueries` interface, which `@sanity/client`'s exported
-    // `SanityQueries` inherits from. Registering globally needs no import of, and no module
-    // resolution to, `@sanity/client`: the registrations are seen whether or not the client is a
-    // direct dependency of this file, however many copies of it are installed, and from every entry
-    // point including `@sanity/client/stega`.
     const globalRegistry = t.addComments(tsDeclareGlobal([queryReturnInterface]), 'leading', [
       {type: 'CommentLine', value: ' Query TypeMap'},
     ])
 
-    // `@sanity/client` releases that predate the global registry only read their exported
-    // `SanityQueries` interface. Interface merging unions the `extends` clauses of every
-    // declaration, so adding the global interface as a base type makes those releases read the
-    // registry above. Releases that already inherit the global see a duplicate `extends` of the
-    // same type, which is accepted, so the same output works with either.
-    // `SANITY_QUERIES` is already the registry's identifier and a node must not appear twice in one
-    // tree, so the bridge mints its own.
+    // The client-side global registry: https://github.com/sanity-io/client/pull/1319 (8.x) and
+    // https://github.com/sanity-io/client/pull/1320 (7.x)
     const bridge = t.addComments(
       tsDeclareModule('@sanity/client', [
         t.tsInterfaceDeclaration(
-          t.identifier(SANITY_QUERIES.name),
+          SANITY_QUERIES,
           null,
           [
             t.tsExpressionWithTypeArguments(
-              t.tsQualifiedName(t.identifier('globalThis'), t.identifier(SANITY_QUERIES.name)),
+              t.tsQualifiedName(t.identifier('globalThis'), SANITY_QUERIES),
             ),
           ],
           t.tsInterfaceBody([]),
