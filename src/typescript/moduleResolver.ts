@@ -1,6 +1,6 @@
 import {createRequire} from 'node:module'
 
-import createDebug from 'debug'
+import {createDebug} from 'obug'
 import {createMatchPath, loadConfig as loadTSConfig} from 'tsconfig-paths'
 
 const require = createRequire(import.meta.url)

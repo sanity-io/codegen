@@ -4,7 +4,7 @@ import path from 'node:path'
 import {type TransformOptions, traverse} from '@babel/core'
 import {Scope} from '@babel/traverse'
 import * as babelTypes from '@babel/types'
-import createDebug from 'debug'
+import {createDebug} from 'obug'
 
 import {formatPath} from '../utils/formatPath.js'
 import {parseSourceFile} from './parseSource.js'
