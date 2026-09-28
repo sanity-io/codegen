@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.1.1](https://github.com/sanity-io/codegen/compare/codegen-v8.1.0...codegen-v8.1.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* replace debug with obug ([#167](https://github.com/sanity-io/codegen/issues/167)) ([bc74869](https://github.com/sanity-io/codegen/commit/bc74869e70e9d16886eb9a32579f82b31ff1c061))
+
 ## [8.1.0](https://github.com/sanity-io/codegen/compare/codegen-v8.0.0...codegen-v8.1.0) (2026-09-03)
 
 
