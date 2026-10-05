@@ -26,8 +26,10 @@ export {
 } from '../typescript/typeGenerator.js'
 export {
   type EvaluatedModule,
+  type EvaluatedProjection,
   type EvaluatedQuery,
   type ExtractedModule,
+  type ExtractedProjection,
   type ExtractedQuery,
   QueryExtractionError,
 } from '../typescript/types.js'

@@ -61,3 +61,28 @@ test('generates from an extracted schema with no schema file on disk', async () 
   // An extracted schema has no file to name.
   expect(written).not.toContain('// Source: schema.json')
 })
+
+test('carries projections through the worker into the written file', async () => {
+  dir = await mkdtemp(join(tmpdir(), 'codegen-run-'))
+  await mkdir(join(dir, 'src'))
+  await writeFile(
+    join(dir, 'src', 'projections.ts'),
+    "import {defineProjection} from '@sanity/sdk-react'\nexport const bookTitle = defineProjection('book', '{title}')\n",
+  )
+
+  await runTypegenGenerate({
+    config: {
+      formatGeneratedCode: false,
+      generates: './sanity.types.ts',
+      path: join(dir, 'src/**/*.ts'),
+    },
+    extractedSchema: schema,
+    resource: {dataset: 'test', projectId: 'abc123'},
+    workDir: dir,
+  })
+
+  const written = await readFile(join(dir, 'sanity.types.ts'), 'utf8')
+  // The optional field stays nullable; only a missing document's null is dropped.
+  expect(written).toContain('export type BookTitleResult = {\n  title: string | null;\n};')
+  expect(written).toMatch(/"abc123\.test": \{\s*"book": \{\s*"\{title\}": BookTitleResult;/)
+})

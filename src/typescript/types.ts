@@ -31,6 +31,23 @@ export interface ExtractedQuery {
 }
 
 /**
+ * A projection extracted from a `defineProjection` call in a source file.
+ * @beta
+ */
+export interface ExtractedProjection {
+  filename: string
+  /** The exact projection string, which is also its lookup key. */
+  projection: string
+  variable: QueryVariable
+
+  /**
+   * The document type the projection is written for, when passed as the first argument.
+   * Without it, the projection is evaluated against every document type.
+   */
+  documentType?: string
+}
+
+/**
  * A module (file) containing extracted GROQ queries.
  * @public
  */
@@ -38,6 +55,9 @@ export interface ExtractedModule {
   errors: QueryExtractionError[]
   filename: string
   queries: ExtractedQuery[]
+
+  /** @beta */
+  projections?: ExtractedProjection[]
 }
 
 /**
@@ -53,6 +73,18 @@ export interface EvaluatedQuery extends ExtractedQuery {
 }
 
 /**
+ * An `ExtractedProjection` evaluated against the document types it applies to.
+ * @beta
+ */
+export interface EvaluatedProjection extends ExtractedProjection {
+  /** One result type alias per distinct result. */
+  declarations: {ast: t.ExportNamedDeclaration; code: string; id: t.Identifier}[]
+  /** The result alias for each document type the projection was evaluated against. */
+  resultsByDocumentType: {[documentType: string]: t.Identifier}
+  stats: TypeEvaluationStats
+}
+
+/**
  * A module containing queries that have been evaluated.
  * @public
  */
@@ -60,6 +92,9 @@ export interface EvaluatedModule {
   errors: (QueryEvaluationError | QueryExtractionError)[]
   filename: string
   queries: EvaluatedQuery[]
+
+  /** @beta */
+  projections?: EvaluatedProjection[]
 }
 
 interface QueryExtractionErrorOptions {
