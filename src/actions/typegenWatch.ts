@@ -71,7 +71,8 @@ function createTypegenRunner(onGenerate: () => Promise<unknown>): TypegenRunner 
 
 /**
  * Starts a file watcher that triggers typegen on changes.
- * Watches both query files (via patterns) and the schema JSON file.
+ * Watches query files (via patterns) and the schema JSON file. With `extractedSchema`, the
+ * schema is fixed for the life of the watcher, so only query files are watched.
  * Implements debouncing and concurrency control to prevent multiple generations.
  * @public
  */
@@ -109,7 +110,9 @@ export function runTypegenWatcher(options: RunTypegenOptions): {
     isAbsolute(pattern) ? pattern : join(workDir, pattern),
   )
   const absoluteSchemaPath = isAbsolute(schema) ? schema : join(workDir, schema)
-  const watchTargets = [...absoluteQueryPatterns, absoluteSchemaPath]
+  const watchTargets = options.extractedSchema
+    ? absoluteQueryPatterns
+    : [...absoluteQueryPatterns, absoluteSchemaPath]
 
   // perform initial generation
   debouncedGenerate()

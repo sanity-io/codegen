@@ -1,7 +1,11 @@
 import {WorkerChannel} from '@sanity/worker-channels'
+import {type SchemaType} from 'groq-js'
 
 import {TypeGenConfig} from '../readConfig.js'
-import {type TypegenWorkerChannel as CodegenTypegenWorkerChannel} from '../typescript/typeGenerator.js'
+import {
+  type TypegenWorkerChannel as CodegenTypegenWorkerChannel,
+  type TypegenResource,
+} from '../typescript/typeGenerator.js'
 
 /**
  * Data passed to the typegen worker thread.
@@ -15,8 +19,12 @@ export interface TypegenGenerateTypesWorkerData {
   /** Working directory (project root) */
   workDir: string
 
+  /** An extracted schema to use instead of reading `schemaPath`. */
+  extractedSchema?: SchemaType
   /** Whether to generate client method overloads */
   overloadClientMethods?: boolean
+  /** Register output under this resource. See `GenerateTypesOptions.resource`. */
+  resource?: TypegenResource
 }
 
 /**
@@ -56,20 +64,20 @@ export interface GenerationResult {
  * @public
  */
 export type TypegenProgressEvent =
-  | {type: 'schemaLoaded'}
-  | {type: 'typegenStarted'; expectedFileCount: number}
-  | {type: 'schemaTypesGenerated'; schemaTypesCount: number}
   | {
-      type: 'moduleEvaluated'
+      errors: string[]
       evaluatedFiles: number
       expectedFileCount: number
       queriesCount: number
       queryFilesCount: number
-      errors: string[]
+      type: 'moduleEvaluated'
     }
-  | {type: 'formatting'; formatterName: string}
-  | {type: 'formatFailed'; formatterName: string; message: string}
-  | {type: 'complete'; result: GenerationResult}
+  | {expectedFileCount: number; type: 'typegenStarted'}
+  | {formatterName: string; message: string; type: 'formatFailed'}
+  | {formatterName: string; type: 'formatting'}
+  | {result: GenerationResult; type: 'complete'}
+  | {schemaTypesCount: number; type: 'schemaTypesGenerated'}
+  | {type: 'schemaLoaded'}
 
 /**
  * Options for running a single typegen generation.
@@ -82,6 +90,22 @@ export interface RunTypegenOptions {
   /** Typegen configuration */
   config?: Partial<TypeGenConfig>
 
+  /**
+   * An extracted schema to generate from, used instead of reading `config.schema` from disk.
+   * Same shape as the output of `sanity schema extract`. Pass this when the schema is extracted
+   * in memory, for example after fetching and compiling a dataset's schema, so it does not have
+   * to be written to a temporary file first. The watcher then watches query files only.
+   * @beta
+   */
+  extractedSchema?: SchemaType
+
   /** Optional progress reporter. Called synchronously as generation proceeds. */
   onProgress?: (event: TypegenProgressEvent) => void
+
+  /**
+   * Also register the generated types under this project and dataset. See
+   * `GenerateTypesOptions.resource`.
+   * @beta
+   */
+  resource?: TypegenResource
 }

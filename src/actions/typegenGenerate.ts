@@ -26,7 +26,7 @@ import {
  * @public
  */
 export async function runTypegenGenerate(options: RunTypegenOptions): Promise<GenerationResult> {
-  const {config, workDir, onProgress} = options
+  const {config, extractedSchema, onProgress, resource, workDir} = options
 
   const {formatGeneratedCode, generates, overloadClientMethods, path, schema} =
     prepareConfig(config)
@@ -40,7 +40,10 @@ export async function runTypegenGenerate(options: RunTypegenOptions): Promise<Ge
   // set up worker
   const workerPath = new URL('../actions/typegenGenerate.worker.js', import.meta.url)
   const workerData: TypegenGenerateTypesWorkerData = {
+    // Structured-cloned into the worker. An extracted schema is plain JSON, so it survives.
+    extractedSchema,
     overloadClientMethods,
+    resource,
     schemaPath: schema,
     searchPath: path,
     workDir,

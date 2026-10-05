@@ -17,14 +17,7 @@ if (isMainThread || !parentPort) {
 
 registerBabel()
 
-async function main({
-  overloadClientMethods,
-  schemaPath,
-  searchPath,
-  workDir,
-}: TypegenGenerateTypesWorkerData) {
-  const report = WorkerChannelReporter.from<TypegenWorkerChannel>(parentPort)
-
+async function loadSchema(schemaPath: string, workDir: string) {
   const fullPath = isAbsolute(schemaPath) ? schemaPath : join(workDir, schemaPath)
 
   try {
@@ -41,7 +34,20 @@ async function main({
     throw err
   }
 
-  const schema = await readSchema(fullPath)
+  return readSchema(fullPath)
+}
+
+async function main({
+  extractedSchema,
+  overloadClientMethods,
+  resource,
+  schemaPath,
+  searchPath,
+  workDir,
+}: TypegenGenerateTypesWorkerData) {
+  const report = WorkerChannelReporter.from<TypegenWorkerChannel>(parentPort)
+
+  const schema = extractedSchema ?? (await loadSchema(schemaPath, workDir))
 
   report.event.loadedSchema()
 
@@ -57,9 +63,11 @@ async function main({
     overloadClientMethods,
     queries,
     reporter: report,
+    resource,
     root: workDir,
     schema,
-    schemaPath,
+    // Only a schema read from disk has a path worth naming in the output.
+    schemaPath: extractedSchema ? undefined : schemaPath,
   })
   report.event.typegenComplete(result)
 }

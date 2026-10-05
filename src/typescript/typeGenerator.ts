@@ -12,6 +12,8 @@ import {
   ARRAY_OF,
   INTERNAL_REFERENCE_SYMBOL,
   SANITY_QUERIES,
+  SANITY_QUERIES_BY_RESOURCE,
+  SANITY_SCHEMAS_BY_RESOURCE,
 } from './constants.js'
 import {
   computeOnce,
@@ -57,13 +59,43 @@ export type TypegenWorkerChannel = WorkerChannel.Definition<{
   }>
 }>
 
+/**
+ * The project and dataset a schema belongs to.
+ * @beta
+ */
+export interface TypegenResource {
+  dataset: string
+  projectId: string
+}
+
 /** @public */
 export interface GenerateTypesOptions {
   schema: SchemaType
 
+  /**
+   * Generate the client's flat `SanityQueries` map, which types `client.fetch`. Independent of
+   * `resource`. When an app generates types for more than one resource into one TypeScript
+   * program, set this to `false` for all of them: each file would declare the same query text
+   * in the flat map with a different type, and TypeScript rejects that merge.
+   */
   overloadClientMethods?: boolean
   queries?: AsyncIterable<ExtractedModule>
   reporter?: WorkerChannelReporter<TypegenWorkerChannel>
+  /**
+   * Also register the schema and query result types under this project and dataset, so one
+   * app can read more than one dataset and resolve the same query text to a different type for
+   * each. Types go into the global `SanitySchemasByResource` and `SanityQueriesByResource`
+   * interfaces that `@sanity/client` 8.7.0 and later declare, keyed `projectId.dataset`, the
+   * same string the App SDK uses for its runtime cache.
+   *
+   * The registration is a plain global declaration and never resolves `@sanity/client`, so it
+   * works when the client is only a dependency of another package, as with the App SDK under
+   * pnpm. The flat map's bridge does resolve it, so in that layout also set
+   * `overloadClientMethods: false`. Generate one file per resource per TypeScript program: two
+   * files registering the same resource conflict.
+   * @beta
+   */
+  resource?: TypegenResource
   root?: string
   schemaPath?: string
 }
@@ -232,29 +264,14 @@ export class TypeGenerator {
   }: GetQueryMapDeclarationOptions) {
     if (!overloadClientMethods) return {ast: t.program([]), code: ''}
 
-    const queries = evaluatedModules.flatMap((module) => module.queries)
-    if (queries.length === 0) return {ast: t.program([]), code: ''}
-
-    const typesByQuerystring: {[query: string]: string[]} = {}
-    for (const {id, query} of queries) {
-      typesByQuerystring[query] ??= []
-      typesByQuerystring[query].push(id.name)
-    }
+    const properties = TypeGenerator.getQueryResultProperties(evaluatedModules)
+    if (properties.length === 0) return {ast: t.program([]), code: ''}
 
     const queryReturnInterface = t.tsInterfaceDeclaration(
       SANITY_QUERIES,
       null,
       [],
-      t.tsInterfaceBody(
-        Object.entries(typesByQuerystring).map(([query, types]) => {
-          return t.tsPropertySignature(
-            t.stringLiteral(query),
-            t.tsTypeAnnotation(
-              t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type)))),
-            ),
-          )
-        }),
-      ),
+      t.tsInterfaceBody(properties),
     )
 
     const globalRegistry = t.addComments(tsDeclareGlobal([queryReturnInterface]), 'leading', [
@@ -290,7 +307,80 @@ export class TypeGenerator {
     return {ast, code}
   }
 
+  /**
+   * One property per distinct query string, typed as the union of every result type generated
+   * for it. Two variables holding the same query text share a key.
+   */
+  private static getQueryResultProperties(evaluatedModules: EvaluatedModule[]) {
+    const typesByQuerystring: {[query: string]: string[]} = {}
+    for (const {queries} of evaluatedModules) {
+      for (const {id, query} of queries) {
+        typesByQuerystring[query] ??= []
+        typesByQuerystring[query].push(id.name)
+      }
+    }
+
+    return Object.entries(typesByQuerystring).map(([query, types]) =>
+      t.tsPropertySignature(
+        t.stringLiteral(query),
+        t.tsTypeAnnotation(
+          t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type)))),
+        ),
+      ),
+    )
+  }
+
+  private static getResourceRegistryDeclaration({
+    evaluatedModules,
+    resource,
+  }: GetQueryMapDeclarationOptions & {resource: TypegenResource}) {
+    const key = `${resource.projectId}.${resource.dataset}`
+
+    const schemas = t.tsInterfaceDeclaration(
+      SANITY_SCHEMAS_BY_RESOURCE,
+      null,
+      [],
+      t.tsInterfaceBody([
+        t.tsPropertySignature(
+          t.stringLiteral(key),
+          t.tsTypeAnnotation(t.tsTypeReference(ALL_SANITY_SCHEMA_TYPES)),
+        ),
+      ]),
+    )
+
+    // Written even with no queries. An entry, empty or not, tells consumers this resource is
+    // generated, so a query missing from it is a miss rather than a reason to fall back.
+    const queries = t.tsInterfaceDeclaration(
+      SANITY_QUERIES_BY_RESOURCE,
+      null,
+      [],
+      t.tsInterfaceBody([
+        t.tsPropertySignature(
+          t.stringLiteral(key),
+          t.tsTypeAnnotation(
+            t.tsTypeLiteral(TypeGenerator.getQueryResultProperties(evaluatedModules)),
+          ),
+        ),
+      ]),
+    )
+
+    // No `declare module "@sanity/client"` bridge, unlike the flat map. These registries first
+    // shipped already global, so no client release needs one, and an augmentation would fail
+    // with TS2664 wherever `@sanity/client` is not resolvable from the generated file.
+    const ast = t.program([
+      t.addComments(tsDeclareGlobal([schemas, queries]), 'leading', [
+        {type: 'CommentLine', value: ` Resource TypeMap: ${key}`},
+      ]),
+    ])
+    const code = generateCode(ast)
+    return {ast, code}
+  }
+
   async generateTypes(options: GenerateTypesOptions) {
+    if (options.resource && (!options.resource.projectId || !options.resource.dataset)) {
+      throw new TypeError('A typegen resource needs both a projectId and a dataset')
+    }
+
     const {reporter: report} = options
     const internalReferenceSymbol = this.getInternalReferenceSymbolDeclaration()
     const schemaTypeGenerator = this.getSchemaTypeGenerator(options)
@@ -346,6 +436,16 @@ export class TypeGenerator {
     })
     program.body.push(...queryMapDeclaration.ast.body)
     code += queryMapDeclaration.code
+
+    if (options.resource) {
+      const resourceRegistry = TypeGenerator.getResourceRegistryDeclaration({
+        ...options,
+        evaluatedModules,
+        resource: options.resource,
+      })
+      program.body.push(...resourceRegistry.ast.body)
+      code += resourceRegistry.code
+    }
 
     report?.event.generatedQueryTypes({queryMapDeclaration})
 
