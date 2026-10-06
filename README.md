@@ -27,3 +27,31 @@ The two blocks serve different `@sanity/client` releases, and the same generated
 The bridge is the only line that resolves `@sanity/client`. When the client cannot be resolved from the generated file, TypeScript reports `TS2664: Invalid module name in augmentation` for it in a `.ts` file, while in a declaration file an augmentation whose module cannot be found is skipped silently. Pointing `generates` at a `.d.ts` path therefore keeps the file valid in such a layout, and the global registry still types the client that is installed.
 
 The earlier output, a `declare module '@sanity/client'` block that carried the whole map, keeps working with every `@sanity/client` release that accepts the new one.
+
+## Types per dataset
+
+Pass `resource: {projectId, dataset}` to a generation run and the generated file also registers its schema and query result types under that resource, keyed `projectId.dataset`:
+
+```ts
+// Resource TypeMap: abc123.production
+declare global {
+  interface SanitySchemasByResource {
+    'abc123.production': AllSanitySchemaTypes
+  }
+  interface SanityQueriesByResource {
+    'abc123.production': {
+      '*[_type == "post"]': PostsQueryResult
+    }
+  }
+}
+```
+
+An app that reads more than one dataset generates one file per dataset, and the same query text then resolves to a different type for each. `@sanity/client` 8.7.0 and later declare these interfaces, and the App SDK's hooks read them. The key is the same string the App SDK uses for its runtime cache.
+
+This block has no `declare module '@sanity/client'` bridge. The registries first shipped as globals, so no client release needs one, and without it the block never resolves `@sanity/client`. That matters when the client is only a dependency of another package, as with the App SDK under pnpm. The flat query type map's bridge still resolves it, so in that layout also set `overloadClientMethods: false` (it defaults to `true`), or point `generates` at a `.d.ts` path as described above.
+
+The flat query type map above is still controlled by `overloadClientMethods`, independently. When generating more than one resource into one TypeScript program, set `overloadClientMethods: false` for all of them: each file would declare the same query text in `SanityQueries` with a different type, which TypeScript rejects. For the same reason, generate one file per resource. Two files registering the same resource conflict.
+
+Without `resource`, the generated file is unchanged.
+
+`runTypegenGenerate` also accepts `extractedSchema`, a schema already in memory in the shape `sanity schema extract` writes, so a caller that fetched and compiled a schema does not have to write it to a temporary file first. The file then has no `// Source:` line naming a schema file, since there is none.

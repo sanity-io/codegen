@@ -21,6 +21,7 @@ export {registerBabel} from '../typescript/registerBabel.js'
 export {
   type GenerateTypesOptions,
   TypeGenerator,
+  type TypegenResource,
   type TypegenWorkerChannel,
 } from '../typescript/typeGenerator.js'
 export {
