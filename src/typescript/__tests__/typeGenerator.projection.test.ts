@@ -154,22 +154,38 @@ describe('TypeGenerator with projections', () => {
     expect(code).toContain('"{_id}": BookTitleResult_2;')
   })
 
-  test('reports a document type that is not in the schema, or not a document', async () => {
+  test('skips a document type the schema lacks when generating for a resource', async () => {
+    // Datasets of one app can scan the same files, and the type can belong to another dataset.
     const {code, errors} = await generate([
       projection('bookTitle', '{title}', 'book'),
-      projection('unknownType', '{title}', 'nope'),
-      projection('objectType', '{title}', 'seo'),
+      projection('movieTitle', '{title}', 'movie'),
     ])
+
+    expect(errors).toEqual([])
+    expect(code).not.toContain('MovieTitleResult')
+    expect(code).not.toContain('"movie"')
+    expect(code).toContain('"{title}": BookTitleResult;')
+  })
+
+  test('reports an object type passed as the document type', async () => {
+    const {code, errors} = await generate([projection('objectType', '{title}', 'seo')])
+
+    expect(errors).toEqual([
+      expect.stringContaining(`'objectType' in /src/projections.ts: "seo" is not a document type`),
+    ])
+    expect(code).not.toContain('ObjectTypeResult')
+  })
+
+  test('reports a document type the schema lacks when not generating for a resource', async () => {
+    const {errors} = await generate([projection('movieTitle', '{title}', 'movie')], {
+      resource: false,
+    })
 
     expect(errors).toEqual([
       expect.stringContaining(
-        `'unknownType' in /src/projections.ts: "nope" is not a document type`,
+        `'movieTitle' in /src/projections.ts: "movie" is not a document type`,
       ),
-      expect.stringContaining(`'objectType' in /src/projections.ts: "seo" is not a document type`),
     ])
-    expect(code).not.toContain('UnknownTypeResult')
-    expect(code).not.toContain('"nope"')
-    expect(code).toContain('"{title}": BookTitleResult;')
   })
 
   test('declares result types without a resource, but registers nothing', async () => {

@@ -204,25 +204,31 @@ export class TypeGenerator {
    * Evaluates a projection against its document type, or against every document type when it
    * names none. Document types with the same result share one alias, so a projection that does
    * not apply to most types does not repeat the same type once per document type.
+   *
+   * Returns `undefined` for a document type this schema does not have when generating for a
+   * resource: datasets of one app can scan the same files, and the type can belong to another.
    */
   private static evaluateProjection({
     currentIdentifiers,
     extractedProjection,
     filename,
+    resource,
     root,
     schemaTypeGenerator,
   }: {
     currentIdentifiers: Set<string>
     extractedProjection: ExtractedProjection
     filename: string
+    resource: TypegenResource | undefined
     root: string
     schemaTypeGenerator: SchemaTypeGenerator
-  }): EvaluatedProjection {
+  }): EvaluatedProjection | undefined {
     const {documentType, projection, variable} = extractedProjection
     const documentTypeNames = schemaTypeGenerator.documentTypeNames()
     // Without this, an unknown or non-document type evaluates to `null` and is registered as if
-    // it were a result.
+    // it were a result. An object type is a mistake in any run.
     if (documentType !== undefined && !documentTypeNames.includes(documentType)) {
+      if (resource && !schemaTypeGenerator.hasType(documentType)) return undefined
       throw new Error(`"${documentType}" is not a document type in the schema`)
     }
     const documentTypes = documentType === undefined ? documentTypeNames : [documentType]
@@ -276,6 +282,7 @@ export class TypeGenerator {
   private static async getEvaluatedModules({
     queries: extractedModules,
     reporter: report,
+    resource,
     root = process.cwd(),
     schemaTypeDeclarations,
     schemaTypeGenerator,
@@ -329,9 +336,11 @@ export class TypeGenerator {
             currentIdentifiers,
             extractedProjection,
             filename,
+            resource,
             root,
             schemaTypeGenerator,
           })
+          if (!evaluatedProjection) continue
           for (const {id} of evaluatedProjection.declarations) currentIdentifiers.add(id.name)
           projections.push(evaluatedProjection)
         } catch (cause) {
