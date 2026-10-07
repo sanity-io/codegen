@@ -2,7 +2,12 @@ import {type SchemaType} from 'groq-js'
 import {describe, expect, test} from 'vitest'
 
 import {TypeGenerator} from '../typeGenerator.js'
-import {type EvaluatedModule, type ExtractedModule, type ExtractedProjection} from '../types.js'
+import {
+  type EvaluatedModule,
+  type ExtractedModule,
+  type ExtractedProjection,
+  type ExtractedQuery,
+} from '../types.js'
 
 /** `book` and `author` documents that share no fields, plus an object type. */
 const schema: SchemaType = [
@@ -43,18 +48,23 @@ function projection(name: string, text: string, documentType?: string): Extracte
   }
 }
 
-async function* modules(...projections: ExtractedProjection[]): AsyncGenerator<ExtractedModule> {
+/** The projections' file comes first, so its names are claimed before the queries are read. */
+async function* modules(
+  projections: ExtractedProjection[],
+  queries: ExtractedQuery[],
+): AsyncGenerator<ExtractedModule> {
   yield {errors: [], filename: '/src/projections.ts', projections, queries: []}
+  if (queries.length > 0) yield {errors: [], filename: '/src/queries.ts', queries}
 }
 
 async function generate(
   projections: ExtractedProjection[],
-  {resource = true}: {resource?: boolean} = {},
+  {queries = [], resource = true}: {queries?: ExtractedQuery[]; resource?: boolean} = {},
 ) {
   const evaluatedModules: EvaluatedModule[] = []
   const {code} = await new TypeGenerator().generateTypes({
     overloadClientMethods: false,
-    queries: modules(...projections),
+    queries: modules(projections, queries),
     reporter: {
       event: {generatedQueryTypes: () => {}, generatedSchemaTypes: () => {}},
       stream: {
@@ -152,6 +162,21 @@ describe('TypeGenerator with projections', () => {
     expect(code.match(/export type BookTitleResult\b/g)).toHaveLength(1)
     expect(code).toContain('export type BookTitleResult_2 = {')
     expect(code).toContain('"{_id}": BookTitleResult_2;')
+  })
+
+  test('does not rename an existing query result type when a projection shares its name', async () => {
+    const {code} = await generate([projection('bookTitle', '{title}', 'book')], {
+      queries: [
+        {
+          filename: '/src/queries.ts',
+          query: '*[_type == "book"][0]{_id}',
+          variable: {id: {name: 'bookTitle', type: 'Identifier'}},
+        },
+      ],
+    })
+
+    expect(code).toContain('"*[_type == \\"book\\"][0]{_id}": BookTitleResult;')
+    expect(code).toContain('"{title}": BookTitleResult_2;')
   })
 
   test('skips a document type the schema lacks when generating for a resource', async () => {

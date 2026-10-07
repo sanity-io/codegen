@@ -33,6 +33,7 @@ import {
   type ExtractedProjection,
   QueryEvaluationError,
   type QueryExtractionError,
+  type TypeEvaluationStats,
 } from './types.js'
 
 /** @public */
@@ -202,28 +203,24 @@ export class TypeGenerator {
 
   /**
    * Evaluates a projection against its document type, or against every document type when it
-   * names none. Document types with the same result share one alias, so a projection that does
+   * names none. Document types with the same result share one group, so a projection that does
    * not apply to most types does not repeat the same type once per document type.
    *
    * Returns `undefined` for a document type this schema does not have when generating for a
    * resource: datasets of one app can scan the same files, and the type can belong to another.
    */
   private static evaluateProjection({
-    currentIdentifiers,
     extractedProjection,
     filename,
     resource,
-    root,
     schemaTypeGenerator,
   }: {
-    currentIdentifiers: Set<string>
     extractedProjection: ExtractedProjection
     filename: string
     resource: TypegenResource | undefined
-    root: string
     schemaTypeGenerator: SchemaTypeGenerator
-  }): EvaluatedProjection | undefined {
-    const {documentType, projection, variable} = extractedProjection
+  }): UnnamedProjection | undefined {
+    const {documentType, projection} = extractedProjection
     const documentTypeNames = schemaTypeGenerator.documentTypeNames()
     // Without this, an unknown or non-document type evaluates to `null` and is registered as if
     // it were a result. An object type is a mistake in any run.
@@ -249,34 +246,7 @@ export class TypeGenerator {
       stats.unknownTypes += result.stats.unknownTypes
     }
 
-    const identifiers = new Set(currentIdentifiers)
-    const trimmedProjection = projection.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
-    const declarations: EvaluatedProjection['declarations'] = []
-    const resultsByDocumentType: EvaluatedProjection['resultsByDocumentType'] = {}
-    for (const group of groups.values()) {
-      const name =
-        groups.size === 1
-          ? variable.id.name
-          : `${variable.id.name}${pascalCase(group.documentTypes[0]!)}`
-      const id = getUniqueIdentifierForName(resultSuffix(name), identifiers)
-      identifiers.add(id.name)
-      const ast = t.addComments(
-        t.exportNamedDeclaration(t.tsTypeAliasDeclaration(id, null, group.tsType)),
-        'leading',
-        [
-          {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
-          {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
-          {
-            type: 'CommentLine',
-            value: ` Projection on ${group.documentTypes.join(', ')}: ${trimmedProjection}`,
-          },
-        ],
-      )
-      declarations.push({ast, code: generateCode(ast), id})
-      for (const type of group.documentTypes) resultsByDocumentType[type] = id
-    }
-
-    return {...extractedProjection, declarations, resultsByDocumentType, stats}
+    return {extractedProjection, filename, groups: [...groups.values()], stats}
   }
 
   private static async getEvaluatedModules({
@@ -294,6 +264,7 @@ export class TypeGenerator {
 
     const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
     const evaluatedModuleResults: EvaluatedModule[] = []
+    const unnamedProjectionsByModule = new Map<EvaluatedModule, UnnamedProjection[]>()
 
     for await (const {filename, ...extractedModule} of extractedModules) {
       const queries: EvaluatedQuery[] = []
@@ -328,36 +299,38 @@ export class TypeGenerator {
         }
       }
 
-      const projections: EvaluatedProjection[] = []
+      const unnamedProjections: UnnamedProjection[] = []
       for (const extractedProjection of extractedModule.projections ?? []) {
         const {variable} = extractedProjection
         try {
-          const evaluatedProjection = TypeGenerator.evaluateProjection({
-            currentIdentifiers,
+          const unnamedProjection = TypeGenerator.evaluateProjection({
             extractedProjection,
             filename,
             resource,
-            root,
             schemaTypeGenerator,
           })
-          if (!evaluatedProjection) continue
-          for (const {id} of evaluatedProjection.declarations) currentIdentifiers.add(id.name)
-          projections.push(evaluatedProjection)
+          if (unnamedProjection) unnamedProjections.push(unnamedProjection)
         } catch (cause) {
           errors.push(new QueryEvaluationError({cause, filename, variable}))
         }
       }
 
-      const evaluatedModule: EvaluatedModule = {
-        errors,
-        filename,
-        projections,
-        queries,
-      }
+      // Streamed without projections, which are named once every file has been read.
+      const evaluatedModule: EvaluatedModule = {errors, filename, queries}
       report?.stream.evaluatedModules.emit(evaluatedModule)
       evaluatedModuleResults.push(evaluatedModule)
+      unnamedProjectionsByModule.set(evaluatedModule, unnamedProjections)
     }
     report?.stream.evaluatedModules.end()
+
+    // Projections are named after every query, so a query result keeps the name it had before
+    // projections were generated, whatever the file order. A projection sharing a query's
+    // variable name gets the numeric suffix instead.
+    for (const [evaluatedModule, unnamedProjections] of unnamedProjectionsByModule) {
+      evaluatedModule.projections = unnamedProjections.map((unnamedProjection) =>
+        TypeGenerator.nameProjection({currentIdentifiers, root, unnamedProjection}),
+      )
+    }
 
     return evaluatedModuleResults
   }
@@ -530,6 +503,46 @@ export class TypeGenerator {
     return {ast, code}
   }
 
+  /** Declares one result alias per group, with names not yet in `currentIdentifiers`. */
+  private static nameProjection({
+    currentIdentifiers,
+    root,
+    unnamedProjection: {extractedProjection, filename, groups, stats},
+  }: {
+    currentIdentifiers: Set<string>
+    root: string
+    unnamedProjection: UnnamedProjection
+  }): EvaluatedProjection {
+    const {projection, variable} = extractedProjection
+    const trimmedProjection = projection.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
+    const declarations: EvaluatedProjection['declarations'] = []
+    const resultsByDocumentType: EvaluatedProjection['resultsByDocumentType'] = {}
+    for (const group of groups) {
+      const name =
+        groups.length === 1
+          ? variable.id.name
+          : `${variable.id.name}${pascalCase(group.documentTypes[0]!)}`
+      const id = getUniqueIdentifierForName(resultSuffix(name), currentIdentifiers)
+      currentIdentifiers.add(id.name)
+      const ast = t.addComments(
+        t.exportNamedDeclaration(t.tsTypeAliasDeclaration(id, null, group.tsType)),
+        'leading',
+        [
+          {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
+          {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
+          {
+            type: 'CommentLine',
+            value: ` Projection on ${group.documentTypes.join(', ')}: ${trimmedProjection}`,
+          },
+        ],
+      )
+      declarations.push({ast, code: generateCode(ast), id})
+      for (const type of group.documentTypes) resultsByDocumentType[type] = id
+    }
+
+    return {...extractedProjection, declarations, resultsByDocumentType, stats}
+  }
+
   async generateTypes(options: GenerateTypesOptions) {
     if (options.resource && (!options.resource.projectId || !options.resource.dataset)) {
       throw new TypeError('A typegen resource needs both a projectId and a dataset')
@@ -614,6 +627,14 @@ export class TypeGenerator {
 
     return {ast: program, code}
   }
+}
+
+/** A projection's result types, grouped by document type, before they are given names. */
+interface UnnamedProjection {
+  extractedProjection: ExtractedProjection
+  filename: string
+  groups: {documentTypes: string[]; tsType: t.TSType}[]
+  stats: TypeEvaluationStats
 }
 
 /** `sanity.imageAsset` to `SanityImageAsset`, for naming a result alias after a document type. */
