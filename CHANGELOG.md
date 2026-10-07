@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.2.0](https://github.com/sanity-io/codegen/compare/codegen-v8.1.1...codegen-v8.2.0) (2026-10-07)
+
+
+### Features
+
+* register schema and query types per resource ([#170](https://github.com/sanity-io/codegen/issues/170)) ([99f0192](https://github.com/sanity-io/codegen/commit/99f0192edae1ad183c24889570f457355287eaa4))
+* type App SDK projections per resource ([#171](https://github.com/sanity-io/codegen/issues/171)) ([305875d](https://github.com/sanity-io/codegen/commit/305875dc44367725e80204a22684c613c2538048))
+
 ## [8.1.1](https://github.com/sanity-io/codegen/compare/codegen-v8.1.0...codegen-v8.1.1) (2026-09-18)
 
 
