@@ -11,6 +11,7 @@ import {
   ALL_SANITY_SCHEMA_TYPES,
   ARRAY_OF,
   INTERNAL_REFERENCE_SYMBOL,
+  SANITY_PROJECTIONS_BY_RESOURCE,
   SANITY_QUERIES,
   SANITY_QUERIES_BY_RESOURCE,
   SANITY_SCHEMAS_BY_RESOURCE,
@@ -26,10 +27,13 @@ import {
 import {SchemaTypeGenerator} from './schemaTypeGenerator.js'
 import {
   type EvaluatedModule,
+  type EvaluatedProjection,
   type EvaluatedQuery,
   type ExtractedModule,
+  type ExtractedProjection,
   QueryEvaluationError,
   type QueryExtractionError,
+  type TypeEvaluationStats,
 } from './types.js'
 
 /** @public */
@@ -197,9 +201,58 @@ export class TypeGenerator {
     return {ast, code, id}
   })
 
+  /**
+   * Evaluates a projection against its document type, or against every document type when it
+   * names none. Document types with the same result share one group, so a projection that does
+   * not apply to most types does not repeat the same type once per document type.
+   *
+   * Returns `undefined` for a document type this schema does not have when generating for a
+   * resource: datasets of one app can scan the same files, and the type can belong to another.
+   */
+  private static evaluateProjection({
+    extractedProjection,
+    filename,
+    resource,
+    schemaTypeGenerator,
+  }: {
+    extractedProjection: ExtractedProjection
+    filename: string
+    resource: TypegenResource | undefined
+    schemaTypeGenerator: SchemaTypeGenerator
+  }): UnnamedProjection | undefined {
+    const {documentType, projection} = extractedProjection
+    const documentTypeNames = schemaTypeGenerator.documentTypeNames()
+    // Without this, an unknown or non-document type evaluates to `null` and is registered as if
+    // it were a result. An object type is a mistake in any run.
+    if (documentType !== undefined && !documentTypeNames.includes(documentType)) {
+      if (resource && !schemaTypeGenerator.hasType(documentType)) return undefined
+      throw new Error(`"${documentType}" is not a document type in the schema`)
+    }
+    const documentTypes = documentType === undefined ? documentTypeNames : [documentType]
+
+    const groups = new Map<string, {documentTypes: string[]; tsType: t.TSType}>()
+    const stats = {allTypes: 0, emptyUnions: 0, unknownTypes: 0}
+    for (const type of documentTypes) {
+      const result = schemaTypeGenerator.evaluateProjection({documentType: type, projection})
+      const key = generateCode(result.tsType)
+      const group = groups.get(key)
+      if (group) {
+        group.documentTypes.push(type)
+        continue
+      }
+      groups.set(key, {documentTypes: [type], tsType: result.tsType})
+      stats.allTypes += result.stats.allTypes
+      stats.emptyUnions += result.stats.emptyUnions
+      stats.unknownTypes += result.stats.unknownTypes
+    }
+
+    return {extractedProjection, filename, groups: [...groups.values()], stats}
+  }
+
   private static async getEvaluatedModules({
     queries: extractedModules,
     reporter: report,
+    resource,
     root = process.cwd(),
     schemaTypeDeclarations,
     schemaTypeGenerator,
@@ -211,6 +264,7 @@ export class TypeGenerator {
 
     const currentIdentifiers = new Set<string>(schemaTypeDeclarations.map(({id}) => id.name))
     const evaluatedModuleResults: EvaluatedModule[] = []
+    const unnamedProjectionsByModule = new Map<EvaluatedModule, UnnamedProjection[]>()
 
     for await (const {filename, ...extractedModule} of extractedModules) {
       const queries: EvaluatedQuery[] = []
@@ -245,17 +299,75 @@ export class TypeGenerator {
         }
       }
 
-      const evaluatedModule: EvaluatedModule = {
-        errors,
-        filename,
-        queries,
+      const unnamedProjections: UnnamedProjection[] = []
+      for (const extractedProjection of extractedModule.projections ?? []) {
+        const {variable} = extractedProjection
+        try {
+          const unnamedProjection = TypeGenerator.evaluateProjection({
+            extractedProjection,
+            filename,
+            resource,
+            schemaTypeGenerator,
+          })
+          if (unnamedProjection) unnamedProjections.push(unnamedProjection)
+        } catch (cause) {
+          errors.push(new QueryEvaluationError({cause, filename, variable}))
+        }
       }
+
+      // Streamed without projections, which are named once every file has been read.
+      const evaluatedModule: EvaluatedModule = {errors, filename, queries}
       report?.stream.evaluatedModules.emit(evaluatedModule)
       evaluatedModuleResults.push(evaluatedModule)
+      unnamedProjectionsByModule.set(evaluatedModule, unnamedProjections)
     }
     report?.stream.evaluatedModules.end()
 
+    // Projections are named after every query, so a query result keeps the name it had before
+    // projections were generated, whatever the file order. A projection sharing a query's
+    // variable name gets the numeric suffix instead.
+    for (const [evaluatedModule, unnamedProjections] of unnamedProjectionsByModule) {
+      evaluatedModule.projections = unnamedProjections.map((unnamedProjection) =>
+        TypeGenerator.nameProjection({currentIdentifiers, root, unnamedProjection}),
+      )
+    }
+
     return evaluatedModuleResults
+  }
+
+  /**
+   * One property per document type, each holding one property per distinct projection string,
+   * typed as the union of every result alias generated for that pair.
+   */
+  private static getProjectionResultProperties(evaluatedModules: EvaluatedModule[]) {
+    const typesByDocumentType: {[documentType: string]: {[projection: string]: string[]}} = {}
+    for (const {projections = []} of evaluatedModules) {
+      for (const {projection, resultsByDocumentType} of projections) {
+        for (const [documentType, id] of Object.entries(resultsByDocumentType)) {
+          typesByDocumentType[documentType] ??= {}
+          typesByDocumentType[documentType][projection] ??= []
+          typesByDocumentType[documentType][projection].push(id.name)
+        }
+      }
+    }
+
+    return Object.entries(typesByDocumentType).map(([documentType, typesByProjection]) =>
+      t.tsPropertySignature(
+        t.stringLiteral(documentType),
+        t.tsTypeAnnotation(
+          t.tsTypeLiteral(
+            Object.entries(typesByProjection).map(([projection, types]) =>
+              t.tsPropertySignature(
+                t.stringLiteral(projection),
+                t.tsTypeAnnotation(
+                  t.tsUnionType(types.map((type) => t.tsTypeReference(t.identifier(type)))),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
   }
 
   private static async getQueryMapDeclaration({
@@ -348,8 +460,9 @@ export class TypeGenerator {
       ]),
     )
 
-    // Written even with no queries. An entry, empty or not, tells consumers this resource is
-    // generated, so a query missing from it is a miss rather than a reason to fall back.
+    // Written even with no queries, and the projection entry below even with no projections. An
+    // entry, empty or not, tells consumers this resource is generated, so a query or projection
+    // missing from it is a miss rather than a reason to fall back.
     const queries = t.tsInterfaceDeclaration(
       SANITY_QUERIES_BY_RESOURCE,
       null,
@@ -364,16 +477,70 @@ export class TypeGenerator {
       ]),
     )
 
+    const projections = t.tsInterfaceDeclaration(
+      SANITY_PROJECTIONS_BY_RESOURCE,
+      null,
+      [],
+      t.tsInterfaceBody([
+        t.tsPropertySignature(
+          t.stringLiteral(key),
+          t.tsTypeAnnotation(
+            t.tsTypeLiteral(TypeGenerator.getProjectionResultProperties(evaluatedModules)),
+          ),
+        ),
+      ]),
+    )
+
     // No `declare module "@sanity/client"` bridge, unlike the flat map. These registries first
     // shipped already global, so no client release needs one, and an augmentation would fail
     // with TS2664 wherever `@sanity/client` is not resolvable from the generated file.
     const ast = t.program([
-      t.addComments(tsDeclareGlobal([schemas, queries]), 'leading', [
+      t.addComments(tsDeclareGlobal([schemas, queries, projections]), 'leading', [
         {type: 'CommentLine', value: ` Resource TypeMap: ${key}`},
       ]),
     ])
     const code = generateCode(ast)
     return {ast, code}
+  }
+
+  /** Declares one result alias per group, with names not yet in `currentIdentifiers`. */
+  private static nameProjection({
+    currentIdentifiers,
+    root,
+    unnamedProjection: {extractedProjection, filename, groups, stats},
+  }: {
+    currentIdentifiers: Set<string>
+    root: string
+    unnamedProjection: UnnamedProjection
+  }): EvaluatedProjection {
+    const {projection, variable} = extractedProjection
+    const trimmedProjection = projection.replaceAll(/(\r\n|\n|\r)/gm, '').trim()
+    const declarations: EvaluatedProjection['declarations'] = []
+    const resultsByDocumentType: EvaluatedProjection['resultsByDocumentType'] = {}
+    for (const group of groups) {
+      const name =
+        groups.length === 1
+          ? variable.id.name
+          : `${variable.id.name}${pascalCase(group.documentTypes[0]!)}`
+      const id = getUniqueIdentifierForName(resultSuffix(name), currentIdentifiers)
+      currentIdentifiers.add(id.name)
+      const ast = t.addComments(
+        t.exportNamedDeclaration(t.tsTypeAliasDeclaration(id, null, group.tsType)),
+        'leading',
+        [
+          {type: 'CommentLine', value: ` Source: ${normalizePrintablePath(root, filename)}`},
+          {type: 'CommentLine', value: ` Variable: ${variable.id.name}`},
+          {
+            type: 'CommentLine',
+            value: ` Projection on ${group.documentTypes.join(', ')}: ${trimmedProjection}`,
+          },
+        ],
+      )
+      declarations.push({ast, code: generateCode(ast), id})
+      for (const type of group.documentTypes) resultsByDocumentType[type] = id
+    }
+
+    return {...extractedProjection, declarations, resultsByDocumentType, stats}
   }
 
   async generateTypes(options: GenerateTypesOptions) {
@@ -430,6 +597,15 @@ export class TypeGenerator {
       }
     }
 
+    for (const {projections = []} of evaluatedModules) {
+      for (const {declarations} of projections) {
+        for (const declaration of declarations) {
+          program.body.push(declaration.ast)
+          code += declaration.code
+        }
+      }
+    }
+
     const queryMapDeclaration = await TypeGenerator.getQueryMapDeclaration({
       ...options,
       evaluatedModules,
@@ -451,4 +627,21 @@ export class TypeGenerator {
 
     return {ast: program, code}
   }
+}
+
+/** A projection's result types, grouped by document type, before they are given names. */
+interface UnnamedProjection {
+  extractedProjection: ExtractedProjection
+  filename: string
+  groups: {documentTypes: string[]; tsType: t.TSType}[]
+  stats: TypeEvaluationStats
+}
+
+/** `sanity.imageAsset` to `SanityImageAsset`, for naming a result alias after a document type. */
+function pascalCase(value: string): string {
+  return value
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1))
+    .join('')
 }

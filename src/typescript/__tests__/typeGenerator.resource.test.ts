@@ -125,6 +125,9 @@ describe('TypeGenerator with a resource', () => {
             "*[_type == \\"book\\"]{title}": BooksQueryResult;
           };
         }
+        interface SanityProjectionsByResource {
+          "abc123.test": {};
+        }
       }
 
       "

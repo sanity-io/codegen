@@ -596,3 +596,84 @@ describe('findQueries with defineQuery', () => {
     expect(queryResult?.query).toEqual('*[_type == "author"]')
   })
 })
+
+describe('findQueries with defineProjection', () => {
+  test('finds a projection with its document type', () => {
+    const source = `
+      import {defineProjection} from '@sanity/sdk-react'
+      const bookTitle = defineProjection('book', '{title}')
+    `
+    const {errors, projections, queries} = findQueriesInSource(source, 'test.ts')
+
+    expect(errors).toEqual([])
+    expect(queries).toEqual([])
+    expect(projections).toHaveLength(1)
+    expect(projections?.[0]).toMatchObject({documentType: 'book', projection: '{title}'})
+    expect(projections?.[0]?.variable.id.name).toBe('bookTitle')
+  })
+
+  test('finds a projection without a document type, keeping its exact text', () => {
+    const source = `
+      import {defineProjection} from '@sanity/sdk'
+      const anyTitle = defineProjection(\`{
+        title
+      }\`)
+    `
+    const {projections} = findQueriesInSource(source, 'test.ts')
+
+    expect(projections).toHaveLength(1)
+    expect(projections?.[0]?.projection).toBe('{\n        title\n      }')
+    expect(projections?.[0]).not.toHaveProperty('documentType')
+  })
+
+  test('resolves constants for the document type and projection', () => {
+    const source = `
+      import * as sdk from '@sanity/sdk'
+      const TYPE = 'book'
+      const FIELDS = 'title'
+      const bookTitle = sdk.defineProjection(TYPE, \`{\${FIELDS}}\`)
+    `
+    const {projections} = findQueriesInSource(source, 'test.ts')
+
+    expect(projections?.[0]).toMatchObject({documentType: 'book', projection: '{title}'})
+  })
+
+  test('ignores defineProjection from other modules', () => {
+    const source = `
+      import {defineProjection} from 'groq'
+      import {defineProjection as other} from './local'
+      const fromGroq = defineProjection('book', '{title}')
+      const fromLocal = other('book', '{title}')
+    `
+    const {errors, projections} = findQueriesInSource(source, 'test.ts')
+
+    expect(errors).toEqual([])
+    expect(projections).toEqual([])
+  })
+
+  test('honors the ignore comment', () => {
+    const source = `
+      import {defineProjection} from '@sanity/sdk-react'
+      // @sanity-typegen-ignore
+      const bookTitle = defineProjection('book', '{title}')
+    `
+    const {projections} = findQueriesInSource(source, 'test.ts')
+
+    expect(projections).toEqual([])
+  })
+
+  test('reports a document type that cannot be resolved statically', () => {
+    const source = `
+      import {defineProjection} from '@sanity/sdk-react'
+      const bookTitle = defineProjection(getType(), '{title}')
+      const empty = defineProjection()
+    `
+    const {errors, projections} = findQueriesInSource(source, 'test.ts')
+
+    expect(projections).toEqual([])
+    expect(errors.map((error) => error.message)).toEqual([
+      expect.stringContaining(`variable 'bookTitle' in test.ts: Could not find binding`),
+      expect.stringContaining(`variable 'empty' in test.ts: defineProjection needs a projection`),
+    ])
+  })
+})

@@ -64,6 +64,24 @@ export class SchemaTypeGenerator {
     }
   }
 
+  /** The names of the schema's document types, in schema order. */
+  documentTypeNames(): string[] {
+    return this.schema.filter((schemaType) => schemaType.type === 'document').map(({name}) => name)
+  }
+
+  /**
+   * Evaluates a projection for one document type, as `*[_type == TYPE][0]PROJECTION` without
+   * the `null` for a missing document: the SDK projects documents it has found.
+   */
+  evaluateProjection({documentType, projection}: {documentType: string; projection: string}): {
+    stats: TypeEvaluationStats
+    tsType: t.TSType
+  } {
+    const ast = safeParseQuery(`*[_type == ${JSON.stringify(documentType)}][0]${projection}`)
+    const typeNode = withoutNull(typeEvaluate(ast, this.schema))
+    return {stats: walkAndCountQueryTypeNodeStats(typeNode), tsType: this.generateTsType(typeNode)}
+  }
+
   getType(typeName: string): {id: t.Identifier; tsType: t.TSType} | undefined {
     const tsType = this.tsTypes.get(typeName)
     const id = this.identifiers.get(typeName)
@@ -336,4 +354,10 @@ export function walkAndCountQueryTypeNodeStats(typeNode: TypeNode): TypeEvaluati
       return {allTypes: 1, emptyUnions: 0, unknownTypes: 0}
     }
   }
+}
+
+function withoutNull(typeNode: TypeNode): TypeNode {
+  if (typeNode.type !== 'union') return typeNode
+  const of = typeNode.of.filter((member) => member.type !== 'null')
+  return of.length === 1 ? of[0]! : {...typeNode, of}
 }

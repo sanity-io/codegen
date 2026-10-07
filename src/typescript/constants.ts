@@ -5,6 +5,7 @@ export const ALL_SANITY_SCHEMA_TYPES = t.identifier('AllSanitySchemaTypes')
 export const SANITY_QUERIES = t.identifier('SanityQueries')
 export const SANITY_SCHEMAS_BY_RESOURCE = t.identifier('SanitySchemasByResource')
 export const SANITY_QUERIES_BY_RESOURCE = t.identifier('SanityQueriesByResource')
+export const SANITY_PROJECTIONS_BY_RESOURCE = t.identifier('SanityProjectionsByResource')
 export const ARRAY_OF = t.identifier('ArrayOf')
 
 export const RESERVED_IDENTIFIERS = new Set<string>()

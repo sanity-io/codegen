@@ -43,6 +43,13 @@ declare global {
       '*[_type == "post"]': PostsQueryResult
     }
   }
+  interface SanityProjectionsByResource {
+    'abc123.production': {
+      post: {
+        '{title}': PostTitleResult
+      }
+    }
+  }
 }
 ```
 
@@ -53,5 +60,23 @@ This block has no `declare module '@sanity/client'` bridge. The registries first
 The flat query type map above is still controlled by `overloadClientMethods`, independently. When generating more than one resource into one TypeScript program, set `overloadClientMethods: false` for all of them: each file would declare the same query text in `SanityQueries` with a different type, which TypeScript rejects. For the same reason, generate one file per resource. Two files registering the same resource conflict.
 
 Without `resource`, the generated file is unchanged.
+
+### Projections
+
+Projections passed to the App SDK's `defineProjection`, imported from `@sanity/sdk` or `@sanity/sdk-react`, are typed too:
+
+```ts
+import {defineProjection} from '@sanity/sdk-react'
+
+// Evaluated for `post` documents only
+export const postTitle = defineProjection('post', '{title}')
+
+// Evaluated for every document type in the schema
+export const anyTitle = defineProjection('{title}')
+```
+
+Each projection is evaluated as `*[_type == TYPE][0]PROJECTION` for its document type, and its result type is the object without `null`, since the SDK only projects documents it has found. A projection without a document type is evaluated for every document type in the schema. Document types with the same result share one type alias; the others get an alias named after the document type, such as `AnyTitleAuthorResult`. Passing the document type keeps the generated file smaller.
+
+With `resource` set, results are registered in `SanityProjectionsByResource` by document type and then by the exact projection text, which is what `useDocumentProjection` looks up. Without `resource`, only the result type aliases are generated. As with `defineQuery`, only calls assigned to a variable are found, and the arguments must be resolvable without running the code. With `resource` set, a projection naming a document type the schema does not have is skipped, because another dataset scanning the same files can have it. A name that is an object type in the schema, or any unknown name in a run without `resource`, is reported as an error.
 
 `runTypegenGenerate` also accepts `extractedSchema`, a schema already in memory in the shape `sanity schema extract` writes, so a caller that fetched and compiled a schema does not have to write it to a temporary file first. The file then has no `// Source:` line naming a schema file, since there is none.

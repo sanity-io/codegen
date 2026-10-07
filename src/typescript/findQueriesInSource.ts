@@ -7,7 +7,12 @@ import * as babelTypes from '@babel/types'
 import {getBabelConfig} from '../getBabelConfig.js'
 import {resolveExpression} from './expressionResolvers.js'
 import {parseSourceFile} from './parseSource.js'
-import {type ExtractedModule, type ExtractedQuery, QueryExtractionError} from './types.js'
+import {
+  type ExtractedModule,
+  type ExtractedProjection,
+  type ExtractedQuery,
+  QueryExtractionError,
+} from './types.js'
 
 const require = createRequire(import.meta.url)
 
@@ -16,6 +21,8 @@ const defineQueryFunctionName = 'defineQuery'
 const groqModuleName = 'groq'
 const nextSanityModuleName = 'next-sanity'
 const sveltekitModuleName = '@sanity/sveltekit'
+const defineProjectionFunctionName = 'defineProjection'
+const projectionModuleNames = ['@sanity/sdk', '@sanity/sdk-react']
 
 const ignoreValue = '@sanity-typegen-ignore'
 
@@ -36,6 +43,7 @@ export function findQueriesInSource(
   resolver: NodeJS.RequireResolve = require.resolve,
 ): ExtractedModule {
   const queries: ExtractedQuery[] = []
+  const projections: ExtractedProjection[] = []
   const errors: QueryExtractionError[] = []
   const file = parseSourceFile(source, filename, babelConfig)
 
@@ -84,10 +92,41 @@ export function findQueriesInSource(
           errors.push(new QueryExtractionError({cause, filename, variable}))
         }
       }
+
+      // Look for `defineProjection(projection)` or `defineProjection(documentType, projection)`
+      // imported from the App SDK
+      if (
+        babelTypes.isIdentifier(node.id) &&
+        babelTypes.isCallExpression(init) &&
+        projectionModuleNames.some((moduleName) =>
+          isImportFrom(moduleName, defineProjectionFunctionName, scope, init.callee),
+        ) &&
+        !declarationLeadingCommentContains(path, ignoreValue)
+      ) {
+        const {end, id, start} = node
+        const variable = {id, ...(start && {start}), ...(end && {end})}
+        const resolve = (argument: babelTypes.Node) =>
+          resolveExpression({babelConfig, file, filename, node: argument, resolver, scope})
+
+        try {
+          const [first, second] = init.arguments
+          const projectionNode = second ?? first
+          if (!projectionNode) throw new Error('defineProjection needs a projection')
+
+          projections.push({
+            filename,
+            projection: resolve(projectionNode),
+            variable,
+            ...(second && first ? {documentType: resolve(first)} : {}),
+          })
+        } catch (cause) {
+          errors.push(new QueryExtractionError({cause, filename, variable}))
+        }
+      }
     },
   })
 
-  return {errors, filename, queries}
+  return {errors, filename, projections, queries}
 }
 
 function declarationLeadingCommentContains(path: NodePath, comment: string): boolean {
