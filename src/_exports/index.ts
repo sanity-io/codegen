@@ -18,6 +18,7 @@ export {findQueriesInPath} from '../typescript/findQueriesInPath.js'
 export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
 export {getResolver} from '../typescript/moduleResolver.js'
 export {registerBabel} from '../typescript/registerBabel.js'
+export {SchemaTypeGenerator} from '../typescript/schemaTypeGenerator.js'
 export {
   type GenerateTypesOptions,
   TypeGenerator,
