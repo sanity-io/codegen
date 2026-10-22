@@ -134,7 +134,15 @@ Nothing is declared globally and nothing is imported: no `SanityQueries` entry, 
 
 ### Setup
 
-TypeScript 7.1 can ask a package to turn a file it does not understand into a TypeScript module, through a [content mapper](https://devblogs.microsoft.com/typescript/announcing-typescript-7-1-beta/). This package is one for `.groq` files. Name it in `tsconfig.json`, next to `compilerOptions`, with the extension it should own and the schema to type against, and type-check with `--runExternalCode`, the flag that lets `tsc` run content mappers. The mapper then types every `.groq` import from the live file, with nothing written to disk, and reports a GROQ syntax error at the `.groq` file. The feature is this mapper; there is no generated declaration file and nothing for earlier TypeScript releases.
+This needs TypeScript 7.1 beta or later, the first release with [content mappers](https://devblogs.microsoft.com/typescript/announcing-typescript-7-1-beta/), and Node 22.12 or later, or Bun.
+
+```sh
+npm install -D @sanity/codegen typescript@beta
+```
+
+An app that runs on Node under the preload below, rather than as a bundle or on a Node with native text imports, loads its `.groq` files when it runs, so it installs `@sanity/codegen` as a dependency: `npm install @sanity/codegen`.
+
+Name the package in `tsconfig.json`, next to `compilerOptions`, with the extension it should own and the schema to type against, and type-check with `--runExternalCode`, the flag that lets `tsc` run content mappers. The mapper then types every `.groq` import from the live file, with nothing written to disk, and reports a GROQ syntax error at the `.groq` file. The feature is this mapper; there is no generated declaration file and nothing for earlier TypeScript releases.
 
 ```jsonc
 // tsconfig.json
@@ -161,7 +169,36 @@ TypeScript 7.1 can ask a package to turn a file it does not understand into a Ty
 }
 ```
 
-Editors ask for `--runExternalCode` through workspace trust.
+At run time the import attribute does the work: `import query from './posts.groq' with {type: 'text'}` makes the runtime or bundler deliver the file as a string, which most of them do on their own. Where one does not, one line fills in. None of these runs the type generator, and each delivers the file as it is, which is what the mapper types.
+
+| Runtime or bundler                            | `with {type: 'text'}`                    | Setup                                                                                                                       |
+| --------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Node 26.5 and later                           | behind `--experimental-import-text`      | the flag, or the preload below                                                                                              |
+| Node 22.12 and later                          | no                                       | `node --import @sanity/codegen/register main.ts`                                                                            |
+| Bun                                           | yes                                      | nothing                                                                                                                     |
+| Deno                                          | yes                                      | nothing; `deno check` types the import as `string`, since Deno's TypeScript has no content mappers                          |
+| esbuild, `Bun.build`                          | yes                                      | nothing                                                                                                                     |
+| webpack 5.102 and later, Rspack 1.7 and later | yes, as `asset/source`                   | nothing                                                                                                                     |
+| webpack before 5.102                          | no                                       | `{test: /\.groq$/, type: 'asset/source'}` in `module.rules`                                                                 |
+| Rolldown                                      | with `moduleTypes: {'.groq': 'text'}`    | that option                                                                                                                 |
+| Vite, Vitest, Rollup                          | not in Vite's dev server                 | `import groqFiles from '@sanity/codegen/vite'`, then `groqFiles()` in `plugins`                                             |
+| Sanity Studio, App SDK apps                   | as Vite                                  | the same plugin, in `vite: {plugins: [groqFiles()]}` of `sanity.cli.ts`                                                     |
+| Next.js 16.3 and later                        | yes under Turbopack; its webpack is 5.98 | `import {withGroqFiles} from '@sanity/codegen/next'`, then `export default withGroqFiles(nextConfig)` (below)               |
+| Jest                                          | rejected by Jest's ES module loader      | `'@sanity/codegen/jest'` in `transform`, for `'\\.groq$'`, with tests compiled to CommonJS, where Babel drops the attribute |
+
+`withGroqFiles` adds the `asset/source` rule for the webpack Next bundles and takes over the type check `next build` runs: Next runs the project's own `tsc` for it, but without `--runExternalCode`, which TypeScript takes from the command line only, so that check cannot start the mapper and fails on every `.groq` import. The wrapper turns Next's check off and runs the same check with the flag in `compiler.runAfterProductionCompile`, after the compile under either bundler; on a first build it runs `next typegen` first, since Next writes `next-env.d.ts` only later. A project that set `typescript.ignoreBuildErrors` itself gets no check.
+
+In VS Code or Cursor, install the TypeScript 7 extension, `TypeScriptTeam.native-preview`, and point it at the project's TypeScript, since the extension bundles 7.0:
+
+```jsonc
+// .vscode/settings.json
+{
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.tsdk.path": "./node_modules/typescript",
+}
+```
+
+Then trust the workspace, and allow the extension to use the workspace's TypeScript when it asks; editors ask for `--runExternalCode` that way.
 
 ### The schema
 
@@ -206,4 +243,4 @@ TypeScript resolves the alias to the file before asking the mapper, so each impo
 
 The mapper is also exported as `@sanity/codegen/content-mapper`, as `ContentMapper`, for a host that wants to drive it in-process.
 
-Two things are not inferred: a comparison against `^` is `unknown`, because the probe that resolves field types does not reproduce the parent scope, and groq-js does not yet model `score()`, so `_score` is `null` in a result and `[_score > 0]` empties it. A bundler plugin that loads the file as its string at runtime is a separate, following change; until then the import needs a loader that evaluates a `.groq` file to `export default "<its text>"`.
+Two things are not inferred: a comparison against `^` is `unknown`, because the probe that resolves field types does not reproduce the parent scope, and groq-js does not yet model `score()`, so `_score` is `null` in a result and `[_score > 0]` empties it.

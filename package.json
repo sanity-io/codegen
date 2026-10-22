@@ -20,7 +20,9 @@
   },
   "license": "MIT",
   "author": "Sanity.io <hello@sanity.io>",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/_exports/register.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -30,6 +32,22 @@
     "./content-mapper": {
       "source": "./src/_exports/content-mapper.ts",
       "default": "./dist/_exports/content-mapper.js"
+    },
+    "./jest": {
+      "source": "./src/_exports/jest.ts",
+      "default": "./dist/_exports/jest.js"
+    },
+    "./next": {
+      "source": "./src/_exports/next.ts",
+      "default": "./dist/_exports/next.js"
+    },
+    "./register": {
+      "source": "./src/_exports/register.ts",
+      "default": "./dist/_exports/register.js"
+    },
+    "./vite": {
+      "source": "./src/_exports/vite.ts",
+      "default": "./dist/_exports/vite.js"
     },
     "./package.json": "./package.json"
   },
@@ -89,6 +107,7 @@
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^24.13.3",
     "@vitest/coverage-istanbul": "^4.1.8",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
@@ -100,7 +119,8 @@
     "tinyglobby": "^0.2.17",
     "typescript": "^5.9.3",
     "vite": "^8.2.2",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "webpack": "^5.112.0"
   },
   "peerDependencies": {
     "oxfmt": "*"
