@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.3.0](https://github.com/sanity-io/codegen/compare/codegen-v8.2.0...codegen-v8.3.0) (2026-10-22)
+
+
+### Features
+
+* export SchemaTypeGenerator ([#176](https://github.com/sanity-io/codegen/issues/176)) ([9a52bd6](https://github.com/sanity-io/codegen/commit/9a52bd6dc61aba80f84fa6bbc1d08c5f2d709633))
+
 ## [8.2.0](https://github.com/sanity-io/codegen/compare/codegen-v8.1.1...codegen-v8.2.0) (2026-10-07)
 
 
