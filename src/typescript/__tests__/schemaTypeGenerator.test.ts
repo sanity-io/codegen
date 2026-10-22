@@ -538,6 +538,100 @@ describe(SchemaTypeGenerator.name, () => {
     })
   })
 
+  describe('as a public API', () => {
+    const schema = new SchemaTypeGenerator([
+      {
+        attributes: {
+          _id: {type: 'objectAttribute', value: {type: 'string'}},
+          _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+          author: {
+            optional: true,
+            type: 'objectAttribute',
+            value: {name: 'author.reference', type: 'inline'},
+          },
+          slug: {optional: true, type: 'objectAttribute', value: {name: 'slug', type: 'inline'}},
+        },
+        name: 'post',
+        type: 'document',
+      },
+      {
+        name: 'slug',
+        type: 'type',
+        value: {
+          attributes: {current: {optional: true, type: 'objectAttribute', value: {type: 'string'}}},
+          type: 'object',
+        },
+      },
+      {
+        name: 'author.reference',
+        type: 'type',
+        value: {
+          attributes: {_ref: {type: 'objectAttribute', value: {type: 'string'}}},
+          dereferencesTo: 'author',
+          type: 'object',
+        },
+      },
+    ])
+
+    test('is exported from the package entry', async () => {
+      const exports = await import('../../_exports/index.js')
+      expect(exports.SchemaTypeGenerator).toBe(SchemaTypeGenerator)
+    })
+
+    test('types a type node that is not in the schema, naming schema types by their alias', () => {
+      // The result type of a query, as groq-js's type evaluation produces it.
+      const result: TypeNode = {
+        of: {
+          attributes: {
+            author: {type: 'objectAttribute', value: {name: 'author.reference', type: 'inline'}},
+            slug: {
+              type: 'objectAttribute',
+              value: {of: [{name: 'slug', type: 'inline'}, {type: 'null'}], type: 'union'},
+            },
+            tags: {type: 'objectAttribute', value: {of: {type: 'string'}, type: 'array'}},
+          },
+          type: 'object',
+        },
+        type: 'array',
+      }
+
+      expect(generateCode(schema.generateTsType(result))).toMatchInlineSnapshot(`
+        "Array<{
+          author: AuthorReference;
+          slug: Slug | null;
+          tags: Array<string>;
+        }>"
+      `)
+      expect(generateCode(schema.generateTsType({type: 'string', value: 'admin'}))).toBe('"admin"')
+      expect(generateCode(schema.generateTsType({name: 'missing', type: 'inline'}))).toBe(
+        'unknown // Unable to locate the referenced type "missing" in schema',
+      )
+    })
+
+    test('reports when a generated type needs the ArrayOf helper', () => {
+      const fresh = new SchemaTypeGenerator([
+        {name: 'slug', type: 'type', value: {attributes: {}, type: 'object'}},
+      ])
+      expect(fresh.isArrayOfUsed()).toBe(false)
+      expect(
+        generateCode(fresh.generateTsType({of: {name: 'slug', type: 'inline'}, type: 'array'})),
+      ).toBe('ArrayOf<Slug>')
+      expect(fresh.isArrayOfUsed()).toBe(true)
+    })
+
+    test('iterates the schema types as {name, id, tsType}, in schema order', () => {
+      const entries = [...schema]
+      expect(entries.map(({name}) => name)).toEqual(['post', 'slug', 'author.reference'])
+      expect(entries.map(({id}) => id.name)).toEqual(['Post', 'Slug', 'AuthorReference'])
+      expect(generateCode(entries[2]?.tsType)).toMatchInlineSnapshot(`
+        "{
+          _ref: string;
+          [internalGroqTypeReferenceTo]?: "author";
+        }"
+      `)
+    })
+  })
+
   describe('evaluateQuery', () => {
     test('evaluates a query against the schema and returns the TS Type and stats', () => {
       const schema = new SchemaTypeGenerator([
