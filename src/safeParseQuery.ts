@@ -20,7 +20,7 @@ export function safeParseQuery(query: string): ExprNode {
  * @internal
  */
 export function* extractSliceParams(query: string): Generator<string> {
-  const sliceRegex = /\[(\$(\w+)|\d)\.\.\.?(\$(\w+)|\d)\]/g
+  const sliceRegex = /\[\s*(\$(\w+)|\d+)\s*\.\.\.?\s*(\$(\w+)|\d+)\s*\]/g
   const matches = query.matchAll(sliceRegex)
   if (!matches) {
     return

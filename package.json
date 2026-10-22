@@ -27,6 +27,10 @@
       "source": "./src/_exports/index.ts",
       "default": "./dist/_exports/index.js"
     },
+    "./content-mapper": {
+      "source": "./src/_exports/content-mapper.ts",
+      "default": "./dist/_exports/content-mapper.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/_exports/index.js",
@@ -112,5 +116,14 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "typescript": {
+    "contentMapper": {
+      "dynamicConfig": true,
+      "exec": [
+        "node",
+        "dist/bin/contentMapper.js"
+      ]
+    }
   }
 }

@@ -1,0 +1,8 @@
+{
+  "name": "@repo/typescript-7",
+  "private": true,
+  "description": "The TypeScript 7.1 the content mapper tests run against, kept out of the root so its tsc bin does not shadow the repository's TypeScript 5.",
+  "devDependencies": {
+    "typescript": "7.1.0-beta"
+  }
+}

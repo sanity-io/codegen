@@ -3,10 +3,22 @@ import process from 'node:process'
 
 import * as t from '@babel/types'
 import {type WorkerChannel, type WorkerChannelReporter} from '@sanity/worker-channels'
-import {type SchemaType} from 'groq-js'
+import {GroqSyntaxError, type SchemaType} from 'groq-js'
 import {createSelector} from 'reselect'
 
 import {resultSuffix} from '../casing.js'
+import {type ExprNode} from '../groqFiles/groqAst.js'
+import {
+  type GroqFileDiagnostic,
+  GroqFileDiagnosticCode,
+  type GroqModule,
+  paramsType,
+  renderGroqModule,
+  type RenderGroqModuleOptions,
+} from '../groqFiles/groqModule.js'
+import {inferParams} from '../groqFiles/inferParams.js'
+import {safeParseQuery} from '../safeParseQuery.js'
+import {getMessage} from '../utils/getMessage.js'
 import {
   ALL_SANITY_SCHEMA_TYPES,
   ARRAY_OF,
@@ -101,6 +113,23 @@ export interface GenerateTypesOptions {
    */
   resource?: TypegenResource
   root?: string
+  schemaPath?: string
+}
+
+/**
+ * Options for typing one `.groq` file.
+ * @beta
+ */
+export interface GenerateGroqModuleOptions {
+  /** The file's content, which is also the query: a text import delivers the file as it is. */
+  content: string
+  /** The `.groq` file, named in a comment at the top of the module. */
+  filename: string
+  schema: SchemaType
+
+  /** The directory file names in comments are relative to. Defaults to the working directory. */
+  root?: string
+  /** The schema file, named in a comment at the top of the module. */
   schemaPath?: string
 }
 
@@ -541,6 +570,88 @@ export class TypeGenerator {
     }
 
     return {...extractedProjection, declarations, resultsByDocumentType, stats}
+  }
+
+  /**
+   * Types one `.groq` file as a TypeScript module, so a text import of the file,
+   * `import query from './file.groq' with {type: 'text'}`, gives a query string that carries
+   * its own types:
+   *
+   * ```ts
+   * export type QueryResponse = Array<{title: string | null}>
+   * export type QueryParams = {slug: string}
+   * declare const query: '*[_type == "post" && slug.current == $slug]{title}\n' & {
+   *   readonly __groqResult?: QueryResponse
+   *   readonly __groqParams?: QueryParams
+   * }
+   * export default query
+   * ```
+   *
+   * The literal is the file's exact content, whitespace and all, because that is what a text
+   * import evaluates to at run time; GROQ does not mind the whitespace. The result type is
+   * evaluated as `generateTypes` evaluates a `defineQuery` call, so `[0]` becomes `T | null`.
+   * Params are inferred from the `$` placeholders: a placeholder compared with a field takes the
+   * field's type, slice bounds are numbers, and anything else is `unknown`. The module declares
+   * nothing globally and imports nothing, so two files with the same text are interchangeable
+   * and the brand can be read by any client structurally.
+   *
+   * A file that cannot be typed still yields a complete module, with `unknown` for what could
+   * not be inferred, plus a diagnostic saying why.
+   * @beta
+   */
+  generateGroqModule(options: GenerateGroqModuleOptions): GroqModule {
+    const {content, filename, root, schema, schemaPath} = options
+    const query = content
+    const diagnostics: GroqFileDiagnostic[] = []
+    const notes: string[] = []
+    const report = (
+      code: GroqFileDiagnosticCode,
+      messageText: string,
+      start: number,
+      length: number,
+    ) => {
+      const from = Math.min(start, content.length)
+      diagnostics.push({
+        code,
+        length: Math.min(length, content.length - from),
+        messageText,
+        start: from,
+      })
+    }
+    const render = (parts: Pick<RenderGroqModuleOptions, 'params' | 'result'>): GroqModule => ({
+      ...renderGroqModule({filename, notes, query, root, schemaPath, ...parts}),
+      diagnostics,
+      query,
+    })
+
+    if (query.trim().length === 0) {
+      report(GroqFileDiagnosticCode.EmptyFile, 'This .groq file has no query.', 0, content.length)
+      return render({})
+    }
+
+    let ast: ExprNode
+    try {
+      ast = safeParseQuery(query) as ExprNode
+    } catch (error) {
+      const position = error instanceof GroqSyntaxError ? error.position : 0
+      report(GroqFileDiagnosticCode.SyntaxError, getMessage(error), position, 1)
+      return render({})
+    }
+
+    try {
+      const schemaTypes = this.getSchemaTypeGenerator(options)
+      const params = new Map<string, t.TSType>()
+      for (const [name, type] of inferParams({ast, query, schema})) {
+        params.set(name, schemaTypes.generateTsType(type))
+      }
+      const {tsType} = schemaTypes.evaluateQuery({query})
+      return render({params: paramsType(params), result: {schemaTypes, tsType}})
+    } catch (error) {
+      const message = `Could not type this query against the schema: ${getMessage(error)}`
+      report(GroqFileDiagnosticCode.EvaluationFailed, message, 0, query.length)
+      notes.push(message)
+      return render({})
+    }
   }
 
   async generateTypes(options: GenerateTypesOptions) {

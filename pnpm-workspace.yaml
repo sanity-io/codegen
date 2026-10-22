@@ -1,6 +1,7 @@
 packages:
   - .
   - dev
+  - 'test/*'
   - 'tmp/*'
 allowBuilds:
   '@swc/core': true

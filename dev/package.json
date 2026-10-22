@@ -2,12 +2,16 @@
   "name": "playground",
   "private": true,
   "type": "module",
+  "scripts": {
+    "typecheck": "tsc --runExternalCode --noEmit -p ."
+  },
   "dependencies": {
+    "@sanity/client": "^8.10.1",
     "groq": "^6.0.0",
     "sanity": "^6.0.0"
   },
   "devDependencies": {
     "@sanity/codegen": "workspace:*",
-    "typescript": "^5.9.3"
+    "typescript": "7.1.0-beta"
   }
 }

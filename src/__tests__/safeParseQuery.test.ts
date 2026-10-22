@@ -27,6 +27,14 @@ const variants = [
     params: ['from', 'to', 'limit'],
     query: '*[_type == "author"][$from...$to] { name, "foo": *[_type == "bar"][0...$limit] }',
   },
+  {
+    params: ['to'],
+    query: '*[_type == "author"][10...$to]',
+  },
+  {
+    params: ['from', 'to'],
+    query: '*[_type == "author"][ $from .. $to ]',
+  },
 ]
 describe('safeParseQuery', () => {
   test.each(variants)('can extract: $query', async (variant) => {

@@ -6,6 +6,13 @@ export {
   type TypegenProgressEvent,
 } from '../actions/types.js'
 export {
+  type GroqFileDiagnostic,
+  GroqFileDiagnosticCode,
+  type GroqModule,
+} from '../groqFiles/groqModule.js'
+export {type GroqFilesOptions, type GroqFilesSchema} from '../groqFiles/schemas.js'
+export {type GroqParams, type GroqQuery, type GroqResult} from '../groqFiles/types.js'
+export {
   type CodegenConfig,
   configDefinition,
   readConfig,
@@ -19,6 +26,7 @@ export {findQueriesInSource} from '../typescript/findQueriesInSource.js'
 export {getResolver} from '../typescript/moduleResolver.js'
 export {registerBabel} from '../typescript/registerBabel.js'
 export {
+  type GenerateGroqModuleOptions,
   type GenerateTypesOptions,
   TypeGenerator,
   type TypegenResource,

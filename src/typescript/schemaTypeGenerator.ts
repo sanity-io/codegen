@@ -82,6 +82,63 @@ export class SchemaTypeGenerator {
     return {stats: walkAndCountQueryTypeNodeStats(typeNode), tsType: this.generateTsType(typeNode)}
   }
 
+  /** The TypeScript type for a groq-js type node, naming schema types by their alias. */
+  generateTsType(typeNode: DocumentSchemaType | TypeDeclarationSchemaType | TypeNode): t.TSType {
+    switch (typeNode.type) {
+      case 'array': {
+        return this.generateArrayTsType(typeNode)
+      }
+      case 'boolean': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.booleanLiteral(typeNode.value))
+        }
+        return t.tsBooleanKeyword()
+      }
+      case 'document': {
+        return this.generateDocumentTsType(typeNode)
+      }
+      case 'inline': {
+        return this.generateInlineTsType(typeNode)
+      }
+      case 'null': {
+        return t.tsNullKeyword()
+      }
+      case 'number': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.numericLiteral(typeNode.value))
+        }
+        return t.tsNumberKeyword()
+      }
+      case 'object': {
+        return this.generateObjectTsType(typeNode)
+      }
+      case 'string': {
+        if (typeNode.value !== undefined) {
+          return t.tsLiteralType(t.stringLiteral(typeNode.value))
+        }
+        return t.tsStringKeyword()
+      }
+      case 'type': {
+        return this.generateTsType(typeNode.value)
+      }
+      case 'union': {
+        return this.generateUnionTsType(typeNode)
+      }
+      case 'unknown': {
+        return t.tsUnknownKeyword()
+      }
+
+      default: {
+        throw new Error(
+          `Encountered unsupported node type "${
+            // @ts-expect-error This should never happen
+            typeNode.type
+          }" while generating schema types`,
+        )
+      }
+    }
+  }
+
   getType(typeName: string): {id: t.Identifier; tsType: t.TSType} | undefined {
     const tsType = this.tsTypes.get(typeName)
     const id = this.identifiers.get(typeName)
@@ -229,64 +286,6 @@ export class SchemaTypeGenerator {
     propertySignature.optional = attribute.optional
 
     return propertySignature
-  }
-
-  private generateTsType(
-    typeNode: DocumentSchemaType | TypeDeclarationSchemaType | TypeNode,
-  ): t.TSType {
-    switch (typeNode.type) {
-      case 'array': {
-        return this.generateArrayTsType(typeNode)
-      }
-      case 'boolean': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.booleanLiteral(typeNode.value))
-        }
-        return t.tsBooleanKeyword()
-      }
-      case 'document': {
-        return this.generateDocumentTsType(typeNode)
-      }
-      case 'inline': {
-        return this.generateInlineTsType(typeNode)
-      }
-      case 'null': {
-        return t.tsNullKeyword()
-      }
-      case 'number': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.numericLiteral(typeNode.value))
-        }
-        return t.tsNumberKeyword()
-      }
-      case 'object': {
-        return this.generateObjectTsType(typeNode)
-      }
-      case 'string': {
-        if (typeNode.value !== undefined) {
-          return t.tsLiteralType(t.stringLiteral(typeNode.value))
-        }
-        return t.tsStringKeyword()
-      }
-      case 'type': {
-        return this.generateTsType(typeNode.value)
-      }
-      case 'union': {
-        return this.generateUnionTsType(typeNode)
-      }
-      case 'unknown': {
-        return t.tsUnknownKeyword()
-      }
-
-      default: {
-        throw new Error(
-          `Encountered unsupported node type "${
-            // @ts-expect-error This should never happen
-            typeNode.type
-          }" while generating schema types`,
-        )
-      }
-    }
   }
 
   // Helper function used to generate TS types for union type nodes.

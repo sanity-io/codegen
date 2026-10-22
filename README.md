@@ -80,3 +80,130 @@ Each projection is evaluated as `*[_type == TYPE][0]PROJECTION` for its document
 With `resource` set, results are registered in `SanityProjectionsByResource` by document type and then by the exact projection text, which is what `useDocumentProjection` looks up. Without `resource`, only the result type aliases are generated. As with `defineQuery`, only calls assigned to a variable are found, and the arguments must be resolvable without running the code. With `resource` set, a projection naming a document type the schema does not have is skipped, because another dataset scanning the same files can have it. A name that is an object type in the schema, or any unknown name in a run without `resource`, is reported as an error.
 
 `runTypegenGenerate` also accepts `extractedSchema`, a schema already in memory in the shape `sanity schema extract` writes, so a caller that fetched and compiled a schema does not have to write it to a temporary file first. The file then has no `// Source:` line naming a schema file, since there is none.
+
+## Importing `.groq` files
+
+Experimental and opt-in, for TypeScript 7.1 and later. A query kept in its own file can be imported as a typed query:
+
+```groq
+// postsBySearch.groq
+*[_type == "post"] | score(
+  boost(title match $searchQuery, 10),
+  text::semanticSimilarity($searchQuery)
+) | order(_score desc) [$start...$end] {
+  _id,
+  title,
+  slug,
+  "_score": _score
+}
+```
+
+```ts
+import postsBySearch from './postsBySearch.groq' with {type: 'text'}
+import type {QueryParams, QueryResponse} from './postsBySearch.groq'
+
+const posts = await client.fetch(postsBySearch, {searchQuery: 'foo', start: 0, end: 10})
+//    ^? QueryResponse, with the params checked, no generic argument and no global registry
+
+const params = {searchQuery: 'foo', start: 0, end: 10} satisfies QueryParams
+
+function PostsList(props: {data: QueryResponse}) {}
+```
+
+The import attribute, `with {type: 'text'}`, is the standard way to import a file as its text (TC39 [import text](https://github.com/tc39/proposal-import-text), stage 3): at run time the default export is the file's content, a string, delivered by the runtime or bundler itself. TypeScript ignores the attribute and asks the content mapper for the module's type instead. A type-only import needs no attribute; a value import does, because it runs. Inline type specifiers work too: `import postsBySearch, {type QueryResponse} from './postsBySearch.groq' with {type: 'text'}`.
+
+The module has three exports. The default export is the query string itself, typed as its own literal with the result and params types attached as optional phantom properties, so it is still assignable to `string` and goes anywhere a query string goes. The literal is the file's exact content, whitespace and trailing newline included, because that is what the text import evaluates to; GROQ does not mind. `QueryResponse` is the result type, evaluated as a `defineQuery` call is, so `[0]` is `T | null`. `QueryParams` is the object the `$` placeholders expect: a placeholder compared with a field takes the field's type, including string enums and arrays, `$x in field` takes the element type and `field in $xs` the array, `match` takes a string, slice bounds are numbers, and a placeholder the schema says nothing about is `unknown`, which still makes the key required. A query without placeholders has `QueryParams = Record<string, never>`.
+
+```ts
+// What `import postsBySearch from './postsBySearch.groq' with {type: 'text'}` resolves to
+export type QueryResponse = Array<{
+  _id: string
+  title: string | null
+  slug: Slug | null
+  _score: null
+}>
+export type QueryParams = {searchQuery: string; start: number; end: number}
+declare const query: '*[_type == "post"] | score(…\n' & {
+  readonly __groqResult?: QueryResponse
+  readonly __groqParams?: QueryParams
+}
+export default query
+```
+
+Nothing is declared globally and nothing is imported: no `SanityQueries` entry, no `declare module '@sanity/client'`. Two files with the same query text have the same type. `@sanity/client` reads the brand structurally, with `G extends {readonly __groqResult?: infer R}` for the result and the same property for the params ([sanity-io/client#1373](https://github.com/sanity-io/client/pull/1373)), so the two packages never import each other. The brand is exported from this package as `GroqQuery<Query, Result, Params>` for reference, with `GroqResult<Q>` and `GroqParams<Q>` to read it back. Client releases that predate the brand accept the import, since it is a string, and resolve to `any`; pass the type to them explicitly: `client.fetch<QueryResponse>(postsBySearch, params)`.
+
+### Setup
+
+TypeScript 7.1 can ask a package to turn a file it does not understand into a TypeScript module, through a [content mapper](https://devblogs.microsoft.com/typescript/announcing-typescript-7-1-beta/). This package is one for `.groq` files. Name it in `tsconfig.json`, next to `compilerOptions`, with the extension it should own and the schema to type against, and type-check with `--runExternalCode`, the flag that lets `tsc` run content mappers. The mapper then types every `.groq` import from the live file, with nothing written to disk, and reports a GROQ syntax error at the `.groq` file. The feature is this mapper; there is no generated declaration file and nothing for earlier TypeScript releases.
+
+```jsonc
+// tsconfig.json
+{
+  "compilerOptions": {
+    /* ... */
+  },
+  "contentMappers": [
+    {
+      "package": "@sanity/codegen",
+      "extensions": [".groq"],
+      "options": {"schema": "./schema.json"},
+    },
+  ],
+}
+```
+
+```jsonc
+// package.json
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit --runExternalCode",
+  },
+}
+```
+
+Editors ask for `--runExternalCode` through workspace trust.
+
+### The schema
+
+The tsconfig is the only place the mapper is configured. `schema` is the file `sanity schema extract` writes, relative to the tsconfig, and is required: the mapper reads no other configuration, and an entry without it is reported against the entry. The schema file is watched, so extracting it again retypes the imports. A file that cannot be typed, because the query does not parse or the schema file is missing, still resolves, with `unknown` for what could not be inferred, alongside the diagnostic that says why.
+
+A codebase that queries more than one project or dataset has one schema per folder. TypeScript registers a content mapper by file extension alone, with no folder on the entry, and rejects two entries for `.groq` with TS18067, so the folders are scoped inside the one entry, with `schemas`: each item pairs one or more folders with the schema for the `.groq` files under them. A file is typed against the schema of the longest folder that contains it, and against `schema` when none does; without a `schema`, a file outside every folder gets a diagnostic saying so. Folders, rather than a second file ending such as `.shop.groq`, so that a query file is named for what it is wherever it lives.
+
+```jsonc
+{
+  "contentMappers": [
+    {
+      "package": "@sanity/codegen",
+      "extensions": [".groq"],
+      "options": {
+        "schemas": [
+          {"include": "src/queries/blog", "schema": "schemas/blog.json"},
+          {"include": ["src/queries/shop", "src/queries/checkout"], "schema": "schemas/shop.json"},
+        ],
+      },
+    },
+  ],
+}
+```
+
+The folders also make for short import paths. A `package.json` `imports` entry names them once:
+
+```jsonc
+// package.json
+{
+  "imports": {
+    "#queries/*": "./src/queries/*",
+  },
+}
+```
+
+```ts
+import posts from '#queries/blog/posts.groq' with {type: 'text'}
+import products from '#queries/shop/products.groq' with {type: 'text'}
+```
+
+TypeScript resolves the alias to the file before asking the mapper, so each import is typed against its folder's schema, and Node, Bun, Deno and the bundlers resolve `imports` on their own.
+
+The mapper is also exported as `@sanity/codegen/content-mapper`, as `ContentMapper`, for a host that wants to drive it in-process.
+
+Two things are not inferred: a comparison against `^` is `unknown`, because the probe that resolves field types does not reproduce the parent scope, and groq-js does not yet model `score()`, so `_score` is `null` in a result and `[_score > 0]` empties it. A bundler plugin that loads the file as its string at runtime is a separate, following change; until then the import needs a loader that evaluates a `.groq` file to `export default "<its text>"`.
