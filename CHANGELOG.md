@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.3.1](https://github.com/sanity-io/codegen/compare/codegen-v8.3.0...codegen-v8.3.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* read multi-digit and spaced slice bounds when substituting slice params ([#179](https://github.com/sanity-io/codegen/issues/179)) ([aa03469](https://github.com/sanity-io/codegen/commit/aa03469b8f07db4d315e78b15ba28a3748c38e67))
+
 ## [8.3.0](https://github.com/sanity-io/codegen/compare/codegen-v8.2.0...codegen-v8.3.0) (2026-10-22)
 
 
