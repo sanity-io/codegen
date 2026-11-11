@@ -321,6 +321,72 @@ describe('findQueries with defineQuery', () => {
       expect(queryResult?.query).toEqual('*[_type == "author"]')
     })
 
+    test('inlines a template literal argument that has no interpolations', () => {
+      const source = `
+      import { defineQuery } from "groq";
+      const suffix = "2";
+      const getType = (type) => \`\${type}\${suffix}\`;
+      const query = defineQuery(\`*[_type == "\${getType(\`author\`)}"]\`);
+    `
+
+      const {errors, queries} = findQueriesInSource(source, 'test.ts')
+
+      expect(errors).toEqual([])
+      expect(queries[0]?.query).toEqual('*[_type == "author2"]')
+    })
+
+    test('reports an error when a helper forwards its parameter to another helper', () => {
+      const source = `
+      import { defineQuery } from "groq";
+      const typeSelect = (type) => \`select(_type == "\${type}" => "\${type}")\`;
+      const projection = (type) => \`{ "type": \${typeSelect(type)} }\`;
+      export const researchQuery = defineQuery(\`*[0]\${projection("essay")}\`);
+    `
+
+      const {errors, queries} = findQueriesInSource(source, 'research.ts')
+
+      expect(queries).toEqual([])
+      expect(errors).toHaveLength(1)
+      expect(errors[0]?.message).toContain(
+        `Error while extracting query from variable 'researchQuery' in research.ts: Could not find binding for node "type"`,
+      )
+      expect(errors[0]?.message).not.toMatch(/Maximum call stack/)
+    })
+
+    test('does not loop when a helper forwards its parameter inside a template literal', () => {
+      const source = `
+      import { defineQuery } from "groq";
+      const typeSelect = (type) => \`select(_type == "\${type}" => "\${type}")\`;
+      const projection = (type) => \`{ "type": \${typeSelect(\`\${type}\`)} }\`;
+      export const researchQuery = defineQuery(\`*[0]\${projection("essay")}\`);
+    `
+
+      const {errors, queries} = findQueriesInSource(source, 'research.ts')
+
+      expect(queries).toEqual([])
+      expect(errors).toHaveLength(1)
+      expect(errors[0]?.message).not.toMatch(/Maximum call stack/)
+      expect(errors[0]?.message).toContain(
+        'Could not forward parameter "type" through a template literal',
+      )
+    })
+
+    test('does not loop when the forwarded template wraps the parameter again', () => {
+      const source = `
+      import { defineQuery } from "groq";
+      const typeSelect = (type) => \`select(\${type})\`;
+      const projection = (type) => \`{ \${typeSelect(\`\${\`\${type}\`}\`)} }\`;
+      export const researchQuery = defineQuery(\`*[0]\${projection("essay")}\`);
+    `
+
+      const {errors, queries} = findQueriesInSource(source, 'research.ts')
+
+      expect(queries).toEqual([])
+      expect(errors).toHaveLength(1)
+      expect(errors[0]?.message).toContain('Could not find binding for node "type"')
+      expect(errors[0]?.message).not.toMatch(/Maximum call stack/)
+    })
+
     test('with block comment', () => {
       const source = `
         import { defineQuery } from "groq";
