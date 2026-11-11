@@ -273,6 +273,29 @@ function resolveIdentifier({
   if (!argument && paramIndex !== -1 && babelTypes.isAssignmentPattern(params[paramIndex])) {
     argument = params[paramIndex].right
   }
+  // `isLiteral` is true for a template literal.
+  if (argument && babelTypes.isTemplateLiteral(argument)) {
+    const forwardsThisParameter = argument.expressions.some(
+      (expression) => babelTypes.isIdentifier(expression) && expression.name === node.name,
+    )
+    if (forwardsThisParameter) {
+      throw new Error(
+        `Could not forward parameter "${node.name}" through a template literal in ${filename}:${argument.loc?.start.line}:${argument.loc?.start.column}`,
+      )
+    }
+    const unbindParameter = (items: babelTypes.Node[]) =>
+      items.filter((_, index) => index !== paramIndex)
+    return resolveExpression({
+      babelConfig,
+      file,
+      filename,
+      fnArguments: unbindParameter(fnArguments),
+      node: argument,
+      params: unbindParameter(params),
+      resolver,
+      scope,
+    })
+  }
   if (argument && babelTypes.isLiteral(argument)) {
     return resolveExpression({
       babelConfig,
