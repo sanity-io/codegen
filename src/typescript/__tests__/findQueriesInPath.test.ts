@@ -1,4 +1,4 @@
-import {mkdtemp, rm, writeFile} from 'node:fs/promises'
+import {chmod, mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 
@@ -68,6 +68,27 @@ describe('findQueriesInPath', () => {
     expect(res).toHaveLength(1)
     expect(res[0]?.queries).toHaveLength(1)
   })
+
+  test.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'should not read node_modules when the path contains a dot directory',
+    async () => {
+      const tmpDir = await mkdtemp(path.join(tmpdir(), '.findQueriesInPath-'))
+      const lockedDir = path.join(tmpDir, 'node_modules', 'locked')
+      await mkdir(path.join(tmpDir, 'src'))
+      await mkdir(lockedDir, {recursive: true})
+      try {
+        await writeFile(path.join(tmpDir, 'src', 'query.ts'), 'export const a = 1\n')
+        await writeFile(path.join(tmpDir, 'src', '.hidden.ts'), 'export const b = 1\n')
+        await chmod(lockedDir, 0o000)
+
+        const {files} = findQueriesInPath({path: path.join(tmpDir, '**', '*.ts')})
+        expect(files).toEqual([path.join(tmpDir, 'src', 'query.ts')])
+      } finally {
+        await chmod(lockedDir, 0o755)
+        await rm(tmpDir, {force: true, recursive: true})
+      }
+    },
+  )
 
   // This test is skipped by default because it's very slow, but it's useful to have it around for testing deterministic behavior
   suite.concurrent.skip(
