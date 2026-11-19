@@ -666,6 +666,79 @@ describe(SchemaTypeGenerator.name, () => {
         }
       `)
     })
+
+    test('narrows projection fields proven defined by the filter', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          attributes: {
+            _id: {type: 'objectAttribute', value: {type: 'string'}},
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'post'}},
+            slug: {optional: true, type: 'objectAttribute', value: {name: 'slug', type: 'inline'}},
+            title: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          name: 'post',
+          type: 'document',
+        },
+        {
+          name: 'slug',
+          type: 'type',
+          value: {
+            attributes: {
+              current: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+            },
+            type: 'object',
+          },
+        },
+      ])
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == $type && defined(slug.current)]{ "slug": slug.current }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          slug: string;
+        }>"
+      `)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == $type && defined(title)]{ title }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          title: string;
+        }>"
+      `)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == $type && title != null]{ title }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          title: string;
+        }>"
+      `)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == $type && (defined(title) || defined(slug.current))]{ title }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          title: string | null;
+        }>"
+      `)
+    })
   })
 
   describe('walkAndCountQueryTypeNodeStats', () => {
