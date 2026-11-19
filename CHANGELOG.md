@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.3.2](https://github.com/sanity-io/codegen/compare/codegen-v8.3.1...codegen-v8.3.2) (2026-11-19)
+
+
+### Bug Fixes
+
+* pick up groq-js defined() filter narrowing ([#186](https://github.com/sanity-io/codegen/issues/186)) ([b7e426a](https://github.com/sanity-io/codegen/commit/b7e426ab26a40ef9b9232232ae17ab6543683fa8))
+
 ## [8.3.1](https://github.com/sanity-io/codegen/compare/codegen-v8.3.0...codegen-v8.3.1) (2026-11-11)
 
 
