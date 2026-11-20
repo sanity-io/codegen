@@ -141,7 +141,7 @@ pnpm test -- src/commands/typegen/__tests__/generate.test.ts
 
 ## Releases
 
-Releases are managed automatically by [Release Please](https://github.com/googleapis/release-please). When PRs are merged to `main`, Release Please creates a release PR that bumps the version and updates the changelog. Merging the release PR triggers the publish to npm.
+Releases are managed by [Changesets](https://github.com/changesets/changesets). A changeset is generated automatically from the conventional commit PR title for PRs that touch the published package; run `pnpm changeset` to add one manually. When PRs with changesets are merged to `main`, a "chore: version packages" PR is opened that bumps the version and updates the changelog. Merging that PR publishes to npm via [trusted publishing](https://docs.npmjs.com/trusted-publishers) with provenance.
 
 ## License
 
