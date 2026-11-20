@@ -1,5 +1,11 @@
 # Change Log
 
+## 8.3.4
+
+### Patch Changes
+
+- release with changesets and npm trusted publishing ([#192](https://github.com/sanity-io/codegen/pull/192)) ([3eaf6b0](https://github.com/sanity-io/codegen/commit/3eaf6b055f7af500a20569f11d0be54712ca95eb))
+
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
