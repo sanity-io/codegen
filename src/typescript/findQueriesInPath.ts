@@ -19,6 +19,18 @@ interface FindQueriesInPathOptions {
   resolver?: NodeJS.RequireResolve
 }
 
+function getNodeModulesIgnore(patterns: string | string[]): string[] {
+  const ignore = new Set(['**/node_modules/**'])
+  for (const pattern of Array.isArray(patterns) ? patterns : [patterns]) {
+    if (pattern.startsWith('!')) continue
+    const segments = pattern.split('/')
+    const index = segments.findIndex((segment) => segment !== '' && glob.hasMagic(segment))
+    const base = segments.slice(0, index).join('/')
+    if (index > 0 && base) ignore.add(`${base}/**/node_modules/**`)
+  }
+  return [...ignore]
+}
+
 /**
  * findQueriesInPath takes a path or array of paths and returns all GROQ queries in the files.
  * @param path - The path or array of paths to search for queries
@@ -43,7 +55,7 @@ export function findQueriesInPath({
   const files = glob
     .sync(normalizedPath, {
       absolute: false,
-      ignore: ['**/node_modules/**'], // we never want to look in node_modules
+      ignore: getNodeModulesIgnore(normalizedPath), // we never want to look in node_modules
       onlyFiles: true,
     })
     .toSorted()
