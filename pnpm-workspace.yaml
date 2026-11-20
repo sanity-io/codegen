@@ -9,4 +9,4 @@ allowBuilds:
 lockfile:
   format: v13
 minimumReleaseAgeExclude:
-  - groq-js@2.0.2
+  - groq-js@2.0.3

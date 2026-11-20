@@ -739,6 +739,72 @@ describe(SchemaTypeGenerator.name, () => {
         }>"
       `)
     })
+
+    test('types select() alternatives at the query root, and select() with no fallback as nullable', () => {
+      const schema = new SchemaTypeGenerator([
+        {
+          attributes: {
+            _id: {type: 'objectAttribute', value: {type: 'string'}},
+            _type: {type: 'objectAttribute', value: {type: 'string', value: 'author'}},
+            name: {optional: true, type: 'objectAttribute', value: {type: 'string'}},
+          },
+          name: 'author',
+          type: 'document',
+        },
+      ])
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: 'select($x == 1 => "a", "b")',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`""a" | "b""`)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: 'select($type == "author" => *[_type == "author"]{name}, "__placeholder__")',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          name: string | null;
+        }> | "__placeholder__""
+      `)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: 'select($x == 1 => "a")',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`""a" | null"`)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == "author"]{ "a": select(name == "x" => 1) }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          a: 1 | null;
+        }>"
+      `)
+
+      expect(
+        generateCode(
+          schema.evaluateQuery({
+            query: '*[_type == "author"]{ "a": select(name == "x" => 1, 2) }',
+          }).tsType,
+        ),
+      ).toMatchInlineSnapshot(`
+        "Array<{
+          a: 1 | 2;
+        }>"
+      `)
+    })
   })
 
   describe('walkAndCountQueryTypeNodeStats', () => {
