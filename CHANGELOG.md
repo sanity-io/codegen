@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.3.3](https://github.com/sanity-io/codegen/compare/codegen-v8.3.2...codegen-v8.3.3) (2026-11-20)
+
+
+### Bug Fixes
+
+* **deps:** update sanity-tooling ([#163](https://github.com/sanity-io/codegen/issues/163)) ([008fec8](https://github.com/sanity-io/codegen/commit/008fec8a068143bb4d3d2063dc55a20bf9d0423f))
+* pick up groq-js select() typing ([#189](https://github.com/sanity-io/codegen/issues/189)) ([336e631](https://github.com/sanity-io/codegen/commit/336e631bdd819fddfd877ff218906bb0aa14b7c2))
+
 ## [8.3.2](https://github.com/sanity-io/codegen/compare/codegen-v8.3.1...codegen-v8.3.2) (2026-11-19)
 
 
